@@ -1,0 +1,26 @@
+// src/types/next-auth.d.ts หรือ src/next-auth.d.ts
+import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
+import { Role } from '@prisma/client'; // Import Role enum จาก Prisma
+
+// ขยาย Type ของ User เพื่อรวม 'role'
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      role: Role; // เพิ่ม role เข้าไป
+    } & DefaultSession['user'];
+  }
+
+  interface User extends DefaultUser {
+    role: Role; // เพิ่ม role เข้าไป
+  }
+}
+
+// ขยาย Type ของ JWT เพื่อรวม 'role' และ 'id'
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    role: Role; // เพิ่ม role เข้าไป
+  }
+}

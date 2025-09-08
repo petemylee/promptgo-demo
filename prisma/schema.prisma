@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Requester
+  Driver
+  Admin
+  Executive
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  CONFIRMED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  MERGED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  password          String
+  role              Role      @default(Requester)
+  signatureImageUrl String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  bookingsRequested      Booking[] @relation("RequesterBookings")
+  bookingsDriven         Booking[] @relation("DriverTrips")
+  bookingsApprovedByAdmin Booking[] @relation("AdminApprovals")
+  bookingsConfirmedByExec Booking[] @relation("ExecutiveConfirmations")
+}
+
+model Vehicle {
+  id           String    @id @default(cuid())
+  licensePlate String    @unique
+  brand        String?
+  model        String?
+  type         String?
+  capacity     Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  bookings Booking[]
+}
+
+model Booking {
+  id                  String         @id @default(cuid())
+  purpose             String?
+  startLocation       String?
+  endLocation         String?
+  startTime           DateTime?
+  endTime             DateTime?
+  status              BookingStatus  @default(PENDING)
+  generatedFormUrl    String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  requesterId           String
+  driverId              String?
+  vehicleId             String?
+  adminApproverId       String?
+  executiveConfirmerId  String?
+
+  requester          User      @relation("RequesterBookings", fields: [requesterId], references: [id])
+  driver             User?     @relation("DriverTrips", fields: [driverId], references: [id])
+  vehicle            Vehicle?  @relation(fields: [vehicleId], references: [id])
+  adminApprover      User?     @relation("AdminApprovals", fields: [adminApproverId], references: [id])
+  executiveConfirmer User?     @relation("ExecutiveConfirmations", fields: [executiveConfirmerId], references: [id])
+
+  feedback           Feedback?
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+}
