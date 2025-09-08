@@ -53,51 +53,63 @@ export default function NewBookingPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-lg">
-        <h1 className="text-2xl font-bold mb-6 text-center">แบบฟอร์มขอใช้รถยนต์</h1>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="destination">สถานที่ปลายทาง*</label>
-            <input
-              id="destination"
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="startTime">วันที่และเวลาออกเดินทาง*</label>
-            <input
-              id="startTime"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2" htmlFor="purpose">วัตถุประสงค์*</label>
-            <textarea
-              id="purpose"
-              rows={4}
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            ></textarea>
-          </div>
-          
-          {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+    <div className="relative min-h-screen overflow-hidden p-4">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]"></div>
+      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#0076c3]/20 blur-3xl"></div>
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-[#004c80]/20 blur-3xl"></div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
-          >
-            {isLoading ? 'กำลังส่งข้อมูล...' : 'ยืนยันการจอง'}
-          </button>
-        </form>
+      <div className="relative z-10 mx-auto w-full max-w-3xl">
+        <div className="rounded-2xl bg-white/80 p-8 shadow-xl ring-1 ring-black/5 backdrop-blur">
+          <h1 className="text-2xl font-bold mb-6 text-[#004c80] text-center">แบบฟอร์มขอใช้รถยนต์</h1>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2" htmlFor="destination">สถานที่ปลายทาง*</label>
+              <input
+                id="destination"
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-2" htmlFor="startTime">วันที่และเวลาออกเดินทาง*</label>
+                <input
+                  id="startTime"
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-2" htmlFor="purpose">วัตถุประสงค์*</label>
+              <textarea
+                id="purpose"
+                rows={4}
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+              ></textarea>
+            </div>
+
+            {error && <p className="text-red-600 text-center">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-[#004c80] to-[#0076c3] px-5 py-3 font-medium text-white shadow-lg transition hover:from-[#005b99] hover:to-[#0087de] disabled:from-[#004c80]/60 disabled:to-[#0076c3]/60"
+            >
+              <span className="relative z-10">{isLoading ? 'กำลังส่งข้อมูล...' : 'ยืนยันการจอง'}</span>
+              <span className="absolute inset-0 -translate-x-full bg-white/20 transition group-hover:translate-x-0"></span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

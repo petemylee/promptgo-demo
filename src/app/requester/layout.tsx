@@ -1,24 +1,19 @@
-// src/app/admin/layout.tsx
-'use client'; 
+'use client';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
-function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () => void, session: any }) {
+function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () => void; session: any }) {
   const pathname = usePathname();
-
   const NavItem = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => {
-    const isActive = pathname.startsWith(href);
+    const isActive = pathname === href || pathname.startsWith(href);
     return (
       <li className="mb-1">
         <Link
           href={href}
           className={`flex items-center gap-3 rounded-xl px-3 py-2 transition ring-1 ${
-            isActive
-              ? 'bg-white text-[#004c80] ring-white'
-              : 'text-white/90 ring-white/10 hover:bg-white/10 hover:text-white'
+            isActive ? 'bg-white text-[#004c80] ring-white' : 'text-white/90 ring-white/10 hover:bg-white/10 hover:text-white'
           }`}
         >
           <span className={`grid h-6 w-6 place-items-center rounded-md ${isActive ? 'bg-[#004c80]/10 text-[#004c80]' : 'bg-white/10 text-white'}`}>{icon}</span>
@@ -30,15 +25,10 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
 
   return (
     <div
-      className={`
-        fixed inset-y-0 left-0 z-30 w-64 text-white p-4
-        transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0
-      `}
+      className={`fixed inset-y-0 left-0 z-30 w-64 text-white p-4 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:relative md:translate-x-0`}
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] to-[#0076c3]"/>
+      <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] to-[#0076c3]" />
       <div className="relative z-10 flex h-full flex-col">
         <div className="mb-6 flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3 ring-1 ring-white/20">
           <div className="h-8 w-8 rounded-lg bg-white/20" />
@@ -50,29 +40,20 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
         <nav className="flex-1 overflow-y-auto">
           <ul>
             <NavItem
-              href="/admin/dashboard"
-              label="Dashboard"
+              href="/requester"
+              label="My Bookings"
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M3 12a9 9 0 1 1 18 0h-2a7 7 0 1 0-7 7v2A9 9 0 0 1 3 12z"/>
+                  <path d="M6 4a2 2 0 0 0-2 2v12l4-2 4 2 4-2 4 2V6a2 2 0 0 0-2-2H6z" />
                 </svg>
               }
             />
             <NavItem
-              href="/admin/users"
-              label="ผู้ใช้"
+              href="/booking/new"
+              label="New Booking"
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm-7 9a7 7 0 0 1 14 0v1H5z"/>
-                </svg>
-              }
-            />
-            <NavItem
-              href="/admin/vehicles"
-              label="รถยนต์"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11v6a1 1 0 0 1-1 1h-1a2 2 0 0 1-4 0H11a2 2 0 0 1-4 0H6a1 1 0 0 1-1-1v-6zm2.2-4l-1.2 3h11l-1.2-3a1 1 0 0 0-.95-.67H8.15A1 1 0 0 0 7.2 7zM7 16a1 1 0 1 0 1 1 1 1 0 0 0-1-1zm9 0a1 1 0 1 0 1 1 1 1 0 0 0-1-1z"/>
+                  <path d="M11 11V6a1 1 0 1 1 2 0v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 1 1 0-2h5z" />
                 </svg>
               }
             />
@@ -98,11 +79,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
   );
 }
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RequesterLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -112,34 +89,30 @@ export default function AdminLayout({
       router.replace('/login');
       return;
     }
-    if (status === 'authenticated' && session?.user?.role !== 'Admin') {
+    if (status === 'authenticated' && session?.user?.role !== 'Requester') {
       router.replace('/');
     }
   }, [status, session, router]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Admin')) {
+  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Requester')) {
     return <div className="p-4">Loading...</div>;
   }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff] text-slate-800">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} />
-      
       <div className="flex-1 flex flex-col min-w-0">
-
         <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
           <h1 className="text-xl font-bold">OFM PROMPTGO</h1>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
           </button>
         </header>
-
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
-        
-        <main className="flex-1">
-          {children}
-        </main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );
 }
+
+
