@@ -45,34 +45,36 @@ export async function POST(req: Request) {
 
 // ========== เพิ่มฟังก์ชันนี้เข้าไปใหม่ ==========
 export async function GET() {
-  // ตรวจสอบ Session และสิทธิ์ (ควรเช็คว่าเป็น Admin)
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== 'Admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // ดึงข้อมูลการจองทั้งหมดที่มีสถานะ PENDING
+    // 1. ดึงข้อมูลรายการ Pending เหมือนเดิม
     const pendingBookings = await prisma.booking.findMany({
-      where: {
-        status: 'PENDING',
-      },
-      include: {
-        requester: { // ดึงข้อมูลผู้ขอใช้ที่เกี่ยวข้องมาด้วย
-          select: {
-            name: true, // เลือกมาแค่ชื่อ
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'asc', // เรียงตามเวลาที่สร้างก่อน-หลัง
-      },
+      where: { status: 'PENDING' },
+      include: { requester: { select: { name: true } } },
+      orderBy: { createdAt: 'asc' },
     });
 
-    return NextResponse.json(pendingBookings, { status: 200 });
+    // 2. นับจำนวนรายการในแต่ละสถานะ
+    const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
+    const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
+    const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
+
+    // 3. ส่งข้อมูลทั้งหมดกลับไปในรูปแบบ Object
+    return NextResponse.json({
+      counts: {
+        pending: pendingCount,
+        approved: approvedCount,
+        inProgress: inProgressCount,
+      },
+      pendingBookings: pendingBookings,
+    });
 
   } catch (error) {
-    console.error("Error fetching bookings:", error);
+    console.error("Error fetching dashboard data:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

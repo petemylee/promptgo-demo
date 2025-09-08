@@ -107,8 +107,8 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
             <input type="text" value={type} onChange={(e) => setType(e.target.value)} className="w-full p-2 border rounded" />
           </div>
           <div className="mb-6">
-            <label className="block mb-2">Capacity</label>
-            <input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full p-2 border rounded" />
+            <label className="block mb-2">ความจุเครื่องยนต์ (CC)</label>
+            <input type="number" step="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full p-2 border rounded" placeholder="เช่น 1800" />
           </div>
 
           {error && <p className="text-red-500 text-center mb-4">{error}</p>}

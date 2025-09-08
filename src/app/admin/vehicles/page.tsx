@@ -1,4 +1,3 @@
-// src/app/admin/vehicles/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import VehicleFormModal from './VehicleFormModal';
@@ -41,7 +40,7 @@ export default function VehicleManagementPage() {
     setEditingVehicle(vehicle);
     setIsModalOpen(true);
   };
-
+  
   const handleAdd = () => {
     setEditingVehicle(null);
     setIsModalOpen(true);
@@ -52,54 +51,56 @@ export default function VehicleManagementPage() {
     setEditingVehicle(null);
   };
 
-  if (isLoading) return <p className="p-8">Loading vehicles...</p>;
+  if (isLoading) return <p className="p-4 md:p-8">Loading vehicles...</p>;
 
   return (
     <>
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-6">
+      <div className="p-4 md:p-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold">Vehicle Management</h1>
-          <button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full md:w-auto">
             + Add New Vehicle
           </button>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-4">License Plate</th>
-                <th className="text-left py-2 px-4">Brand & Model</th>
-                <th className="text-left py-2 px-4">Type</th>
-                <th className="text-left py-2 px-4">Capacity</th>
-                <th className="text-left py-2 px-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 px-4 font-mono">{vehicle.licensePlate}</td>
-                  <td className="py-2 px-4">{vehicle.brand} {vehicle.model}</td>
-                  <td className="py-2 px-4">{vehicle.type}</td>
-                  <td className="py-2 px-4">{vehicle.capacity}</td>
-                  <td className="py-2 px-4">
-                    <button 
-                      onClick={() => handleEdit(vehicle)}
-                      className="bg-yellow-500 text-white px-3 py-1 rounded-md mr-2 hover:bg-yellow-600">
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(vehicle.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">
-                      Delete
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-4">License Plate</th>
+                  <th className="text-left py-2 px-4">Brand & Model</th>
+                  <th className="text-left py-2 px-4">Type</th>
+                  <th className="text-left py-2 px-4">ความจุ (CC)</th>
+                  <th className="text-left py-2 px-4">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {vehicles.map((vehicle) => (
+                  <tr key={vehicle.id} className="border-b hover:bg-gray-50">
+                    <td className="py-2 px-4 font-mono whitespace-nowrap">{vehicle.licensePlate}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">{vehicle.brand} {vehicle.model}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">{vehicle.type}</td>
+                    <td className="py-2 px-4">{vehicle.capacity}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      <button 
+                        onClick={() => handleEdit(vehicle)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-md mr-2 hover:bg-yellow-600">
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(vehicle.id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-
+      
       <VehicleFormModal 
         isOpen={isModalOpen}
         onClose={handleCloseModal}

@@ -1,8 +1,8 @@
+// src/app/admin/dashboard/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 
-// สร้าง Type เพื่อให้ TypeScript รู้จักโครงสร้างข้อมูล
 interface Booking {
   id: string;
   endLocation: string | null;
@@ -12,21 +12,27 @@ interface Booking {
   };
 }
 
+interface DashboardData {
+  counts: {
+    pending: number;
+    approved: number;
+    inProgress: number;
+  };
+  pendingBookings: Booking[];
+}
+
 export default function AdminDashboard() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ฟังก์ชันสำหรับดึงข้อมูลรายการที่รออนุมัติ
-  const fetchBookings = async () => {
+  const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/bookings');
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-      const data = await response.json();
-      setBookings(data);
+      if (!response.ok) throw new Error('Failed to fetch data');
+      const dashboardData = await response.json();
+      setData(dashboardData);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -34,12 +40,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // เรียกใช้ฟังก์ชัน fetchBookings เมื่อหน้าโหลดครั้งแรก
   useEffect(() => {
-    fetchBookings();
+    fetchDashboardData();
   }, []);
 
-  // ฟังก์ชันสำหรับจัดการการกดปุ่ม อนุมัติ/ปฏิเสธ
   const handleUpdateStatus = async (bookingId: string, status: 'APPROVED' | 'REJECTED') => {
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
@@ -47,30 +51,35 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to update status');
-      }
-
-      // อัปเดตหน้าจอทันทีโดยไม่ต้องโหลดใหม่
-      // โดยการกรองรายการที่เพิ่งจัดการออกไป
-      setBookings(currentBookings => 
-        currentBookings.filter(booking => booking.id !== bookingId)
-      );
-
+      if (!response.ok) throw new Error('Failed to update status');
+      // โหลดข้อมูล Dashboard ใหม่ทั้งหมดหลังอัปเดตสำเร็จ
+      fetchDashboardData();
     } catch (err: any) {
-      // แสดง Error หากการอัปเดตล้มเหลว
       alert(`Error: ${err.message}`);
     }
   };
   
-  // ส่วนจัดการการแสดงผลระหว่างโหลดหรือเมื่อเกิด Error
-  if (isLoading) return <p className="p-8">Loading...</p>;
-  if (error) return <p className="p-8 text-red-500">Error: {error}</p>;
+  if (isLoading) return <p className="p-4 md:p-8">Loading...</p>;
+  if (error) return <p className="p-4 md:p-8 text-red-500">Error: {error}</p>;
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-gray-500">รอการพิจารณา (Pending)</h3>
+              <p className="text-3xl font-bold">{data?.counts.pending ?? 0}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-gray-500">รอการยืนยัน (Approved)</h3>
+              <p className="text-3xl font-bold">{data?.counts.approved ?? 0}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-gray-500">กำลังเดินทาง</h3>
+              <p className="text-3xl font-bold">{data?.counts.inProgress ?? 0}</p>
+          </div>
+      </div>
       
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">รายการรออนุมัติเบื้องต้น</h2>
@@ -86,8 +95,8 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {bookings.length > 0 ? (
-                bookings.map((booking) => (
+              {data && data.pendingBookings.length > 0 ? (
+                data.pendingBookings.map((booking) => (
                   <tr key={booking.id} className="border-b hover:bg-gray-50">
                     <td className="py-2 px-4">{booking.id.substring(0, 8)}...</td>
                     <td className="py-2 px-4">{booking.requester.name}</td>
@@ -98,12 +107,12 @@ export default function AdminDashboard() {
                     <td className="py-2 px-4">
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'APPROVED')}
-                        className="bg-green-500 text-white px-3 py-1 rounded-md mr-2 hover:bg-green-600 transition-colors">
+                        className="bg-green-500 text-white px-3 py-1 rounded-md mr-2 hover:bg-green-600">
                         อนุมัติ
                       </button>
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'REJECTED')}
-                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors">
+                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">
                         ปฏิเสธ
                       </button>
                     </td>
