@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Role } from '@prisma/client';
+import { ROLES, type Role } from '@/types/roles';
 
 interface User {
   id: string;
@@ -109,7 +109,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
           <div className="mb-6">
             <label className="block mb-2">Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="w-full p-2 border rounded">
-              {Object.values(Role).map(roleValue => (
+              {ROLES.map(roleValue => (
                 <option key={roleValue} value={roleValue}>{roleValue}</option>
               ))}
             </select>

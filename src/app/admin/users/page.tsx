@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Role } from '@prisma/client';
+import type { Role } from '@/types/roles';
 import UserFormModal from './UserFormModal';
 
 interface User {

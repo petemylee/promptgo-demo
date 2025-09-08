@@ -1,7 +1,9 @@
 // src/app/admin/layout.tsx
 'use client'; 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   return (
@@ -31,7 +33,23 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
+    if (status === 'authenticated' && session?.user?.role !== 'Admin') {
+      router.replace('/');
+    }
+  }, [status, session, router]);
+
+  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Admin')) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-100">

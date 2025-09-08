@@ -8,10 +8,9 @@ const prisma = new PrismaClient();
 // ฟังก์ชันสำหรับจัดการ Request แบบ PATCH (ใช้สำหรับการอัปเดตข้อมูลบางส่วน)
 export async function PATCH(
   req: NextRequest,
-  context: { params: Promise<{ bookingId: string }> }
+  context: { params: { bookingId: string } }
 ) {
-  // ✅ ต้อง await context.params
-  const { bookingId } = await context.params;
+  const { bookingId } = context.params;
 
   // ตรวจสอบ Session และสิทธิ์
   const session = await getServerSession(authOptions);
