@@ -1,5 +1,4 @@
-// src/app/api/bookings/[bookingId]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { PrismaClient } from '@prisma/client';
@@ -8,12 +7,12 @@ const prisma = new PrismaClient();
 
 // ฟังก์ชันสำหรับจัดการ Request แบบ PATCH (ใช้สำหรับการอัปเดตข้อมูลบางส่วน)
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { bookingId: string } }
 ) {
   // ตรวจสอบ Session และสิทธิ์
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== 'Admin') {
+  if (session?.user?.role !== 'Admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

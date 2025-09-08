@@ -39,9 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-<<<<<<< HEAD
-=======
 node_modules
 
 /src/generated/prisma
->>>>>>> 0506ec5 (feat: Implement user authentication with NextAuth.js)
