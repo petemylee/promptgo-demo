@@ -1,0 +1,57 @@
+// src/app/api/users/route.ts
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
+
+const prisma = new PrismaClient();
+
+// GET: ดึงข้อมูลผู้ใช้ทั้งหมด
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== 'Admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json(users);
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// POST: สร้างผู้ใช้ใหม่
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== 'Admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { name, email, password, role } = body;
+
+    if (!name || !email || !password || !role) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
+      },
+    });
+
+    return NextResponse.json(newUser, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
