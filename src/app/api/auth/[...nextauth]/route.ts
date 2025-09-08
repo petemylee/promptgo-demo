@@ -62,7 +62,7 @@ export const authOptions: AuthOptions = {
         session.user.role = token.role; // เพิ่ม role เข้าไปใน session
       }
       return session;
-    },
+    },  
   },
   secret: process.env.NEXTAUTH_SECRET, // ต้องสร้าง NEXTAUTH_SECRET ใน .env
   pages: {
