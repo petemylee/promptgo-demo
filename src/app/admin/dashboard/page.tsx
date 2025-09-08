@@ -1,4 +1,3 @@
-// src/app/admin/dashboard/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,8 +32,12 @@ export default function AdminDashboard() {
       if (!response.ok) throw new Error('Failed to fetch data');
       const dashboardData = await response.json();
       setData(dashboardData);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -52,16 +55,20 @@ export default function AdminDashboard() {
         body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('Failed to update status');
-      // โหลดข้อมูล Dashboard ใหม่ทั้งหมดหลังอัปเดตสำเร็จ
       fetchDashboardData();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown
+      if (err instanceof Error) {
+        alert(`Error: ${err.message}`);
+      } else {
+        alert('An unknown error occurred');
+      }
     }
   };
   
   if (isLoading) return <p className="p-4 md:p-8">Loading...</p>;
   if (error) return <p className="p-4 md:p-8 text-red-500">Error: {error}</p>;
 
+  // ... ส่วนของ return JSX เหมือนเดิม ...
   return (
     <div className="p-4 md:p-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>

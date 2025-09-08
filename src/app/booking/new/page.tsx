@@ -1,4 +1,3 @@
-// src/app/booking/new/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -41,16 +40,20 @@ export default function NewBookingPage() {
 
       // ถ้าสำเร็จ
       alert('สร้างคำขอสำเร็จแล้ว');
-      router.push('/'); // กลับไปที่หน้าหลัก (Dashboard ของผู้ใช้)
-    } catch (err: any) {
-      setError(err.message);
+      router.push('/'); // กลับไปที่หน้าหลัก (ซึ่งจะ redirect ไปหน้า My Bookings)
+    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown แทน any
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-lg">
         <h1 className="text-2xl font-bold mb-6 text-center">แบบฟอร์มขอใช้รถยนต์</h1>
         <form onSubmit={handleSubmit}>
@@ -61,7 +64,7 @@ export default function NewBookingPage() {
               type="text"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="mb-4">
@@ -71,7 +74,7 @@ export default function NewBookingPage() {
               type="datetime-local"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="mb-6">
@@ -81,10 +84,10 @@ export default function NewBookingPage() {
               rows={4}
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             ></textarea>
           </div>
-
+          
           {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
           <button

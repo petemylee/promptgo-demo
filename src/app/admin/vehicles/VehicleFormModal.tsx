@@ -1,7 +1,7 @@
-// src/app/admin/vehicles/VehicleFormModal.tsx
 'use client';
 import { useState, useEffect } from 'react';
 
+// Interface สำหรับโครงสร้างข้อมูล Vehicle
 interface Vehicle {
   id: string;
   licensePlate: string;
@@ -11,6 +11,7 @@ interface Vehicle {
   capacity: number | null;
 }
 
+// Props สำหรับ Component
 interface VehicleFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,9 +27,10 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
   const [capacity, setCapacity] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
+  
   const isEditMode = !!initialData;
 
+  // เติมข้อมูลลงฟอร์มเมื่อเป็นโหมดแก้ไข
   useEffect(() => {
     if (isEditMode && initialData) {
       setLicensePlate(initialData.licensePlate || '');
@@ -37,6 +39,7 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setType(initialData.type || '');
       setCapacity(initialData.capacity?.toString() || '');
     } else {
+      // Reset ฟอร์มเมื่อเป็นโหมดเพิ่ม
       setLicensePlate('');
       setBrand('');
       setModel('');
@@ -45,6 +48,7 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
     }
   }, [initialData, isEditMode]);
 
+  // ไม่แสดง Modal ถ้า isOpen เป็น false
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,13 +59,13 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
     try {
       const url = isEditMode ? `/api/vehicles/${initialData?.id}` : '/api/vehicles';
       const method = isEditMode ? 'PATCH' : 'POST';
-
+      
       const body = { 
         licensePlate, 
         brand, 
         model, 
         type, 
-        capacity: parseInt(capacity) || null 
+        capacity: capacity ? parseInt(capacity, 10) : null 
       };
 
       const response = await fetch(url, {
@@ -74,19 +78,23 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
         const data = await response.json();
         throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} vehicle.`);
       }
-
-      onVehicleUpdated();
-      onClose();
-
-    } catch (err: any) {
-      setError(err.message);
+      
+      onVehicleUpdated(); // สั่งให้หน้าหลักโหลดข้อมูลใหม่
+      onClose(); // ปิด Modal
+      
+    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown แทน any
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
         <form onSubmit={handleSubmit}>

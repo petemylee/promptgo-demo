@@ -1,9 +1,7 @@
-// src/app/admin/users/UserFormModal.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import { Role } from '@prisma/client';
 
-// เพิ่ม type User เข้ามาเพื่อใช้กับ initialData
 interface User {
   id: string;
   name: string | null;
@@ -14,36 +12,34 @@ interface User {
 interface UserFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUserUpdated: () => void; // เปลี่ยนชื่อ prop เพื่อความชัดเจน
-  initialData?: User | null; // <-- Prop ใหม่สำหรับรับข้อมูลที่จะแก้ไข
+  onUserUpdated: () => void;
+  initialData?: User | null;
 }
 
 export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialData }: UserFormModalProps) {
+  // ... (ส่วน state และ useEffect คงไว้เหมือนเดิม)
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Requester');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
+  
   const isEditMode = !!initialData;
 
-  // useEffect จะทำงานเมื่อ initialData เปลี่ยนแปลง (เมื่อเปิด Modal ในโหมดแก้ไข)
   useEffect(() => {
     if (isEditMode && initialData) {
       setName(initialData.name || '');
       setEmail(initialData.email || '');
       setRole(initialData.role || 'Requester');
-      setPassword(''); // ไม่แสดงรหัสผ่านเดิม
+      setPassword('');
     } else {
-      // Reset form for "Add" mode
       setName('');
       setEmail('');
       setPassword('');
       setRole('Requester');
     }
   }, [initialData, isEditMode]);
-
 
   if (!isOpen) return null;
 
@@ -55,9 +51,9 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
     try {
       const url = isEditMode ? `/api/users/${initialData?.id}` : '/api/users';
       const method = isEditMode ? 'PATCH' : 'POST';
-
-      let body: any = { name, email, role };
-      // ส่งรหัสผ่านไปเฉพาะตอนสร้างผู้ใช้ใหม่เท่านั้น
+      
+      // <-- แก้ไข: ใช้ const และกำหนด Type ให้ body
+      const body: { name: string; email: string; role: Role; password?: string } = { name, email, role };
       if (!isEditMode) {
         body.password = password;
       }
@@ -72,23 +68,28 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
         const data = await response.json();
         throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} user.`);
       }
-
+      
       onUserUpdated();
       onClose();
-
-    } catch (err: any) {
-      setError(err.message);
+      
+    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ... (ส่วน return JSX คงไว้เหมือนเดิม)
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit User' : 'Add New User'}</h2>
         <form onSubmit={handleSubmit}>
-          {/* ... form fields ... */}
+          {/* Form fields */}
           <div className="mb-4">
             <label className="block mb-2">Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2 border rounded" required />
@@ -97,8 +98,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
             <label className="block mb-2">Email</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border rounded" required />
           </div>
-
-          {/* แสดงช่องรหัสผ่านเฉพาะตอน "Add New User" */}
+          
           {!isEditMode && (
             <div className="mb-4">
               <label className="block mb-2">Password</label>
