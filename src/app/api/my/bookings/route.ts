@@ -27,7 +27,7 @@ export async function GET() {
     });
 
     return NextResponse.json(bookings);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -2,9 +2,10 @@
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import type { Session } from 'next-auth';
 import { useRouter, usePathname } from 'next/navigation';
 
-function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () => void; session: any }) {
+function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () => void; session: Session | null }) {
   const pathname = usePathname();
   const NavItem = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => {
     const isActive = pathname === href || pathname.startsWith(href);

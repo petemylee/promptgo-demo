@@ -29,7 +29,7 @@ export default function LoginPage() {
       } else {
         router.push('/'); 
       }
-    } catch (error) {
+    } catch {
       setError('เกิดข้อผิดพลาดในการ Login');
     } finally {
       setIsLoading(false);
