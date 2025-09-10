@@ -7,6 +7,7 @@ interface User {
   name: string | null;
   email: string;
   role: Role;
+  position?: string | null;
 }
 
 interface UserFormModalProps {
@@ -22,6 +23,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Requester');
+  const [position, setPosition] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -32,12 +34,14 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setName(initialData.name || '');
       setEmail(initialData.email || '');
       setRole(initialData.role || 'Requester');
+      setPosition(initialData.position || '');
       setPassword('');
     } else {
       setName('');
       setEmail('');
       setPassword('');
       setRole('Requester');
+      setPosition('');
     }
   }, [initialData, isEditMode]);
 
@@ -53,7 +57,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       const method = isEditMode ? 'PATCH' : 'POST';
       
       // <-- แก้ไข: ใช้ const และกำหนด Type ให้ body
-      const body: { name: string; email: string; role: Role; password?: string } = { name, email, role };
+      const body: { name: string; email: string; role: Role; position: string; password?: string } = { name, email, role, position };
       if (!isEditMode) {
         body.password = password;
       }
@@ -91,8 +95,12 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Form fields */}
           <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Name</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง</label>
+            <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
           </div>
           <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>

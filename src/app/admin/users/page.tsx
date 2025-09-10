@@ -8,6 +8,7 @@ interface User {
   name: string | null;
   email: string;
   role: Role;
+  position?: string | null;
 }
 
 export default function UserManagementPage() {
@@ -58,6 +59,7 @@ export default function UserManagementPage() {
     if (!q) return true;
     return (
       (u.name || '').toLowerCase().includes(q) ||
+      (u.position || '').toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       u.role.toLowerCase().includes(q)
     );
@@ -91,7 +93,7 @@ export default function UserManagementPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ค้นหา: ชื่อ อีเมล หรือบทบาท"
+                placeholder="ค้นหา: ชื่อ ตำแหน่ง อีเมล หรือบทบาท"
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
               />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
@@ -103,23 +105,29 @@ export default function UserManagementPage() {
         </div>
         <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="min-w-full table-fixed">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
-                  <th className="text-left py-2 px-4 text-[#004c80]">Name</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Email</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Role</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">ชื่อ</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">ตำแหน่ง</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/4">Email</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-24">Role</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-32">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                   <tr key={user.id} className="border-b hover:bg-[#0076c3]/5">
                     <td className="py-2 px-4 whitespace-nowrap">{user.name}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">{user.position || '-'}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{user.email}</td>
-                    <td className="py-2 px-4"><RoleBadge role={user.role} /></td>
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                    <td className="py-2 px-4 text-center">
+                      <div className="flex justify-center">
+                        <RoleBadge role={user.role} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEdit(user)}
                           aria-label="Edit user"
@@ -147,7 +155,7 @@ export default function UserManagementPage() {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={4} className="py-10">
+                    <td colSpan={5} className="py-10">
                       <div className="mx-auto max-w-md text-center">
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#0076c3] grid place-items-center">🙂</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีผู้ใช้ที่ตรงกับคำค้นหา</h3>
