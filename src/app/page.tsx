@@ -1,33 +1,25 @@
 // src/app/page.tsx
 'use client';
-import { useSession, signOut } from 'next-auth/react';
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
-  if (status === 'loading') {
-    return <p>Loading...</p>;
-  }
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
+    const role = session?.user?.role;
+    if (role === 'Admin') router.replace('/admin');
+    else if (role === 'Driver') router.replace('/driver');
+    else if (role === 'Executive') router.replace('/executive');
+    else router.replace('/requester');
+  }, [status, session, router]);
 
-  if (status === 'authenticated') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <h1>สวัสดี, {session.user?.name}</h1>
-        <p>คุณได้เข้าสู่ระบบด้วย Role: <strong>{session.user?.role}</strong></p>
-        <button 
-          onClick={() => signOut()} 
-          style={{ marginTop: '10px', padding: '5px 10px', cursor: 'pointer' }}
-        >
-          ออกจากระบบ
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ padding: '20px' }}>
-      <h1>กรุณาเข้าสู่ระบบ</h1>
-      <a href="/login" style={{ color: 'blue' }}>ไปที่หน้า Login</a>
-    </div>
-  );
+  return <div className="p-4">Loading...</div>;
 }

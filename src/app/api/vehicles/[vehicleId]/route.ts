@@ -10,7 +10,7 @@ export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ vehicleId: string }> }
 ) {
-  const { vehicleId } = await context.params; // ✅ ต้อง await
+  const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
@@ -39,7 +39,7 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ vehicleId: string }> }
 ) {
-  const { vehicleId } = await context.params; // ✅ ต้อง await
+  const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {

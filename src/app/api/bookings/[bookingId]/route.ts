@@ -10,7 +10,6 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ bookingId: string }> }
 ) {
-  // ✅ ต้อง await context.params
   const { bookingId } = await context.params;
 
   // ตรวจสอบ Session และสิทธิ์
