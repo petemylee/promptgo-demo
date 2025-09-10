@@ -8,9 +8,9 @@ const prisma = new PrismaClient();
 // DELETE: ลบข้อมูลรถยนต์
 export async function DELETE(
   req: NextRequest,
-  context: { params: { vehicleId: string } }
+  context: { params: Promise<{ vehicleId: string }> }
 ) {
-  const { vehicleId } = context.params;
+  const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
@@ -37,9 +37,9 @@ export async function DELETE(
 // PATCH: อัปเดตข้อมูลรถยนต์
 export async function PATCH(
   req: NextRequest,
-  context: { params: { vehicleId: string } }
+  context: { params: Promise<{ vehicleId: string }> }
 ) {
-  const { vehicleId } = context.params;
+  const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {

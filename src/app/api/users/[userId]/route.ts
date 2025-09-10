@@ -8,9 +8,9 @@ const prisma = new PrismaClient();
 // DELETE: ลบผู้ใช้
 export async function DELETE(
   req: NextRequest,
-  context: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = context.params;
+  const { userId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
@@ -45,9 +45,9 @@ export async function DELETE(
 // PATCH: อัปเดตผู้ใช้
 export async function PATCH(
   req: NextRequest,
-  context: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = context.params;
+  const { userId } = await context.params;
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
