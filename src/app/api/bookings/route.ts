@@ -51,44 +51,67 @@ export async function GET() {
   }
 
   try {
-    // ดึงข้อมูลการจองทั้งหมดพร้อมข้อมูลที่เกี่ยวข้อง
-    const bookings = await prisma.booking.findMany({
-      include: {
-        requester: {
-          select: {
-            name: true,
-            email: true,
-            position: true,
-          }
-        },
-        adminApprover: {
-          select: {
-            name: true,
-          }
-        },
-        executiveConfirmer: {
-          select: {
-            name: true,
-            signatureImageUrl: true,
-          }
-        },
-        vehicle: {
-          select: {
-            licensePlate: true,
-            brand: true,
-            model: true,
-          }
-        },
-        driver: {
-          select: {
-            name: true,
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    // ตรวจสอบ role เพื่อส่งข้อมูลที่เหมาะสม
+    if (session.user.role === 'Admin') {
+      // สำหรับ Admin: ส่งข้อมูล dashboard format
+      const pendingBookings = await prisma.booking.findMany({
+        where: { status: 'PENDING' },
+        include: { requester: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
 
-    return NextResponse.json(bookings);
+      const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
+      const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
+      const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
+
+      return NextResponse.json({
+        counts: {
+          pending: pendingCount,
+          approved: approvedCount,
+          inProgress: inProgressCount,
+        },
+        pendingBookings: pendingBookings,
+      });
+    } else {
+      // สำหรับ Executive และ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด
+      const bookings = await prisma.booking.findMany({
+        include: {
+          requester: {
+            select: {
+              name: true,
+              email: true,
+              position: true,
+            }
+          },
+          adminApprover: {
+            select: {
+              name: true,
+            }
+          },
+          executiveConfirmer: {
+            select: {
+              name: true,
+              signatureImageUrl: true,
+            }
+          },
+          vehicle: {
+            select: {
+              licensePlate: true,
+              brand: true,
+              model: true,
+            }
+          },
+          driver: {
+            select: {
+              name: true,
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return NextResponse.json(bookings);
+    }
 
   } catch (error) {
     console.error("Error fetching bookings:", error);
