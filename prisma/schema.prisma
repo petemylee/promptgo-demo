@@ -61,7 +61,6 @@ model Vehicle {
 model Booking {
   id                  String         @id @default(cuid())
   purpose             String?
-  startLocation       String?
   endLocation         String?
   startTime           DateTime?
   endTime             DateTime?

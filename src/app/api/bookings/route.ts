@@ -46,35 +46,52 @@ export async function POST(req: Request) {
 // ========== เพิ่มฟังก์ชันนี้เข้าไปใหม่ ==========
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== 'Admin') {
+  if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // 1. ดึงข้อมูลรายการ Pending เหมือนเดิม
-    const pendingBookings = await prisma.booking.findMany({
-      where: { status: 'PENDING' },
-      include: { requester: { select: { name: true } } },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    // 2. นับจำนวนรายการในแต่ละสถานะ
-    const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
-    const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
-    const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
-
-    // 3. ส่งข้อมูลทั้งหมดกลับไปในรูปแบบ Object
-    return NextResponse.json({
-      counts: {
-        pending: pendingCount,
-        approved: approvedCount,
-        inProgress: inProgressCount,
+    // ดึงข้อมูลการจองทั้งหมดพร้อมข้อมูลที่เกี่ยวข้อง
+    const bookings = await prisma.booking.findMany({
+      include: {
+        requester: {
+          select: {
+            name: true,
+            email: true,
+            position: true,
+          }
+        },
+        adminApprover: {
+          select: {
+            name: true,
+          }
+        },
+        executiveConfirmer: {
+          select: {
+            name: true,
+            signatureImageUrl: true,
+          }
+        },
+        vehicle: {
+          select: {
+            licensePlate: true,
+            brand: true,
+            model: true,
+          }
+        },
+        driver: {
+          select: {
+            name: true,
+          }
+        }
       },
-      pendingBookings: pendingBookings,
+      orderBy: { createdAt: 'desc' },
     });
+
+    return NextResponse.json(bookings);
 
   } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+    console.error("Error fetching bookings:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
