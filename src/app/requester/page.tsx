@@ -54,6 +54,16 @@ export default function RequesterMyBookings() {
     if (status === 'authenticated') load();
   }, [status]);
 
+  useEffect(() => {
+    // Listen for custom event from sidebar button
+    const handleOpenModal = () => setIsModalOpen(true);
+    window.addEventListener('openBookingModal', handleOpenModal);
+    
+    return () => {
+      window.removeEventListener('openBookingModal', handleOpenModal);
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return bookings;

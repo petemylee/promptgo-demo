@@ -49,15 +49,23 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
                 </svg>
               }
             />
-            <NavItem
-              href="/booking/new"
-              label="New Booking"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M11 11V6a1 1 0 1 1 2 0v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 1 1 0-2h5z" />
-                </svg>
-              }
-            />
+            <li className="mb-1">
+              <button
+                onClick={() => {
+                  // Trigger the same modal as the top-right button
+                  const event = new CustomEvent('openBookingModal');
+                  window.dispatchEvent(event);
+                }}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 transition ring-1 text-white/90 ring-white/10 hover:bg-white/10 hover:text-white w-full"
+              >
+                <span className="grid h-6 w-6 place-items-center rounded-md bg-white/10 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                    <path d="M11 11V6a1 1 0 1 1 2 0v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 1 1 0-2h5z" />
+                  </svg>
+                </span>
+                <span className="text-sm font-medium">New Booking</span>
+              </button>
+            </li>
           </ul>
         </nav>
         <div className="mt-6 rounded-xl bg-white/5 px-3 py-3 text-xs text-white/80 ring-1 ring-white/10">
