@@ -9,7 +9,8 @@ const prisma = new PrismaClient();
 // GET: ดึงข้อมูลรถยนต์ทั้งหมด
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin') {
+  // Admin และ Executive สามารถเข้าถึงได้
+  if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

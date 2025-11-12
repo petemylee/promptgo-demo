@@ -42,6 +42,7 @@ export async function GET(
         },
         vehicle: {
           select: {
+            id: true,
             licensePlate: true,
             brand: true,
             model: true,
@@ -81,7 +82,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { status, executiveConfirmerId, signatureImageUrl } = body;
+    const { status, executiveConfirmerId, signatureImageUrl, vehicleId } = body;
 
     // ตรวจสอบสิทธิ์ตาม role
     if (session.user.role === 'Admin') {
@@ -90,11 +91,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid status for Admin' }, { status: 400 });
       }
 
+      // ถ้าอนุมัติ ต้องมี vehicleId
+      if (status === 'APPROVED' && !vehicleId) {
+        return NextResponse.json({ error: 'Vehicle selection is required when approving' }, { status: 400 });
+      }
+
+      // ตรวจสอบว่า vehicleId มีอยู่จริง
+      if (status === 'APPROVED' && vehicleId) {
+        const vehicle = await prisma.vehicle.findUnique({
+          where: { id: vehicleId },
+        });
+        if (!vehicle) {
+          return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+        }
+      }
+
       const updatedBooking = await prisma.booking.update({
         where: { id: bookingId },
         data: {
           status: status as BookingStatus,
           adminApproverId: session.user.id,
+          ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
         },
       });
 
@@ -105,13 +122,30 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid status for Executive' }, { status: 400 });
       }
 
+      // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
+      if (vehicleId) {
+        const vehicle = await prisma.vehicle.findUnique({
+          where: { id: vehicleId },
+        });
+        if (!vehicle) {
+          return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+        }
+      }
+
       // อัปเดต booking status
+      const updateData: any = {
+        status: 'CONFIRMED' as BookingStatus,
+        executiveConfirmerId: executiveConfirmerId || session.user.id,
+      };
+
+      // ถ้ามี vehicleId ส่งมา ให้อัปเดตรถยนต์ (Executive สามารถแก้ไขหรือคงเดิม)
+      if (vehicleId) {
+        updateData.vehicleId = vehicleId;
+      }
+
       const updatedBooking = await prisma.booking.update({
         where: { id: bookingId },
-        data: {
-          status: 'CONFIRMED' as BookingStatus,
-          executiveConfirmerId: executiveConfirmerId || session.user.id,
-        },
+        data: updateData,
       });
 
       // อัปเดต signature URL ใน user profile

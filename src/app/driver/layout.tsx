@@ -1,3 +1,4 @@
+// src/app/driver/layout.tsx
 'use client';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
@@ -7,8 +8,9 @@ import { useRouter, usePathname } from 'next/navigation';
 
 function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () => void; session: Session | null }) {
   const pathname = usePathname();
+  
   const NavItem = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => {
-    const isActive = pathname === href || pathname.startsWith(href);
+    const isActive = pathname === href || (href !== '/driver' && pathname.startsWith(href));
     return (
       <li className="mb-1">
         <Link
@@ -41,11 +43,20 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
         <nav className="flex-1 overflow-y-auto">
           <ul>
             <NavItem
-              href="/requester"
-              label="My Bookings"
+              href="/driver"
+              label="งานของฉัน"
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M6 4a2 2 0 0 0-2 2v12l4-2 4 2 4-2 4 2V6a2 2 0 0 0-2-2H6z" />
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              }
+            />
+            <NavItem
+              href="/driver/history"
+              label="ประวัติงาน"
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
                 </svg>
               }
             />
@@ -61,7 +72,10 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
               className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white ring-1 ring-white/20 hover:bg-white/20 hover:ring-white/30"
               title="Logout"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M13 3a1 1 0 0 1 1 1v4h-2V5H6v14h6v-3h2v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8z"/><path d="M16.293 7.293a1 1 0 0 1 1.414 0L22 11.586a1 1 0 0 1 0 1.414l-4.293 4.293a1 1 0 1 1-1.414-1.414L18.586 13H10a1 1 0 1 1 0-2h8.586l-2.293-2.293a1 1 0 0 1 0-1.414z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M13 3a1 1 0 0 1 1 1v4h-2V5H6v14h6v-3h2v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8z"/>
+                <path d="M16.293 7.293a1 1 0 0 1 1.414 0L22 11.586a1 1 0 0 1 0 1.414l-4.293 4.293a1 1 0 1 1-1.414-1.414L18.586 13H10a1 1 0 1 1 0-2h8.586l-2.293-2.293a1 1 0 0 1 0-1.414z"/>
+              </svg>
               Logout
             </button>
           </div>
@@ -71,7 +85,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
   );
 }
 
-export default function RequesterLayout({ children }: { children: React.ReactNode }) {
+export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -81,30 +95,36 @@ export default function RequesterLayout({ children }: { children: React.ReactNod
       router.replace('/login');
       return;
     }
-    if (status === 'authenticated' && session?.user?.role !== 'Requester') {
+    if (status === 'authenticated' && session?.user?.role !== 'Driver') {
       router.replace('/');
     }
   }, [status, session, router]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Requester')) {
+  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Driver')) {
     return <div className="p-4">Loading...</div>;
   }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff] text-slate-800">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} />
+      
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
           <h1 className="text-xl font-bold">OFM PROMPTGO</h1>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
           </button>
         </header>
+
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
-        <main className="flex-1">{children}</main>
+        
+        <main className="flex-1">
+          {children}
+        </main>
       </div>
     </div>
   );
 }
-
 

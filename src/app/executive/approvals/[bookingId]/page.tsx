@@ -21,6 +21,7 @@ interface Booking {
     name: string | null;
   } | null;
   vehicle: {
+    id: string;
     licensePlate: string;
     brand: string | null;
     model: string | null;
@@ -28,6 +29,15 @@ interface Booking {
   driver: {
     name: string | null;
   } | null;
+}
+
+interface Vehicle {
+  id: string;
+  licensePlate: string;
+  brand: string | null;
+  model: string | null;
+  type: string | null;
+  capacity: number | null;
 }
 
 interface SignatureUploadProps {
@@ -142,6 +152,9 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
   const [isConfirming, setIsConfirming] = useState(false);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -151,6 +164,10 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
       }
       const data = await response.json();
       setBooking(data);
+      // Set initial vehicle selection
+      if (data.vehicle) {
+        setSelectedVehicleId(data.vehicle.id);
+      }
     } catch (error) {
       console.error('Error fetching booking:', error);
       setError('ไม่สามารถโหลดข้อมูลการเดินทางได้');
@@ -159,9 +176,26 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
     }
   }, [params.bookingId]);
 
+  const fetchVehicles = useCallback(async () => {
+    setIsLoadingVehicles(true);
+    try {
+      const response = await fetch('/api/vehicles');
+      if (!response.ok) {
+        throw new Error('Failed to fetch vehicles');
+      }
+      const vehiclesData = await response.json();
+      setVehicles(vehiclesData);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    } finally {
+      setIsLoadingVehicles(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchBooking();
-  }, [fetchBooking]);
+    fetchVehicles();
+  }, [fetchBooking, fetchVehicles]);
 
   const handleSignatureUpload = (file: File) => {
     setSignatureFile(file);
@@ -202,6 +236,7 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
           status: 'CONFIRMED',
           executiveConfirmerId: session?.user?.id,
           signatureImageUrl: signatureData.url,
+          ...(selectedVehicleId ? { vehicleId: selectedVehicleId } : {}),
         }),
       });
 
@@ -351,11 +386,32 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
             <div>
               <h3 className="font-semibold text-[#004c80] mb-3">ยานพาหนะ & คนขับ</h3>
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                {booking.vehicle ? (
-                  <p><span className="font-medium">รถ:</span> {booking.vehicle.brand} {booking.vehicle.model} ({booking.vehicle.licensePlate})</p>
-                ) : (
-                  <p className="text-gray-500">ยังไม่ได้กำหนดรถ</p>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    รถยนต์ (สามารถแก้ไขได้)
+                  </label>
+                  {isLoadingVehicles ? (
+                    <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลรถยนต์...</p>
+                  ) : (
+                    <select
+                      value={selectedVehicleId}
+                      onChange={(e) => setSelectedVehicleId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                    >
+                      <option value="">-- ไม่เลือกรถยนต์ --</option>
+                      {vehicles.map((vehicle) => (
+                        <option key={vehicle.id} value={vehicle.id}>
+                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {booking.vehicle && !selectedVehicleId && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      รถยนต์ที่ Admin เลือก: {booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}
+                    </p>
+                  )}
+                </div>
                 {booking.driver ? (
                   <p><span className="font-medium">คนขับ:</span> {booking.driver.name}</p>
                 ) : (
