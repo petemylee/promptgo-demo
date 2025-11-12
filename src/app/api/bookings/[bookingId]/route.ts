@@ -133,8 +133,12 @@ export async function PATCH(
       }
 
       // อัปเดต booking status
-      const updateData: any = {
-        status: 'CONFIRMED' as BookingStatus,
+      const updateData: {
+        status: BookingStatus;
+        executiveConfirmerId: string;
+        vehicleId?: string;
+      } = {
+        status: BookingStatus.CONFIRMED,
         executiveConfirmerId: executiveConfirmerId || session.user.id,
       };
 
