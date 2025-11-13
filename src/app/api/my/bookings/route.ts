@@ -13,15 +13,24 @@ export async function GET() {
     const bookings = await prisma.booking.findMany({
       where: { requesterId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        purpose: true,
-        endLocation: true,
-        startTime: true,
-        endTime: true,
-        status: true,
-        createdAt: true,
-      },
+      include: {
+        driver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
+        vehicle: {
+          select: {
+            id: true,
+            licensePlate: true,
+            brand: true,
+            model: true,
+            type: true,
+          }
+        }
+      }
     });
 
     return NextResponse.json(bookings);
