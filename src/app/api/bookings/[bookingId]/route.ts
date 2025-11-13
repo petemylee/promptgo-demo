@@ -50,6 +50,7 @@ export async function GET(
         },
         driver: {
           select: {
+            id: true,
             name: true,
           }
         }
@@ -82,7 +83,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { status, executiveConfirmerId, signatureImageUrl, vehicleId } = body;
+    const { status, executiveConfirmerId, signatureImageUrl, vehicleId, driverId } = body;
 
     // ตรวจสอบสิทธิ์ตาม role
     if (session.user.role === 'Admin') {
@@ -132,11 +133,25 @@ export async function PATCH(
         }
       }
 
+      // ตรวจสอบว่า driverId มีอยู่จริง (ถ้ามีการส่งมา)
+      if (driverId) {
+        const driver = await prisma.user.findUnique({
+          where: { id: driverId },
+        });
+        if (!driver) {
+          return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+        }
+        if (driver.role !== 'Driver') {
+          return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
+        }
+      }
+
       // อัปเดต booking status
       const updateData: {
         status: BookingStatus;
         executiveConfirmerId: string;
         vehicleId?: string;
+        driverId?: string;
       } = {
         status: BookingStatus.CONFIRMED,
         executiveConfirmerId: executiveConfirmerId || session.user.id,
@@ -145,6 +160,11 @@ export async function PATCH(
       // ถ้ามี vehicleId ส่งมา ให้อัปเดตรถยนต์ (Executive สามารถแก้ไขหรือคงเดิม)
       if (vehicleId) {
         updateData.vehicleId = vehicleId;
+      }
+
+      // ถ้ามี driverId ส่งมา ให้อัปเดตคนขับ (Executive สามารถแก้ไขหรือคงเดิม)
+      if (driverId) {
+        updateData.driverId = driverId;
       }
 
       const updatedBooking = await prisma.booking.update({

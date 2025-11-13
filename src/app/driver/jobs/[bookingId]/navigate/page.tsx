@@ -1,6 +1,6 @@
 // src/app/driver/jobs/[bookingId]/navigate/page.tsx
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Booking {
@@ -25,7 +25,8 @@ interface Booking {
   } | null;
 }
 
-export default function NavigationPage({ params }: { params: { bookingId: string } }) {
+export default function NavigationPage({ params }: { params: Promise<{ bookingId: string }> }) {
+  const { bookingId } = use(params);
   const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +37,7 @@ export default function NavigationPage({ params }: { params: { bookingId: string
 
   const fetchBooking = useCallback(async () => {
     try {
-      const response = await fetch(`/api/bookings/${params.bookingId}`);
+      const response = await fetch(`/api/bookings/${bookingId}`);
       if (!response.ok) {
         throw new Error('ไม่พบข้อมูลงาน');
       }
@@ -48,7 +49,7 @@ export default function NavigationPage({ params }: { params: { bookingId: string
     } finally {
       setIsLoading(false);
     }
-  }, [params.bookingId]);
+  }, [bookingId]);
 
   useEffect(() => {
     fetchBooking();
@@ -81,7 +82,7 @@ export default function NavigationPage({ params }: { params: { bookingId: string
     setError('');
 
     try {
-      const response = await fetch(`/api/driver/jobs/${params.bookingId}/end`, {
+      const response = await fetch(`/api/driver/jobs/${bookingId}/end`, {
         method: 'PATCH',
       });
 

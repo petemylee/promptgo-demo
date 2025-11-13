@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -27,6 +27,7 @@ interface Booking {
     model: string | null;
   } | null;
   driver: {
+    id: string;
     name: string | null;
   } | null;
 }
@@ -38,6 +39,13 @@ interface Vehicle {
   model: string | null;
   type: string | null;
   capacity: number | null;
+}
+
+interface Driver {
+  id: string;
+  name: string | null;
+  email: string;
+  position: string | null;
 }
 
 interface SignatureUploadProps {
@@ -144,7 +152,8 @@ function SignatureUpload({ onSignatureUpload, isLoading }: SignatureUploadProps)
   );
 }
 
-export default function BookingConfirmationPage({ params }: { params: { bookingId: string } }) {
+export default function BookingConfirmationPage({ params }: { params: Promise<{ bookingId: string }> }) {
+  const { bookingId } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -155,10 +164,13 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     try {
-      const response = await fetch(`/api/bookings/${params.bookingId}`);
+      const response = await fetch(`/api/bookings/${bookingId}`);
       if (!response.ok) {
         throw new Error('ไม่พบข้อมูลการเดินทาง');
       }
@@ -168,13 +180,17 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
       if (data.vehicle) {
         setSelectedVehicleId(data.vehicle.id);
       }
+      // Set initial driver selection if driver exists
+      if (data.driver && data.driver.id) {
+        setSelectedDriverId(data.driver.id);
+      }
     } catch (error) {
       console.error('Error fetching booking:', error);
       setError('ไม่สามารถโหลดข้อมูลการเดินทางได้');
     } finally {
       setIsLoading(false);
     }
-  }, [params.bookingId]);
+  }, [bookingId]);
 
   const fetchVehicles = useCallback(async () => {
     setIsLoadingVehicles(true);
@@ -192,10 +208,27 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
     }
   }, []);
 
+  const fetchDrivers = useCallback(async () => {
+    setIsLoadingDrivers(true);
+    try {
+      const response = await fetch('/api/drivers');
+      if (!response.ok) {
+        throw new Error('Failed to fetch drivers');
+      }
+      const driversData = await response.json();
+      setDrivers(driversData);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    } finally {
+      setIsLoadingDrivers(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchBooking();
     fetchVehicles();
-  }, [fetchBooking, fetchVehicles]);
+    fetchDrivers();
+  }, [fetchBooking, fetchVehicles, fetchDrivers]);
 
   const handleSignatureUpload = (file: File) => {
     setSignatureFile(file);
@@ -227,7 +260,7 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
       const signatureData = await signatureResponse.json();
 
       // Then confirm booking
-      const confirmResponse = await fetch(`/api/bookings/${params.bookingId}`, {
+      const confirmResponse = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -237,6 +270,7 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
           executiveConfirmerId: session?.user?.id,
           signatureImageUrl: signatureData.url,
           ...(selectedVehicleId ? { vehicleId: selectedVehicleId } : {}),
+          ...(selectedDriverId ? { driverId: selectedDriverId } : {}),
         }),
       });
 
@@ -246,7 +280,7 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
 
       // Generate PDF after confirmation
       try {
-        const pdfResponse = await fetch(`/api/bookings/${params.bookingId}/pdf`, {
+        const pdfResponse = await fetch(`/api/bookings/${bookingId}/pdf`, {
           method: 'POST',
         });
 
@@ -412,11 +446,32 @@ export default function BookingConfirmationPage({ params }: { params: { bookingI
                     </p>
                   )}
                 </div>
-                {booking.driver ? (
-                  <p><span className="font-medium">คนขับ:</span> {booking.driver.name}</p>
-                ) : (
-                  <p className="text-gray-500">ยังไม่ได้กำหนดคนขับ</p>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    คนขับ (สามารถแก้ไขได้)
+                  </label>
+                  {isLoadingDrivers ? (
+                    <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลคนขับ...</p>
+                  ) : (
+                    <select
+                      value={selectedDriverId}
+                      onChange={(e) => setSelectedDriverId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                    >
+                      <option value="">-- ไม่เลือกคนขับ --</option>
+                      {drivers.map((driver) => (
+                        <option key={driver.id} value={driver.id}>
+                          {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {booking.driver && !selectedDriverId && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      คนขับที่ Admin เลือก: {booking.driver.name || '-'}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

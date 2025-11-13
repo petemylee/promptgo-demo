@@ -1,6 +1,6 @@
 // src/app/driver/jobs/[bookingId]/page.tsx
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Booking {
@@ -34,7 +34,8 @@ interface Booking {
   } | null;
 }
 
-export default function JobDetailsPage({ params }: { params: { bookingId: string } }) {
+export default function JobDetailsPage({ params }: { params: Promise<{ bookingId: string }> }) {
+  const { bookingId } = use(params);
   const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +44,7 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
 
   const fetchBooking = useCallback(async () => {
     try {
-      const response = await fetch(`/api/bookings/${params.bookingId}`);
+      const response = await fetch(`/api/bookings/${bookingId}`);
       if (!response.ok) {
         throw new Error('ไม่พบข้อมูลงาน');
       }
@@ -55,7 +56,7 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
     } finally {
       setIsLoading(false);
     }
-  }, [params.bookingId]);
+  }, [bookingId]);
 
   useEffect(() => {
     fetchBooking();
@@ -68,7 +69,7 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
     setError('');
 
     try {
-      const response = await fetch(`/api/driver/jobs/${params.bookingId}/start`, {
+      const response = await fetch(`/api/driver/jobs/${bookingId}/start`, {
         method: 'PATCH',
       });
 
@@ -78,7 +79,7 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
       }
 
       // Redirect to navigation page
-      router.push(`/driver/jobs/${params.bookingId}/navigate`);
+      router.push(`/driver/jobs/${bookingId}/navigate`);
     } catch (error) {
       console.error('Error starting job:', error);
       setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเริ่มงาน');
@@ -128,16 +129,17 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
     );
   }
 
-  if (!booking || booking.status !== 'CONFIRMED') {
+  // ตรวจสอบว่า booking มีอยู่และอยู่ในสถานะที่ถูกต้อง (CONFIRMED หรือ IN_PROGRESS)
+  if (!booking || (booking.status !== 'CONFIRMED' && booking.status !== 'IN_PROGRESS')) {
     return (
       <div className="p-4 md:p-8">
         <div className="text-center py-12">
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-yellow-100 text-yellow-600 grid place-items-center">
             ⚠️
           </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">ไม่สามารถเริ่มงานได้</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">ไม่สามารถเข้าถึงได้</h3>
           <p className="text-gray-500 mb-4">
-            งานนี้ไม่ได้อยู่ในสถานะที่พร้อมเริ่ม หรือไม่พบข้อมูล
+            งานนี้ไม่ได้อยู่ในสถานะที่พร้อมเข้าถึง หรือไม่พบข้อมูล
           </p>
           <button
             onClick={() => router.push('/driver')}
@@ -149,6 +151,8 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
       </div>
     );
   }
+
+  const isInProgress = booking.status === 'IN_PROGRESS';
 
   return (
     <div className="p-4 md:p-8">
@@ -237,21 +241,28 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
           </div>
         </div>
 
-        {/* Start Job Form */}
+        {/* Action Form */}
         <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-          <h2 className="text-xl font-semibold text-[#004c80] mb-6">เริ่มงาน</h2>
+          <h2 className="text-xl font-semibold text-[#004c80] mb-6">
+            {isInProgress ? 'จัดการงาน' : 'เริ่มงาน'}
+          </h2>
           
           <div className="space-y-6">
             {/* Notice */}
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className={`p-4 rounded-lg ${isInProgress ? 'bg-indigo-50' : 'bg-blue-50'}`}>
               <div className="flex items-start">
-                <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 mt-0.5 mr-3 ${isInProgress ? 'text-indigo-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <div>
-                  <h4 className="font-medium text-blue-900">ข้อควรทราบ</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    เมื่อเริ่มงานแล้ว ระบบจะเริ่มติดตามตำแหน่งของคุณ และผู้ขอใช้จะสามารถติดตามการเดินทางได้
+                  <h4 className={`font-medium ${isInProgress ? 'text-indigo-900' : 'text-blue-900'}`}>
+                    {isInProgress ? 'งานกำลังดำเนินการอยู่' : 'ข้อควรทราบ'}
+                  </h4>
+                  <p className={`text-sm mt-1 ${isInProgress ? 'text-indigo-700' : 'text-blue-700'}`}>
+                    {isInProgress 
+                      ? 'งานนี้กำลังดำเนินการอยู่ คุณสามารถทำงานต่อหรือสิ้นสุดงานได้'
+                      : 'เมื่อเริ่มงานแล้ว ระบบจะเริ่มติดตามตำแหน่งของคุณ และผู้ขอใช้จะสามารถติดตามการเดินทางได้'
+                    }
                   </p>
                 </div>
               </div>
@@ -273,23 +284,34 @@ export default function JobDetailsPage({ params }: { params: { bookingId: string
               >
                 ยกเลิก
               </button>
-              <button
-                onClick={handleStartJob}
-                disabled={isStarting}
-                className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {isStarting ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    กำลังเริ่มงาน...
-                  </div>
-                ) : (
-                  'เริ่มงาน'
-                )}
-              </button>
+              {isInProgress ? (
+                <>
+                  <button
+                    onClick={() => router.push(`/driver/jobs/${bookingId}/navigate`)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors font-medium"
+                  >
+                    ทำงานต่อ
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleStartJob}
+                  disabled={isStarting}
+                  className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isStarting ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      กำลังเริ่มงาน...
+                    </div>
+                  ) : (
+                    'เริ่มงาน'
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

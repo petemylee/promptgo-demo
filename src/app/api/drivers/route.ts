@@ -1,0 +1,38 @@
+// src/app/api/drivers/route.ts
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
+
+const prisma = new PrismaClient();
+
+// GET: ดึงข้อมูล drivers ทั้งหมด
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  // Admin และ Executive สามารถเข้าถึงได้
+  if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const drivers = await prisma.user.findMany({
+      where: {
+        role: 'Driver',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        position: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    return NextResponse.json(drivers);
+  } catch (error) {
+    console.error('Error fetching drivers:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
