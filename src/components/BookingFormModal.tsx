@@ -83,4 +83,3 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
   );
 }
 
-
