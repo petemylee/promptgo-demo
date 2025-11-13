@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 }
 
 // ========== เพิ่มฟังก์ชันนี้เข้าไปใหม่ ==========
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -51,25 +51,70 @@ export async function GET() {
   try {
     // ตรวจสอบ role เพื่อส่งข้อมูลที่เหมาะสม
     if (session.user.role === 'Admin') {
-      // สำหรับ Admin: ส่งข้อมูล dashboard format
-      const pendingBookings = await prisma.booking.findMany({
-        where: { status: 'PENDING' },
-        include: { requester: { select: { name: true } } },
-        orderBy: { createdAt: 'asc' },
-      });
+      // ตรวจสอบ query parameter เพื่อดูว่าต้องการข้อมูลทั้งหมดหรือ dashboard format
+      const url = new URL(req.url);
+      const allBookings = url.searchParams.get('all') === 'true';
+      
+      if (allBookings) {
+        // สำหรับ Admin history: ส่งข้อมูล bookings ทั้งหมด
+        const bookings = await prisma.booking.findMany({
+          include: {
+            requester: {
+              select: {
+                name: true,
+                email: true,
+                position: true,
+              }
+            },
+            adminApprover: {
+              select: {
+                name: true,
+              }
+            },
+            executiveConfirmer: {
+              select: {
+                name: true,
+                signatureImageUrl: true,
+              }
+            },
+            vehicle: {
+              select: {
+                licensePlate: true,
+                brand: true,
+                model: true,
+                type: true,
+              }
+            },
+            driver: {
+              select: {
+                name: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        return NextResponse.json(bookings);
+      } else {
+        // สำหรับ Admin dashboard: ส่งข้อมูล dashboard format
+        const pendingBookings = await prisma.booking.findMany({
+          where: { status: 'PENDING' },
+          include: { requester: { select: { name: true } } },
+          orderBy: { createdAt: 'asc' },
+        });
 
-      const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
-      const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
-      const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
+        const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
+        const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
+        const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
 
-      return NextResponse.json({
-        counts: {
-          pending: pendingCount,
-          approved: approvedCount,
-          inProgress: inProgressCount,
-        },
-        pendingBookings: pendingBookings,
-      });
+        return NextResponse.json({
+          counts: {
+            pending: pendingCount,
+            approved: approvedCount,
+            inProgress: inProgressCount,
+          },
+          pendingBookings: pendingBookings,
+        });
+      }
     } else {
       // สำหรับ Executive และ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด
       const bookings = await prisma.booking.findMany({
