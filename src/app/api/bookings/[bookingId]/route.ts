@@ -141,22 +141,22 @@ export async function PATCH(
       }
 
       // ตรวจสอบว่า vehicleId มีอยู่จริง
-      const vehicle = await prisma.vehicle.findUnique({
-        where: { id: vehicleId },
-      });
-      if (!vehicle) {
-        return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+        const vehicle = await prisma.vehicle.findUnique({
+          where: { id: vehicleId },
+        });
+        if (!vehicle) {
+          return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
       }
 
       // ตรวจสอบว่า driverId มีอยู่จริง
-      const driver = await prisma.user.findUnique({
-        where: { id: driverId },
-      });
-      if (!driver) {
-        return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
-      }
-      if (driver.role !== 'Driver') {
-        return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
+        const driver = await prisma.user.findUnique({
+          where: { id: driverId },
+        });
+        if (!driver) {
+          return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+        }
+        if (driver.role !== 'Driver') {
+          return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
       }
 
       // อัปเดต booking status

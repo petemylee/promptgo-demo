@@ -96,24 +96,24 @@ export async function GET(req: Request) {
         return NextResponse.json(bookings);
       } else {
         // สำหรับ Admin dashboard: ส่งข้อมูล dashboard format
-        const pendingBookings = await prisma.booking.findMany({
-          where: { status: 'PENDING' },
-          include: { requester: { select: { name: true } } },
-          orderBy: { createdAt: 'asc' },
-        });
+      const pendingBookings = await prisma.booking.findMany({
+        where: { status: 'PENDING' },
+        include: { requester: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
 
-        const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
-        const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
-        const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
+      const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
+      const approvedCount = await prisma.booking.count({ where: { status: 'APPROVED' } });
+      const inProgressCount = await prisma.booking.count({ where: { status: 'IN_PROGRESS' } });
 
-        return NextResponse.json({
-          counts: {
-            pending: pendingCount,
-            approved: approvedCount,
-            inProgress: inProgressCount,
-          },
-          pendingBookings: pendingBookings,
-        });
+      return NextResponse.json({
+        counts: {
+          pending: pendingCount,
+          approved: approvedCount,
+          inProgress: inProgressCount,
+        },
+        pendingBookings: pendingBookings,
+      });
       }
     } else {
       // สำหรับ Executive และ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด

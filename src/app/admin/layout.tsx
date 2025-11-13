@@ -32,7 +32,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
   return (
     <div
       className={`
-        fixed inset-y-0 left-0 z-30 w-64 text-white p-4
+        fixed top-0 bottom-0 left-0 z-30 w-64 text-white
         transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         transition-transform duration-300 ease-in-out
         md:relative md:translate-x-0
@@ -40,7 +40,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] to-[#0076c3]"/>
-      <div className="relative z-10 flex h-full flex-col">
+      <div className="relative z-10 flex h-full flex-col pt-[73px] md:pt-4 p-4">
         <div className="mb-6 flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3 ring-1 ring-white/20">
           <div className="h-8 w-8 rounded-lg bg-white/20" />
           <div>
@@ -137,16 +137,22 @@ export default function AdminLayout({
       
       <div className="flex-1 flex flex-col min-w-0">
 
-        <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+        <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
           <h1 className="text-xl font-bold">OFM PROMPTGO</h1>
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSidebarOpen(!isSidebarOpen);
+            }}
+            className="relative z-50"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
           </button>
         </header>
 
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
         
-        <main className="flex-1">
+        <main className="flex-1 md:mt-0 mt-[73px]">
           {children}
         </main>
       </div>

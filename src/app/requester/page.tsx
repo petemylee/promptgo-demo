@@ -64,15 +64,31 @@ export default function RequesterMyBookings() {
     };
   }, []);
 
+  const { activeBookings, completedBookings } = useMemo(() => {
+    const active = bookings.filter(b => b.status !== 'COMPLETED');
+    const completed = bookings.filter(b => b.status === 'COMPLETED');
+    return { activeBookings: active, completedBookings: completed };
+  }, [bookings]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return bookings;
-    return bookings.filter(b =>
+    if (!q) return activeBookings;
+    return activeBookings.filter(b =>
       (b.purpose || '').toLowerCase().includes(q) ||
       (b.endLocation || '').toLowerCase().includes(q) ||
       (b.status || '').toLowerCase().includes(q)
     );
-  }, [bookings, query]);
+  }, [activeBookings, query]);
+
+  const filteredCompleted = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return completedBookings;
+    return completedBookings.filter(b =>
+      (b.purpose || '').toLowerCase().includes(q) ||
+      (b.endLocation || '').toLowerCase().includes(q) ||
+      (b.status || '').toLowerCase().includes(q)
+    );
+  }, [completedBookings, query]);
 
   if (status === 'loading') return <div className="p-6">Loading...</div>;
 
@@ -98,7 +114,8 @@ export default function RequesterMyBookings() {
           <button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
         </div>
 
-        <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
+        {/* Active Bookings */}
+        <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
@@ -141,6 +158,45 @@ export default function RequesterMyBookings() {
             </table>
           </div>
         </div>
+
+        {/* Completed Bookings Section */}
+        {!isLoading && completedBookings.length > 0 && (
+          <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
+            <h2 className="text-xl font-bold text-[#004c80] mb-4">การเดินทางที่เสร็จสิ้น</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b bg-[#004c80]/5">
+                    <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCompleted.length > 0 ? (
+                    filteredCompleted.map((b) => (
+                      <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
+                        <td className="py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
+                        <td className="py-2 px-4">{b.purpose || '-'}</td>
+                        <td className="py-2 px-4">{b.endLocation || '-'}</td>
+                        <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
+                        <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-gray-500 text-sm">
+                        ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         <BookingFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={() => {
           // reload list after created
           (async () => {
