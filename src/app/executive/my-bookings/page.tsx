@@ -43,7 +43,7 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
 };
 
 export default function ExecutiveMyBookings() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
