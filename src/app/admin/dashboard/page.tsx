@@ -20,6 +20,14 @@ interface Vehicle {
   capacity: number | null;
 }
 
+interface Driver {
+  id: string;
+  name: string | null;
+  email: string;
+  position: string | null;
+  role: string;
+}
+
 interface DashboardData {
   counts: {
     pending: number;
@@ -38,6 +46,9 @@ export default function AdminDashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -79,16 +90,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchDrivers = async () => {
+    setIsLoadingDrivers(true);
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch drivers');
+      const usersData = await response.json();
+      // กรองเฉพาะผู้ใช้ที่มี role เป็น Driver
+      const driversData = usersData.filter((user: Driver) => user.role === 'Driver');
+      setDrivers(driversData);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert(`Error: ${err.message}`);
+      } else {
+        alert('An unknown error occurred');
+      }
+    } finally {
+      setIsLoadingDrivers(false);
+    }
+  };
+
   const handleApproveClick = async (bookingId: string) => {
     setSelectedBookingId(bookingId);
     setSelectedVehicleId('');
-    await fetchVehicles();
+    setSelectedDriverId('');
+    await Promise.all([fetchVehicles(), fetchDrivers()]);
     setShowVehicleModal(true);
   };
 
   const handleApproveConfirm = async () => {
-    if (!selectedBookingId || !selectedVehicleId) {
-      alert('กรุณาเลือกรถยนต์');
+    if (!selectedBookingId) {
+      alert('เกิดข้อผิดพลาด');
       return;
     }
 
@@ -98,7 +130,8 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           status: 'APPROVED',
-          vehicleId: selectedVehicleId,
+          ...(selectedVehicleId ? { vehicleId: selectedVehicleId } : {}),
+          ...(selectedDriverId ? { driverId: selectedDriverId } : {}),
         }),
       });
       if (!response.ok) {
@@ -108,6 +141,7 @@ export default function AdminDashboard() {
       setShowVehicleModal(false);
       setSelectedBookingId(null);
       setSelectedVehicleId('');
+      setSelectedDriverId('');
       fetchDashboardData();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -222,29 +256,47 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Vehicle Selection Modal */}
+      {/* Vehicle & Driver Selection Modal */}
       {showVehicleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold text-[#004c80] mb-4">เลือกรถยนต์</h2>
+            <h2 className="text-xl font-semibold text-[#004c80] mb-4">เลือกรถยนต์และคนขับ</h2>
             
-            {isLoadingVehicles ? (
-              <p className="text-gray-500">กำลังโหลดข้อมูลรถยนต์...</p>
+            {isLoadingVehicles || isLoadingDrivers ? (
+              <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
             ) : (
               <>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เลือกรถยนต์ *
+                    เลือกรถยนต์
                   </label>
                   <select
                     value={selectedVehicleId}
                     onChange={(e) => setSelectedVehicleId(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
                   >
-                    <option value="">-- เลือกรถยนต์ --</option>
+                    <option value="">-- เลือกรถยนต์ (ไม่บังคับ) --</option>
                     {vehicles.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
                         {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    เลือกคนขับ
+                  </label>
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                  >
+                    <option value="">-- เลือกคนขับ (ไม่บังคับ) --</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
                       </option>
                     ))}
                   </select>
@@ -256,6 +308,7 @@ export default function AdminDashboard() {
                       setShowVehicleModal(false);
                       setSelectedBookingId(null);
                       setSelectedVehicleId('');
+                      setSelectedDriverId('');
                     }}
                     className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -263,8 +316,7 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={handleApproveConfirm}
-                    disabled={!selectedVehicleId}
-                    className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
                   >
                     อนุมัติ
                   </button>

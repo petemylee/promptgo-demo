@@ -2,9 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
-import { PrismaClient, BookingStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { BookingStatus } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 // PATCH: สิ้นสุดงาน (อัปเดต status เป็น COMPLETED)
 export async function PATCH(
@@ -65,8 +64,6 @@ export async function PATCH(
   } catch (error) {
     console.error('Error ending job:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

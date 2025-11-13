@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import { PrismaClient, BookingStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { BookingStatus } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 // GET: ดึงข้อมูลการจองตาม ID
 export async function GET(
@@ -92,12 +91,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid status for Admin' }, { status: 400 });
       }
 
-      // ถ้าอนุมัติ ต้องมี vehicleId
-      if (status === 'APPROVED' && !vehicleId) {
-        return NextResponse.json({ error: 'Vehicle selection is required when approving' }, { status: 400 });
-      }
-
-      // ตรวจสอบว่า vehicleId มีอยู่จริง
+      // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
       if (status === 'APPROVED' && vehicleId) {
         const vehicle = await prisma.vehicle.findUnique({
           where: { id: vehicleId },
@@ -107,34 +101,8 @@ export async function PATCH(
         }
       }
 
-      const updatedBooking = await prisma.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: status as BookingStatus,
-          adminApproverId: session.user.id,
-          ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
-        },
-      });
-
-      return NextResponse.json(updatedBooking);
-    } else if (session.user.role === 'Executive') {
-      // Executive สามารถยืนยันขั้นสุดท้ายได้
-      if (status !== 'CONFIRMED') {
-        return NextResponse.json({ error: 'Invalid status for Executive' }, { status: 400 });
-      }
-
-      // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
-      if (vehicleId) {
-        const vehicle = await prisma.vehicle.findUnique({
-          where: { id: vehicleId },
-        });
-        if (!vehicle) {
-          return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
-        }
-      }
-
       // ตรวจสอบว่า driverId มีอยู่จริง (ถ้ามีการส่งมา)
-      if (driverId) {
+      if (status === 'APPROVED' && driverId) {
         const driver = await prisma.user.findUnique({
           where: { id: driverId },
         });
@@ -146,26 +114,63 @@ export async function PATCH(
         }
       }
 
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: status as BookingStatus,
+          adminApproverId: session.user.id,
+          ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
+          ...(status === 'APPROVED' && driverId ? { driverId } : {}),
+        },
+      });
+
+      return NextResponse.json(updatedBooking);
+    } else if (session.user.role === 'Executive') {
+      // Executive สามารถยืนยันขั้นสุดท้ายได้
+      if (status !== 'CONFIRMED') {
+        return NextResponse.json({ error: 'Invalid status for Executive' }, { status: 400 });
+      }
+
+      // Executive ต้องเลือกรถยนต์และคนขับ (บังคับ)
+      if (!vehicleId) {
+        return NextResponse.json({ error: 'Vehicle selection is required for confirmation' }, { status: 400 });
+      }
+
+      if (!driverId) {
+        return NextResponse.json({ error: 'Driver selection is required for confirmation' }, { status: 400 });
+      }
+
+      // ตรวจสอบว่า vehicleId มีอยู่จริง
+      const vehicle = await prisma.vehicle.findUnique({
+        where: { id: vehicleId },
+      });
+      if (!vehicle) {
+        return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+      }
+
+      // ตรวจสอบว่า driverId มีอยู่จริง
+      const driver = await prisma.user.findUnique({
+        where: { id: driverId },
+      });
+      if (!driver) {
+        return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+      }
+      if (driver.role !== 'Driver') {
+        return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
+      }
+
       // อัปเดต booking status
       const updateData: {
         status: BookingStatus;
         executiveConfirmerId: string;
-        vehicleId?: string;
-        driverId?: string;
+        vehicleId: string;
+        driverId: string;
       } = {
         status: BookingStatus.CONFIRMED,
         executiveConfirmerId: executiveConfirmerId || session.user.id,
+        vehicleId: vehicleId,
+        driverId: driverId,
       };
-
-      // ถ้ามี vehicleId ส่งมา ให้อัปเดตรถยนต์ (Executive สามารถแก้ไขหรือคงเดิม)
-      if (vehicleId) {
-        updateData.vehicleId = vehicleId;
-      }
-
-      // ถ้ามี driverId ส่งมา ให้อัปเดตคนขับ (Executive สามารถแก้ไขหรือคงเดิม)
-      if (driverId) {
-        updateData.driverId = driverId;
-      }
 
       const updatedBooking = await prisma.booking.update({
         where: { id: bookingId },

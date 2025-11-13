@@ -1,11 +1,9 @@
 // src/app/api/users/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
-
-const prisma = new PrismaClient();
 
 // GET: ดึงข้อมูลผู้ใช้ทั้งหมด
 export async function GET() {

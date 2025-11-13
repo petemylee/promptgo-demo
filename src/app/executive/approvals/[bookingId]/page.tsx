@@ -240,6 +240,16 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
       return;
     }
 
+    if (!selectedVehicleId) {
+      setError('กรุณาเลือกรถยนต์');
+      return;
+    }
+
+    if (!selectedDriverId) {
+      setError('กรุณาเลือกคนขับ');
+      return;
+    }
+
     setIsConfirming(true);
     setError('');
 
@@ -269,8 +279,8 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
           status: 'CONFIRMED',
           executiveConfirmerId: session?.user?.id,
           signatureImageUrl: signatureData.url,
-          ...(selectedVehicleId ? { vehicleId: selectedVehicleId } : {}),
-          ...(selectedDriverId ? { driverId: selectedDriverId } : {}),
+          vehicleId: selectedVehicleId,
+          driverId: selectedDriverId,
         }),
       });
 
@@ -422,7 +432,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    รถยนต์ (สามารถแก้ไขได้)
+                    รถยนต์ <span className="text-red-500">*</span>
                   </label>
                   {isLoadingVehicles ? (
                     <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลรถยนต์...</p>
@@ -431,8 +441,9 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                       value={selectedVehicleId}
                       onChange={(e) => setSelectedVehicleId(e.target.value)}
                       className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                      required
                     >
-                      <option value="">-- ไม่เลือกรถยนต์ --</option>
+                      <option value="">-- เลือกรถยนต์ (บังคับ) --</option>
                       {vehicles.map((vehicle) => (
                         <option key={vehicle.id} value={vehicle.id}>
                           {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
@@ -448,7 +459,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    คนขับ (สามารถแก้ไขได้)
+                    คนขับ <span className="text-red-500">*</span>
                   </label>
                   {isLoadingDrivers ? (
                     <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลคนขับ...</p>
@@ -457,8 +468,9 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                       value={selectedDriverId}
                       onChange={(e) => setSelectedDriverId(e.target.value)}
                       className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                      required
                     >
-                      <option value="">-- ไม่เลือกคนขับ --</option>
+                      <option value="">-- เลือกคนขับ (บังคับ) --</option>
                       {drivers.map((driver) => (
                         <option key={driver.id} value={driver.id}>
                           {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
@@ -534,7 +546,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={!signatureFile || isConfirming}
+                disabled={!signatureFile || !selectedVehicleId || !selectedDriverId || isConfirming}
                 className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isConfirming ? (

@@ -1,10 +1,8 @@
 // src/app/api/drivers/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
-
-const prisma = new PrismaClient();
 
 // GET: ดึงข้อมูล drivers ทั้งหมด
 export async function GET() {
@@ -31,8 +29,6 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching drivers:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

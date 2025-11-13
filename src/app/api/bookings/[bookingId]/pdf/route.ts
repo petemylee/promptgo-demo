@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-
-const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
@@ -290,7 +288,5 @@ export async function POST(
   } catch (error) {
     console.error('Error generating PDF:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

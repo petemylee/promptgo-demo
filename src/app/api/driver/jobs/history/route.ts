@@ -2,9 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // GET: ดึงข้อมูลประวัติงานที่เสร็จสิ้น, ยกเลิก, หรือถูกปฏิเสธ
 export async function GET() {
@@ -72,8 +70,6 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching driver job history:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
