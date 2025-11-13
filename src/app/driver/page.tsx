@@ -99,6 +99,7 @@ export default function DriverDashboard() {
                 <thead>
                   <tr className="border-b bg-[#004c80]/5">
                     <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">ผู้จอง</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">จุดเริ่มต้น</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
@@ -112,6 +113,14 @@ export default function DriverDashboard() {
                   {jobs.map((job) => (
                     <tr key={job.id} className="border-b hover:bg-[#0076c3]/5">
                       <td className="py-2 px-4 whitespace-nowrap font-mono text-xs">{job.id.substring(0, 8)}...</td>
+                      <td className="py-2 px-4">
+                        <div>
+                          <div className="font-medium">{job.requester.name || job.requester.email}</div>
+                          {job.requester.position && (
+                            <div className="text-xs text-gray-500">{job.requester.position}</div>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2 px-4">{job.purpose || '-'}</td>
                       <td className="py-2 px-4">{job.startLocation || '-'}</td>
                       <td className="py-2 px-4">{job.endLocation || '-'}</td>

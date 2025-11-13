@@ -42,6 +42,135 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
+const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  const getMapUrl = () => {
+    if (!booking.endLocation) return null;
+    
+    if (googleMapsApiKey) {
+      if (booking.startLocation) {
+        const origin = encodeURIComponent(booking.startLocation);
+        const destination = encodeURIComponent(booking.endLocation);
+        return `https://www.google.com/maps/embed/v1/directions?key=${googleMapsApiKey}&origin=${origin}&destination=${destination}&zoom=12`;
+      } else {
+        const destination = encodeURIComponent(booking.endLocation);
+        return `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${destination}&zoom=12`;
+      }
+    }
+    return null;
+  };
+
+  const mapUrl = getMapUrl();
+
+  return (
+    <div className="border border-indigo-200 rounded-lg p-6 bg-gradient-to-br from-indigo-50/50 to-white">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-lg font-semibold text-[#004c80]">Booking #{booking.id.substring(0, 8)}</h3>
+            <StatusBadge status={booking.status} />
+          </div>
+          <p className="text-gray-600">{booking.purpose || '-'}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Map Section */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-[#004c80]">แผนที่เส้นทาง</h4>
+          {mapUrl ? (
+            <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
+              <iframe
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                src={mapUrl}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-80 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-300 text-gray-600 grid place-items-center">
+                  🗺️
+                </div>
+                <p className="text-gray-600 text-sm">
+                  {!googleMapsApiKey
+                    ? 'กรุณาตั้งค่า NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
+                    : !booking.endLocation
+                    ? 'ข้อมูลตำแหน่งปลายทางไม่ครบถ้วน'
+                    : 'ไม่สามารถแสดงแผนที่ได้'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Details Section */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-[#004c80]">รายละเอียด</h4>
+          
+          {/* Route Info */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-2">
+            {booking.startLocation && (
+              <p className="text-sm">
+                <span className="font-medium text-gray-700">จุดเริ่มต้น:</span>{' '}
+                <span className="text-gray-900">{booking.startLocation}</span>
+              </p>
+            )}
+            <p className="text-sm">
+              <span className="font-medium text-gray-700">ปลายทาง:</span>{' '}
+              <span className="text-gray-900">{booking.endLocation || '-'}</span>
+            </p>
+          </div>
+
+          {/* Driver Info */}
+          {booking.driver && (
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h5 className="font-medium text-gray-700 mb-2">คนขับ</h5>
+              <p className="text-sm text-gray-900">{booking.driver.name || booking.driver.email}</p>
+              <p className="text-xs text-gray-500">{booking.driver.email}</p>
+            </div>
+          )}
+
+          {/* Vehicle Info */}
+          {booking.vehicle && (
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h5 className="font-medium text-gray-700 mb-2">ยานพาหนะ</h5>
+              <p className="text-sm font-semibold text-gray-900">{booking.vehicle.licensePlate}</p>
+              <p className="text-xs text-gray-600">
+                {booking.vehicle.brand} {booking.vehicle.model}
+                {booking.vehicle.type && ` (${booking.vehicle.type})`}
+              </p>
+            </div>
+          )}
+
+          {/* Time Info */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-1">
+            <p className="text-sm">
+              <span className="font-medium text-gray-700">เวลาเริ่ม:</span>{' '}
+              <span className="text-gray-900">
+                {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
+              </span>
+            </p>
+            {booking.endTime && (
+              <p className="text-sm">
+                <span className="font-medium text-gray-700">เวลาสิ้นสุด:</span>{' '}
+                <span className="text-gray-900">
+                  {new Date(booking.endTime).toLocaleString('th-TH')}
+                </span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ExecutiveMyBookings() {
   const { status } = useSession();
   const router = useRouter();
@@ -75,10 +204,11 @@ export default function ExecutiveMyBookings() {
     };
   }, []);
 
-  const { activeBookings, completedBookings } = useMemo(() => {
-    const active = bookings.filter(b => b.status !== 'COMPLETED');
+  const { activeBookings, completedBookings, inProgressBookings } = useMemo(() => {
+    const active = bookings.filter(b => b.status !== 'COMPLETED' && b.status !== 'IN_PROGRESS');
     const completed = bookings.filter(b => b.status === 'COMPLETED');
-    return { activeBookings: active, completedBookings: completed };
+    const inProgress = bookings.filter(b => b.status === 'IN_PROGRESS');
+    return { activeBookings: active, completedBookings: completed, inProgressBookings: inProgress };
   }, [bookings]);
 
   const filtered = useMemo(() => {
@@ -125,6 +255,18 @@ export default function ExecutiveMyBookings() {
           <button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
         </div>
 
+        {/* In Progress Bookings with Map */}
+        {!isLoading && inProgressBookings.length > 0 && (
+          <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
+            <h2 className="text-xl font-bold text-[#004c80] mb-4">งานที่กำลังดำเนินการ</h2>
+            <div className="space-y-6">
+              {inProgressBookings.map((booking) => (
+                <InProgressBookingCard key={booking.id} booking={booking} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Active Bookings */}
         <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
           <div className="overflow-x-auto">
@@ -153,7 +295,7 @@ export default function ExecutiveMyBookings() {
                       <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                     </tr>
                   ))
-                ) : (
+                ) : bookings.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10">
                       <div className="mx-auto max-w-md text-center">
@@ -162,6 +304,12 @@ export default function ExecutiveMyBookings() {
                         <p className="text-sm text-gray-500 mt-1">เริ่มต้นสร้างคำขอแรกของคุณได้เลย</p>
                         <button onClick={() => setIsModalOpen(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
                       </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-gray-500 text-sm">
+                      {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
                     </td>
                   </tr>
                 )}

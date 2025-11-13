@@ -301,7 +301,7 @@ export default function RequesterMyBookings() {
                       <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                     </tr>
                   ))
-                ) : (
+                ) : bookings.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10">
                       <div className="mx-auto max-w-md text-center">
@@ -310,6 +310,12 @@ export default function RequesterMyBookings() {
                         <p className="text-sm text-gray-500 mt-1">เริ่มต้นสร้างคำขอแรกของคุณได้เลย</p>
                         <button onClick={() => setIsModalOpen(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
                       </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-gray-500 text-sm">
+                      {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
                     </td>
                   </tr>
                 )}

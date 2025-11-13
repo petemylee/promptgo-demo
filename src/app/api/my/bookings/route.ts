@@ -13,7 +13,14 @@ export async function GET() {
     const bookings = await prisma.booking.findMany({
       where: { requesterId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      include: {
+      select: {
+        id: true,
+        purpose: true,
+        endLocation: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        createdAt: true,
         driver: {
           select: {
             id: true,
@@ -33,7 +40,13 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(bookings);
+    // Map bookings to include startLocation as null (since it's not in schema)
+    const bookingsWithStartLocation = bookings.map(booking => ({
+      ...booking,
+      startLocation: null, // startLocation was removed from schema
+    }));
+
+    return NextResponse.json(bookingsWithStartLocation);
   } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
