@@ -235,11 +235,6 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
   };
 
   const handleConfirm = async () => {
-    if (!signatureFile) {
-      setError('กรุณาอัปโหลดลายเซ็นก่อนยืนยัน');
-      return;
-    }
-
     if (!selectedVehicleId) {
       setError('กรุณาเลือกรถยนต์');
       return;
@@ -254,20 +249,29 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
     setError('');
 
     try {
-      // First upload signature
-      const signatureFormData = new FormData();
-      signatureFormData.append('signature', signatureFile);
+      // Try to upload signature (optional - continue even if it fails)
+      let signatureImageUrl: string | null = null;
+      
+      if (signatureFile) {
+        try {
+          const signatureFormData = new FormData();
+          signatureFormData.append('signature', signatureFile);
 
-      const signatureResponse = await fetch('/api/upload/signature', {
-        method: 'POST',
-        body: signatureFormData,
-      });
+          const signatureResponse = await fetch('/api/upload/signature', {
+            method: 'POST',
+            body: signatureFormData,
+          });
 
-      if (!signatureResponse.ok) {
-        throw new Error('ไม่สามารถอัปโหลดลายเซ็นได้');
+          if (signatureResponse.ok) {
+            const signatureData = await signatureResponse.json();
+            signatureImageUrl = signatureData.url;
+          } else {
+            console.warn('Signature upload failed, continuing without signature');
+          }
+        } catch (error) {
+          console.warn('Signature upload error, continuing without signature:', error);
+        }
       }
-
-      const signatureData = await signatureResponse.json();
 
       // Then confirm booking
       const confirmResponse = await fetch(`/api/bookings/${bookingId}`, {
@@ -278,7 +282,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
         body: JSON.stringify({
           status: 'CONFIRMED',
           executiveConfirmerId: session?.user?.id,
-          signatureImageUrl: signatureData.url,
+          signatureImageUrl: signatureImageUrl,
           vehicleId: selectedVehicleId,
           driverId: selectedDriverId,
         }),
@@ -546,7 +550,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={!signatureFile || !selectedVehicleId || !selectedDriverId || isConfirming}
+                disabled={!selectedVehicleId || !selectedDriverId || isConfirming}
                 className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isConfirming ? (
