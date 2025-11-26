@@ -29,9 +29,22 @@ export async function PATCH(
   }
 
   try {
-    // ดึงข้อมูล booking
+    // ดึงข้อมูล endMileage จาก request body
+    const body = await req.json();
+    const { endMileage } = body;
+
+    // ตรวจสอบว่า endMileage ถูกส่งมาหรือไม่
+    if (!endMileage || typeof endMileage !== 'number' || endMileage < 0) {
+      return NextResponse.json(
+        { error: 'endMileage is required and must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    // ดึงข้อมูล booking พร้อม vehicle
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
+      include: { vehicle: true },
     });
 
     if (!booking) {
@@ -51,16 +64,43 @@ export async function PATCH(
       );
     }
 
-    // อัปเดต booking status เป็น COMPLETED
+    // ตรวจสอบว่า endMileage ต้องมากกว่าหรือเท่ากับ startMileage
+    if (booking.startMileage !== null && endMileage < booking.startMileage) {
+      return NextResponse.json(
+        { error: 'End mileage must be greater than or equal to start mileage' },
+        { status: 400 }
+      );
+    }
+
+    // คำนวณระยะทางที่ใช้ไป
+    const distanceTraveled = booking.startMileage !== null 
+      ? endMileage - booking.startMileage 
+      : null;
+
+    // อัปเดต booking status เป็น COMPLETED และบันทึกเลขไมล์หลังเดินทาง
     const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: 'COMPLETED' as BookingStatus,
         endTime: new Date(),
+        endMileage: endMileage,
       },
     });
 
-    return NextResponse.json(updatedBooking);
+    // อัปเดตเลขไมล์ปัจจุบันของ vehicle
+    if (booking.vehicleId && booking.vehicle) {
+      await prisma.vehicle.update({
+        where: { id: booking.vehicleId },
+        data: {
+          currentMileage: endMileage,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      ...updatedBooking,
+      distanceTraveled,
+    });
   } catch (error) {
     console.error('Error ending job:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

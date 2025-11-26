@@ -57,7 +57,37 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       const method = isEditMode ? 'PATCH' : 'POST';
       
       // <-- แก้ไข: ใช้ const และกำหนด Type ให้ body
-      const body: { name: string; email: string; role: Role; position: string; password?: string } = { name, email, role, position };
+      // ตรวจสอบว่าทุกช่องต้องกรอก
+      if (!name || name.trim() === '') {
+        setError('กรุณากรอกชื่อ');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!email || email.trim() === '') {
+        setError('กรุณากรอกอีเมล');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!position || position.trim() === '') {
+        setError('กรุณากรอกตำแหน่ง');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!isEditMode && (!password || password.trim() === '')) {
+        setError('กรุณากรอกรหัสผ่าน');
+        setIsLoading(false);
+        return;
+      }
+      
+      const body: { name: string; email: string; role: Role; position: string; password?: string } = { 
+        name: name.trim(), 
+        email: email.trim(), 
+        role, 
+        position: position.trim() 
+      };
       if (!isEditMode) {
         body.password = password;
       }
@@ -95,21 +125,21 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Form fields */}
           <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ <span className="text-red-500">*</span></label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง</label>
-            <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
+            <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง <span className="text-red-500">*</span></label>
+            <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           
           {!isEditMode && (
             <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Password <span className="text-red-500">*</span></label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
             </div>
           )}

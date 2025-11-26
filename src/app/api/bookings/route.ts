@@ -98,7 +98,7 @@ export async function GET(req: Request) {
         // สำหรับ Admin dashboard: ส่งข้อมูล dashboard format
       const pendingBookings = await prisma.booking.findMany({
         where: { status: 'PENDING' },
-        include: { requester: { select: { name: true } } },
+        include: { requester: { select: { name: true, position: true } } },
         orderBy: { createdAt: 'asc' },
       });
 

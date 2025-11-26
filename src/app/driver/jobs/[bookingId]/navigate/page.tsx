@@ -11,6 +11,8 @@ interface Booking {
   startTime: string | null;
   endTime: string | null;
   status: string;
+  startMileage: number | null;
+  endMileage: number | null;
   createdAt: string;
   requester: {
     name: string | null;
@@ -22,6 +24,7 @@ interface Booking {
     brand: string | null;
     model: string | null;
     type: string | null;
+    currentMileage: number | null;
   } | null;
 }
 
@@ -34,6 +37,8 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
   const [error, setError] = useState('');
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState('');
+  const [endMileage, setEndMileage] = useState<string>('');
+  const [showMileageModal, setShowMileageModal] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -78,12 +83,27 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
   const handleEndJob = async () => {
     if (!booking) return;
 
+    // ตรวจสอบว่ากรอกเลขไมล์หรือไม่
+    const mileageValue = parseInt(endMileage);
+    if (!endMileage || isNaN(mileageValue) || mileageValue < 0) {
+      setError('กรุณากรอกเลขไมล์ปัจจุบัน');
+      return;
+    }
+
+    // ตรวจสอบว่า endMileage ต้องมากกว่าหรือเท่ากับ startMileage
+    if (booking.startMileage !== null && mileageValue < booking.startMileage) {
+      setError(`เลขไมล์หลังเดินทางต้องมากกว่าหรือเท่ากับเลขไมล์ก่อนออกเดินทาง (${booking.startMileage})`);
+      return;
+    }
+
     setIsEnding(true);
     setError('');
 
     try {
       const response = await fetch(`/api/driver/jobs/${bookingId}/end`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endMileage: mileageValue }),
       });
 
       if (!response.ok) {
@@ -91,12 +111,20 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
         throw new Error(errorData.error || 'ไม่สามารถสิ้นสุดงานได้');
       }
 
+      const result = await response.json();
+      
+      // แสดงผลระยะทางที่ใช้ไป
+      if (result.distanceTraveled !== null) {
+        alert(`สิ้นสุดงานสำเร็จ!\nระยะทางที่ใช้ไป: ${result.distanceTraveled} กิโลเมตร`);
+      } else {
+        alert('สิ้นสุดงานสำเร็จ!');
+      }
+
       // Redirect to dashboard
       router.push('/driver?completed=true');
     } catch (error) {
       console.error('Error ending job:', error);
       setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสิ้นสุดงาน');
-    } finally {
       setIsEnding(false);
     }
   };
@@ -268,6 +296,11 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
                       <p className="text-sm text-gray-600">
                         {booking.vehicle.brand} {booking.vehicle.model}
                       </p>
+                      {booking.startMileage !== null && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">เลขไมล์ก่อนออกเดินทาง:</span> {booking.startMileage.toLocaleString()} กม.
+                        </p>
+                      )}
                     </>
                   ) : (
                     <p className="text-gray-500">ยังไม่ได้กำหนดรถ</p>
@@ -303,6 +336,28 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
               </div>
             </div>
 
+            {/* Mileage Input */}
+            <div>
+              <h3 className="font-semibold text-[#004c80] mb-2">เลขไมล์หลังเดินทาง <span className="text-red-500">*</span></h3>
+              <input
+                type="number"
+                value={endMileage}
+                onChange={(e) => {
+                  setEndMileage(e.target.value);
+                  setError('');
+                }}
+                placeholder="กรอกเลขไมล์ปัจจุบัน"
+                min={booking.startMileage || 0}
+                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                required
+              />
+              {booking.startMileage !== null && (
+                <p className="text-xs text-gray-500 mt-1">
+                  เลขไมล์ก่อนออกเดินทาง: {booking.startMileage.toLocaleString()} กม.
+                </p>
+              )}
+            </div>
+
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 p-4 rounded-lg">
@@ -313,7 +368,7 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
             {/* End Job Button */}
             <button
               onClick={handleEndJob}
-              disabled={isEnding}
+              disabled={isEnding || !endMileage}
               className="w-full px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {isEnding ? (

@@ -9,6 +9,7 @@ interface Vehicle {
   model: string | null;
   type: string | null;
   capacity: number | null;
+  currentMileage: number | null;
 }
 
 // Props สำหรับ Component
@@ -25,6 +26,7 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
   const [model, setModel] = useState('');
   const [type, setType] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [currentMileage, setCurrentMileage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -38,6 +40,7 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setModel(initialData.model || '');
       setType(initialData.type || '');
       setCapacity(initialData.capacity?.toString() || '');
+      setCurrentMileage(initialData.currentMileage?.toString() || '');
     } else {
       // Reset ฟอร์มเมื่อเป็นโหมดเพิ่ม
       setLicensePlate('');
@@ -45,6 +48,7 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setModel('');
       setType('');
       setCapacity('');
+      setCurrentMileage('');
     }
   }, [initialData, isEditMode]);
 
@@ -65,7 +69,8 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
         brand, 
         model, 
         type, 
-        capacity: capacity ? parseInt(capacity, 10) : null 
+        capacity: capacity ? parseInt(capacity, 10) : null,
+        currentMileage: currentMileage ? parseInt(currentMileage, 10) : null
       };
 
       const response = await fetch(url, {
@@ -114,9 +119,13 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
             <label className="block mb-2 text-sm font-medium text-gray-700">Type</label>
             <input type="text" value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
           </div>
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">ความจุเครื่องยนต์ (CC)</label>
             <input type="number" step="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 1800" />
+          </div>
+          <div className="mb-6">
+            <label className="block mb-2 text-sm font-medium text-gray-700">เลขไมล์ปัจจุบัน (กม.)</label>
+            <input type="number" step="1" min="0" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 50000" />
           </div>
 
           {error && <p className="text-red-500 text-center mb-2">{error}</p>}

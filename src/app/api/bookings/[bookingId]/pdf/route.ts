@@ -213,11 +213,49 @@ export async function POST(
       });
     }
 
+    // ข้อมูลเลขไมล์
+    let mileageY = height - 360;
+    if (booking.startMileage !== null) {
+      page.drawText(`เลขไมล์ก่อนออกเดินทาง: ${booking.startMileage.toLocaleString()} กม.`, {
+        x: 100,
+        y: mileageY,
+        size: 12,
+        font: font,
+        color: textColor,
+      });
+      mileageY -= 20;
+    }
+    
+    if (booking.endMileage !== null) {
+      page.drawText(`เลขไมล์หลังเดินทาง: ${booking.endMileage.toLocaleString()} กม.`, {
+        x: 100,
+        y: mileageY,
+        size: 12,
+        font: font,
+        color: textColor,
+      });
+      mileageY -= 20;
+      
+      // คำนวณระยะทางที่ใช้ไป
+      if (booking.startMileage !== null) {
+        const distanceTraveled = booking.endMileage - booking.startMileage;
+        page.drawText(`ระยะทางที่ใช้ไป: ${distanceTraveled.toLocaleString()} กม.`, {
+          x: 100,
+          y: mileageY,
+          size: 12,
+          font: boldFont,
+          color: textColor,
+        });
+        mileageY -= 20;
+      }
+    }
+
     // ข้อมูลการอนุมัติ
+    const approvalY = mileageY - 20;
     if (booking.adminApprover) {
       page.drawText(`อนุมัติโดย: ${booking.adminApprover.name}`, {
         x: 100,
-        y: height - 380,
+        y: approvalY,
         size: 12,
         font: font,
         color: textColor,
@@ -227,7 +265,7 @@ export async function POST(
     if (booking.executiveConfirmer) {
       page.drawText(`ยืนยันโดย: ${booking.executiveConfirmer.name}`, {
         x: 100,
-        y: height - 400,
+        y: approvalY - 20,
         size: 12,
         font: font,
         color: textColor,

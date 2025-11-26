@@ -8,6 +8,7 @@ interface Booking {
   startTime: string | null;
   requester: {
     name: string | null;
+    position: string | null;
   };
 }
 
@@ -213,6 +214,7 @@ export default function AdminDashboard() {
               <tr className="border-b bg-[#004c80]/5">
                 <th className="text-left py-2 px-4 text-[#004c80]">Booking ID</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ผู้ขอใช้</th>
+                <th className="text-left py-2 px-4 text-[#004c80]">ตำแหน่ง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
@@ -224,6 +226,7 @@ export default function AdminDashboard() {
                   <tr key={booking.id} className="border-b hover:bg-[#0076c3]/5">
                     <td className="py-2 px-4">{booking.id.substring(0, 8)}...</td>
                     <td className="py-2 px-4">{booking.requester.name}</td>
+                    <td className="py-2 px-4">{booking.requester.position || '-'}</td>
                     <td className="py-2 px-4">{booking.endLocation}</td>
                     <td className="py-2 px-4">
                       {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
@@ -246,7 +249,7 @@ export default function AdminDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-4 px-4 text-center text-gray-500">
+                  <td colSpan={6} className="py-4 px-4 text-center text-gray-500">
                     ไม่มีรายการรออนุมัติ
                   </td>
                 </tr>

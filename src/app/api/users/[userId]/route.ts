@@ -56,9 +56,14 @@ export async function PATCH(
     const body = await req.json();
     const { name, email, role, position } = body;
 
+    // ตรวจสอบว่าตำแหน่งต้องกรอก
+    if (!position || position.trim() === '') {
+      return NextResponse.json({ error: 'Position is required' }, { status: 400 });
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { name, email, role, position: position || null },
+      data: { name, email, role, position: position.trim() },
     });
 
     return NextResponse.json(updatedUser, { status: 200 });

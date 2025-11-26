@@ -51,12 +51,24 @@ export async function PATCH(
       );
     }
 
-    // อัปเดต booking status เป็น IN_PROGRESS
+    // ดึงข้อมูล vehicle เพื่อบันทึกเลขไมล์ก่อนออกเดินทาง
+    let startMileage: number | null = null;
+    if (booking.vehicleId) {
+      const vehicle = await prisma.vehicle.findUnique({
+        where: { id: booking.vehicleId },
+      });
+      if (vehicle && vehicle.currentMileage !== null) {
+        startMileage = vehicle.currentMileage;
+      }
+    }
+
+    // อัปเดต booking status เป็น IN_PROGRESS และบันทึกเลขไมล์ก่อนออกเดินทาง
     const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: 'IN_PROGRESS' as BookingStatus,
         startTime: booking.startTime || new Date(),
+        startMileage: startMileage,
       },
     });
 

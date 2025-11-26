@@ -167,6 +167,8 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -183,6 +185,10 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
       // Set initial driver selection if driver exists
       if (data.driver && data.driver.id) {
         setSelectedDriverId(data.driver.id);
+      }
+      // Set PDF URL if exists
+      if (data.generatedFormUrl) {
+        setPdfUrl(data.generatedFormUrl);
       }
     } catch (error) {
       console.error('Error fetching booking:', error);
@@ -292,19 +298,8 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
         throw new Error('ไม่สามารถยืนยันการเดินทางได้');
       }
 
-      // Generate PDF after confirmation
-      try {
-        const pdfResponse = await fetch(`/api/bookings/${bookingId}/pdf`, {
-          method: 'POST',
-        });
-
-        if (!pdfResponse.ok) {
-          console.error('PDF generation failed, but booking was confirmed');
-        }
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        // Continue even if PDF generation fails
-      }
+      // Refresh booking data
+      await fetchBooking();
 
       // Redirect to dashboard
       router.push('/executive?confirmed=true');
@@ -313,6 +308,40 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
       setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยืนยัน');
     } finally {
       setIsConfirming(false);
+    }
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!booking || booking.status !== 'CONFIRMED') {
+      setError('สามารถสร้าง PDF ได้เฉพาะการเดินทางที่ยืนยันแล้ว');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    setError('');
+
+    try {
+      const pdfResponse = await fetch(`/api/bookings/${bookingId}/pdf`, {
+        method: 'POST',
+      });
+
+      if (!pdfResponse.ok) {
+        const errorData = await pdfResponse.json();
+        throw new Error(errorData.error || 'ไม่สามารถสร้าง PDF ได้');
+      }
+
+      const pdfData = await pdfResponse.json();
+      setPdfUrl(pdfData.url);
+      
+      // Refresh booking data to get updated PDF URL
+      await fetchBooking();
+      
+      alert('สร้าง PDF สำเร็จ!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสร้าง PDF');
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -540,6 +569,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             )}
 
             {/* Action Buttons */}
+            {booking.status === 'APPROVED' ? (
             <div className="flex gap-4">
               <button
                 onClick={() => router.back()}
@@ -566,6 +596,66 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                 )}
               </button>
             </div>
+            ) : booking.status === 'CONFIRMED' ? (
+              <div className="space-y-4">
+                {/* PDF Generation Section */}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-green-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-green-900">ยืนยันการเดินทางแล้ว</h4>
+                      <p className="text-sm text-green-700 mt-1">
+                        คุณสามารถสร้างเอกสาร PDF ได้ทันที
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {pdfUrl ? (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm text-blue-700 mb-2">เอกสาร PDF ถูกสร้างแล้ว</p>
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      เปิด PDF
+                    </a>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGeneratePDF}
+                    disabled={isGeneratingPDF}
+                    className="w-full px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {isGeneratingPDF ? (
+                      <div className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        กำลังสร้าง PDF...
+                      </div>
+                    ) : (
+                      'สร้างเอกสาร PDF'
+                    )}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => router.back()}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  กลับ
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
