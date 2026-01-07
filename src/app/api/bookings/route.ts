@@ -14,10 +14,10 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime } = body;
+    const { endLocation, purpose, startTime, endTime } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
-    if (!endLocation || !purpose || !startTime) {
+    if (!endLocation || !purpose || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         endLocation,
         purpose,
         startTime: new Date(startTime),
+        endTime: new Date(endTime),
         status: 'PENDING', // กำหนดสถานะเริ่มต้น
         requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
       },

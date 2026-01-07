@@ -194,7 +194,8 @@ export default function ExecutiveDashboard() {
               <tr className="border-b bg-[#004c80]/5">
                 <th className="text-left py-3 px-4 text-[#004c80] font-medium">ผู้ขอใช้</th>
                 <th className="text-left py-3 px-4 text-[#004c80] font-medium">จุดหมาย</th>
-                <th className="text-left py-3 px-4 text-[#004c80] font-medium">วันที่</th>
+                <th className="text-left py-3 px-4 text-[#004c80] font-medium">วันเวลาเริ่ม</th>
+                <th className="text-left py-3 px-4 text-[#004c80] font-medium">วันเวลาสิ้นสุด</th>
                 <th className="text-left py-3 px-4 text-[#004c80] font-medium">สถานะ</th>
                 <th className="text-left py-3 px-4 text-[#004c80] font-medium">การดำเนินการ</th>
               </tr>
@@ -216,6 +217,9 @@ export default function ExecutiveDashboard() {
                   </td>
                   <td className="py-3 px-4 text-sm">
                     {booking.startTime ? formatDate(booking.startTime) : '-'}
+                  </td>
+                  <td className="py-3 px-4 text-sm">
+                    {booking.endTime ? formatDate(booking.endTime) : '-'}
                   </td>
                   <td className="py-3 px-4">
                     {getStatusBadge(booking.status)}

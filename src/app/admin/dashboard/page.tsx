@@ -6,6 +6,7 @@ interface Booking {
   id: string;
   endLocation: string | null;
   startTime: string | null;
+  endTime: string | null;
   requester: {
     name: string | null;
     position: string | null;
@@ -216,7 +217,8 @@ export default function AdminDashboard() {
                 <th className="text-left py-2 px-4 text-[#004c80]">ผู้ขอใช้</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ตำแหน่ง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
-                <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
+                <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
+                <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
               </tr>
             </thead>
@@ -230,6 +232,9 @@ export default function AdminDashboard() {
                     <td className="py-2 px-4">{booking.endLocation}</td>
                     <td className="py-2 px-4">
                       {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
+                    </td>
+                    <td className="py-2 px-4">
+                      {booking.endTime ? new Date(booking.endTime).toLocaleString('th-TH') : '-'}
                     </td>
                     <td className="py-2 px-4">
                       <div className="flex items-center gap-2">
@@ -249,7 +254,7 @@ export default function AdminDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-4 px-4 text-center text-gray-500">
+                  <td colSpan={7} className="py-4 px-4 text-center text-gray-500">
                     ไม่มีรายการรออนุมัติ
                   </td>
                 </tr>

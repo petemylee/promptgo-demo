@@ -104,7 +104,8 @@ export default function DriverDashboard() {
                     <th className="text-left py-2 px-4 text-[#004c80]">จุดเริ่มต้น</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">รถยนต์</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">จัดการ</th>
                   </tr>
@@ -138,6 +139,9 @@ export default function DriverDashboard() {
                       </td>
                       <td className="py-2 px-4">
                         {job.startTime ? new Date(job.startTime).toLocaleString('th-TH') : '-'}
+                      </td>
+                      <td className="py-2 px-4">
+                        {job.endTime ? new Date(job.endTime).toLocaleString('th-TH') : '-'}
                       </td>
                       <td className="py-2 px-4">
                         <StatusBadge status={job.status} />

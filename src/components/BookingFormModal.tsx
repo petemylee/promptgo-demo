@@ -11,6 +11,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,6 +20,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
       setDestination('');
       setPurpose('');
       setStartTime('');
+      setEndTime('');
       setError('');
       setIsLoading(false);
     }
@@ -39,6 +41,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
           endLocation: destination,
           purpose,
           startTime: startTime ? new Date(startTime) : null,
+          endTime: endTime ? new Date(endTime) : null,
         }),
       });
       if (!res.ok) {
@@ -67,6 +70,10 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วันเวลาออกเดินทาง*</label>
             <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">วันที่สิ้นสุด*</label>
+            <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>

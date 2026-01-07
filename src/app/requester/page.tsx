@@ -282,14 +282,15 @@ export default function RequesterMyBookings() {
                   <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
+                    <td colSpan={6} className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((b) => (
@@ -298,6 +299,7 @@ export default function RequesterMyBookings() {
                       <td className="py-2 px-4">{b.purpose || '-'}</td>
                       <td className="py-2 px-4">{b.endLocation || '-'}</td>
                       <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
+                      <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                       <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                     </tr>
                   ))
@@ -314,7 +316,7 @@ export default function RequesterMyBookings() {
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-4 text-center text-gray-500 text-sm">
+                    <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
                       {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
                     </td>
                   </tr>
@@ -335,7 +337,8 @@ export default function RequesterMyBookings() {
                     <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลา</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
                   </tr>
                 </thead>
@@ -347,12 +350,13 @@ export default function RequesterMyBookings() {
                         <td className="py-2 px-4">{b.purpose || '-'}</td>
                         <td className="py-2 px-4">{b.endLocation || '-'}</td>
                         <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
+                        <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                         <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-gray-500 text-sm">
+                      <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
                         ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
                       </td>
                     </tr>
