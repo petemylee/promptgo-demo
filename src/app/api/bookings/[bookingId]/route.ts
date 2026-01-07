@@ -82,10 +82,35 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { status, executiveConfirmerId, signatureImageUrl, vehicleId, driverId } = body;
+    const { status, executiveConfirmerId, signatureImageUrl, vehicleId, driverId, requesterSignatureUrl } = body;
 
     // ตรวจสอบสิทธิ์ตาม role
-    if (session.user.role === 'Admin') {
+    // Requester สามารถอัปเดตลายเซ็นได้
+    if (session.user.role === 'Requester' && requesterSignatureUrl !== undefined) {
+      // ตรวจสอบว่า booking เป็นของ requester คนนี้หรือไม่
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: { requesterId: true },
+      });
+
+      if (!booking) {
+        return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      }
+
+      if (booking.requesterId !== session.user.id) {
+        return NextResponse.json({ error: 'Unauthorized to update this booking' }, { status: 403 });
+      }
+
+      // อัปเดตเฉพาะลายเซ็น
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          requesterSignatureUrl: requesterSignatureUrl || null,
+        },
+      });
+
+      return NextResponse.json(updatedBooking);
+    } else if (session.user.role === 'Admin') {
       // Admin สามารถอนุมัติเบื้องต้นได้
       if (status !== 'APPROVED' && status !== 'REJECTED') {
         return NextResponse.json({ error: 'Invalid status for Admin' }, { status: 400 });

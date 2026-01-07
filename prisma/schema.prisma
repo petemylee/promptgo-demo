@@ -67,6 +67,7 @@ model Booking {
   endTime             DateTime?
   status              BookingStatus  @default(PENDING)
   generatedFormUrl    String?
+  requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ
   startMileage        Int?           // เลขไมล์ก่อนออกเดินทาง
   endMileage          Int?           // เลขไมล์หลังเดินทาง
   createdAt           DateTime       @default(now())
