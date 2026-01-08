@@ -65,6 +65,7 @@ model Booking {
   endLocation         String?
   startTime           DateTime?
   endTime             DateTime?
+  passengerCount      Int?
   status              BookingStatus  @default(PENDING)
   generatedFormUrl    String?
   requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ

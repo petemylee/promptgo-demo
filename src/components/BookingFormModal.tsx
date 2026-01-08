@@ -13,6 +13,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [passengerCount, setPassengerCount] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -25,6 +26,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
       setPurpose('');
       setStartTime('');
       setEndTime('');
+      setPassengerCount('');
       setError('');
       setIsLoading(false);
       setSignatureFile(null);
@@ -134,6 +136,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
           purpose,
           startTime: startTime ? new Date(startTime) : null,
           endTime: endTime ? new Date(endTime) : null,
+          passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           requesterSignatureUrl,
         }),
       });
@@ -175,6 +178,18 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
             <textarea rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
+            <input 
+              type="number" 
+              min="1" 
+              value={passengerCount} 
+              onChange={(e) => setPassengerCount(e.target.value)} 
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
+              required 
+              placeholder="ระบุจำนวนคนนั่ง"
+            />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">ลายเซ็นผู้ขอใช้รถ</label>

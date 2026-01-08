@@ -14,11 +14,17 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, requesterSignatureUrl } = body;
+    const { endLocation, purpose, startTime, endTime, passengerCount, requesterSignatureUrl } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!endLocation || !purpose || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // ตรวจสอบ passengerCount
+    const passengerCountNum = passengerCount ? parseInt(passengerCount, 10) : null;
+    if (passengerCountNum === null || isNaN(passengerCountNum) || passengerCountNum < 1) {
+      return NextResponse.json({ error: 'Passenger count must be at least 1' }, { status: 400 });
     }
 
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
@@ -28,6 +34,7 @@ export async function POST(req: Request) {
         purpose,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
+        passengerCount: passengerCountNum,
         status: 'PENDING', // กำหนดสถานะเริ่มต้น
         requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
         requesterSignatureUrl: requesterSignatureUrl || null, // ลายเซ็นผู้ขอใช้รถ (ถ้ามี)
