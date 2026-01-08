@@ -266,12 +266,20 @@ export default function AdminHistoryPage() {
                       )}
                     </div>
 
-                    {/* Status Badge */}
+                    {/* Status Badge & Actions */}
                     <div className="flex flex-col items-end gap-2">
                       <StatusBadge status={booking.status} />
                       <p className="text-xs text-gray-500">
                         อนุมัติเมื่อ: {formatDate(booking.updatedAt)}
                       </p>
+                      {/* PDF Print Button */}
+                      <button
+                        onClick={() => window.open(`/api/bookings/${booking.id}/pdf`, '_blank')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-medium transition-colors flex items-center gap-1"
+                        title="พิมพ์ใบขอรถ"
+                      >
+                        🖨️ พิมพ์ใบขอรถ
+                      </button>
                     </div>
                   </div>
                 </div>

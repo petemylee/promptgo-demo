@@ -182,7 +182,7 @@ export default function ExecutiveHistoryPage() {
                     )}
                   </div>
 
-                  {/* Status Badge */}
+                  {/* Status Badge & Actions */}
                   <div className="flex flex-col items-end gap-2">
                     <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-green-50 text-green-700 ring-1 ring-black/5">
                       ยืนยันแล้ว
@@ -190,6 +190,14 @@ export default function ExecutiveHistoryPage() {
                     <p className="text-xs text-gray-500">
                       ยืนยันเมื่อ: {formatDate(booking.createdAt)}
                     </p>
+                    {/* PDF Print Button */}
+                    <button
+                      onClick={() => window.open(`/api/bookings/${booking.id}/pdf`, '_blank')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-medium transition-colors flex items-center gap-1"
+                      title="พิมพ์ใบขอรถ"
+                    >
+                      🖨️ พิมพ์ใบขอรถ
+                    </button>
                   </div>
                 </div>
               </div>

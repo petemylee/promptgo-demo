@@ -3,9 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+
+const thaiMonths = [
+  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+];
 
 export async function POST(
   request: NextRequest,
@@ -326,5 +332,176 @@ export async function POST(
   } catch (error) {
     console.error('Error generating PDF:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// GET: สร้าง PDF จาก template ที่มี form fields (ตามที่ Gemini แนะนำ)
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ bookingId: string }> }
+) {
+  try {
+    const { bookingId } = await context.params;
+    const session = await getServerSession(authOptions);
+
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // 1. ดึงข้อมูล Booking
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        requester: true,
+        vehicle: true,
+        driver: true,
+        executiveConfirmer: true, // ผู้บริหารที่จะเซ็นอนุมัติ
+      },
+    });
+
+    if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+
+    // 2. เตรียมไฟล์
+    // ลองหาไฟล์ template ทั้งสองชื่อ (car-request-template.pdf หรือ car-request-template.pdf.pdf)
+    let templatePath = join(process.cwd(), 'public/templates/car-request-template.pdf');
+    if (!existsSync(templatePath)) {
+      // ถ้าไม่เจอ ลองหาไฟล์ที่ชื่อ .pdf.pdf
+      templatePath = join(process.cwd(), 'public/templates/car-request-template.pdf.pdf');
+      if (!existsSync(templatePath)) {
+        return NextResponse.json({ error: 'Template file missing' }, { status: 500 });
+      }
+    }
+
+    const fontPath = join(process.cwd(), 'public/fonts/THSarabunNew.ttf');
+
+    if (!existsSync(fontPath)) {
+      return NextResponse.json({ error: 'Font file missing' }, { status: 500 });
+    }
+
+    // 3. โหลด PDF
+    const pdfDoc = await PDFDocument.load(readFileSync(templatePath));
+    pdfDoc.registerFontkit(fontkit);
+    const thaiFont = await pdfDoc.embedFont(readFileSync(fontPath));
+    const form = pdfDoc.getForm();
+
+    // Helper กรอกข้อมูล
+    // หมายเหตุ: pdf-lib v1.17.1 สำหรับ TextField ที่โหลดมาจาก template PDF
+    // ไม่รองรับการเปลี่ยน fontSize โดยตรง ต้องแก้ไขที่ template PDF เอง
+    // หรือใช้วิธีสร้าง form field ใหม่ แต่จะต้องระบุตำแหน่ง
+    const fill = (field: string, text: string) => {
+      try {
+        const f = form.getTextField(field);
+        f.setText(text);
+        // อัปเดต appearance ด้วยฟอนต์ภาษาไทย
+        // ขนาดฟอนต์จะใช้ค่าที่ตั้งไว้ใน template PDF
+        f.updateAppearances(thaiFont);
+      } catch (e) { 
+        console.warn(`Field ${field} missing:`, e); 
+      }
+    };
+
+    // 4. แปลงข้อมูลวันที่
+    const reqDate = new Date(booking.createdAt);
+    const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
+    const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
+
+    // 5. เริ่มกรอกข้อมูล (Mapping)
+    // หมายเหตุ: ขนาดฟอนต์ถูกกำหนดไว้ใน template PDF แล้ว
+    // ถ้าต้องการเปลี่ยนขนาด ให้แก้ไขที่ template PDF เอง
+    // --- ส่วนหัว ---
+    fill('req_day', reqDate.getDate().toString());
+    fill('req_month', thaiMonths[reqDate.getMonth()]);
+    fill('req_year', (reqDate.getFullYear() + 543).toString());
+
+    // --- ผู้ขอ ---
+    fill('requester_name', booking.requester.name || '-');
+    fill('requester_position', booking.requester.position || '-');
+    
+    // --- รายละเอียด ---
+    fill('destination', booking.endLocation || '-');
+    fill('purpose', booking.purpose || '-');
+    fill('passenger_count', booking.passengerCount?.toString() || '-');
+
+    // --- วันไป ---
+    fill('start_day', startDate.getDate().toString());
+    fill('start_month', thaiMonths[startDate.getMonth()]);
+    fill('start_year', (startDate.getFullYear() + 543).toString());
+    fill('start_time', startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+
+    // --- วันกลับ ---
+    fill('end_day', endDate.getDate().toString());
+    fill('end_month', thaiMonths[endDate.getMonth()]);
+    fill('end_year', (endDate.getFullYear() + 543).toString());
+    fill('end_time', endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+
+    // --- รถ/คนขับ ---
+    if (booking.vehicle) {
+        fill('vehicle_model', `${booking.vehicle.brand || ''} ${booking.vehicle.model || ''}`.trim());
+        fill('vehicle_plate', booking.vehicle.licensePlate || '-');
+    }
+    if (booking.driver) fill('driver_name', booking.driver.name || '-');
+
+    // 6. จัดการลายเซ็น (รูปภาพ)
+    const page = pdfDoc.getPages()[0];
+    
+    // ลายเซ็นผู้ขอ (ซ้าย)
+    if (booking.requester.signatureImageUrl) {
+        try {
+            const sigPath = join(process.cwd(), 'public', booking.requester.signatureImageUrl);
+            if (existsSync(sigPath)) {
+                const sigBytes = readFileSync(sigPath);
+                // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+                let img;
+                try {
+                    img = await pdfDoc.embedPng(sigBytes);
+                } catch {
+                    img = await pdfDoc.embedJpg(sigBytes);
+                }
+                page.drawImage(img, { x: 120, y: 180, width: 100, height: 50 });
+            }
+        } catch (e) { 
+            console.error('Sign load error', e); 
+        }
+    }
+    fill('requester_sign_name', booking.requester.name || '-');
+
+    // ลายเซ็นผู้อนุมัติ (ขวา)
+    if (booking.executiveConfirmer?.signatureImageUrl) {
+        try {
+            const sigPath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
+            if (existsSync(sigPath)) {
+                const sigBytes = readFileSync(sigPath);
+                // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+                let img;
+                try {
+                    img = await pdfDoc.embedPng(sigBytes);
+                } catch {
+                    img = await pdfDoc.embedJpg(sigBytes);
+                }
+                page.drawImage(img, { x: 400, y: 190, width: 100, height: 50 });
+            }
+        } catch (e) { 
+            console.error('Exec sign load error', e); 
+        }
+    }
+    
+    // วันที่อนุมัติ (ใต้ลายเซ็นขวา)
+    const d = reqDate.getDate().toString().padStart(2, '0');
+    const m = (reqDate.getMonth() + 1).toString().padStart(2, '0');
+    const y = (reqDate.getFullYear() + 543).toString();
+    fill('approve_date_full', `${d}/${m}/${y}`);
+
+    // 7. จบงาน
+    form.flatten(); // ลบช่องกรอกข้อมูลทิ้ง ให้เหลือแต่เนื้อหา
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(pdfBytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="booking-${booking.id}.pdf"`,
+      },
+    });
+
+  } catch (error) {
+    console.error('Error generating PDF from template:', error);
+    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }
