@@ -434,10 +434,22 @@ export async function GET(
 
     // --- รถ/คนขับ ---
     if (booking.vehicle) {
-        fill('vehicle_model', `${booking.vehicle.brand || ''} ${booking.vehicle.model || ''}`.trim());
         fill('vehicle_plate', booking.vehicle.licensePlate || '-');
     }
     if (booking.driver) fill('driver_name', booking.driver.name || '-');
+
+    // --- เลขไมล์ ---
+    if (booking.startMileage !== null) {
+        fill('mileage_start', booking.startMileage.toLocaleString('th-TH'));
+    }
+    if (booking.endMileage !== null) {
+        fill('mileage_end', booking.endMileage.toLocaleString('th-TH'));
+        // คำนวณระยะทางที่ใช้ไป
+        if (booking.startMileage !== null) {
+            const distanceTraveled = booking.endMileage - booking.startMileage;
+            fill('distance_total', distanceTraveled.toLocaleString('th-TH'));
+        }
+    }
 
     // 6. จัดการลายเซ็น (รูปภาพ)
     const page = pdfDoc.getPages()[0];
