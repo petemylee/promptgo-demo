@@ -456,17 +456,17 @@ export async function GET(
     };
 
     // 4. แปลงข้อมูลวันที่
-    const reqDate = new Date(booking.createdAt);
     const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
     const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
+    const approveDate = new Date(); // วันที่กดพิมพ์ (วันที่ปัจจุบัน)
 
     // 5. เริ่มกรอกข้อมูล (Mapping)
     // หมายเหตุ: ขนาดฟอนต์ถูกกำหนดไว้ใน template PDF แล้ว
     // ถ้าต้องการเปลี่ยนขนาด ให้แก้ไขที่ template PDF เอง
-    // --- ส่วนหัว ---
-    fill('req_day', reqDate.getDate().toString());
-    fill('req_month', thaiMonths[reqDate.getMonth()]);
-    fill('req_year', (reqDate.getFullYear() + 543).toString());
+    // --- ส่วนหัว --- (อิงตามวันที่เริ่ม)
+    fill('req_day', startDate.getDate().toString());
+    fill('req_month', thaiMonths[startDate.getMonth()]);
+    fill('req_year', (startDate.getFullYear() + 543).toString());
 
     // --- ผู้ขอ ---
     fill('requester_name', booking.requester.name || '-');
@@ -610,10 +610,10 @@ export async function GET(
         }
     }
     
-    // วันที่อนุมัติ (ใต้ลายเซ็นขวา)
-    const d = reqDate.getDate().toString().padStart(2, '0');
-    const m = (reqDate.getMonth() + 1).toString().padStart(2, '0');
-    const y = (reqDate.getFullYear() + 543).toString();
+    // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่กดพิมพ์ (วันที่ปัจจุบัน)
+    const d = approveDate.getDate().toString().padStart(2, '0');
+    const m = (approveDate.getMonth() + 1).toString().padStart(2, '0');
+    const y = (approveDate.getFullYear() + 543).toString();
     fill('approve_date_full', `${d}/${m}/${y}`);
 
     // 7. จบงาน

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface Booking {
   id: string;
@@ -17,6 +18,9 @@ interface Booking {
   adminApprover: {
     name: string | null;
   } | null;
+  executiveConfirmer: {
+    name: string | null;
+  } | null;
   vehicle: {
     licensePlate: string;
     brand: string | null;
@@ -27,21 +31,35 @@ interface Booking {
   } | null;
 }
 
+const StatusBadge = ({ status }: { status: string }) => {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
+    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังเดินทาง' },
+    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'เสร็จสิ้น' },
+    CANCELLED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ยกเลิก' },
+  };
+  const p = map[status] || { bg: 'bg-gray-50', text: 'text-gray-700', label: status };
+  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
+};
+
 export default function ExecutiveHistoryPage() {
+  const { data: session } = useSession();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch('/api/bookings');
+      // ใช้ query parameter executiveHistory=true เพื่อดึงเฉพาะ bookings ที่ executive นี้เคยอนุมัติ
+      const response = await fetch('/api/bookings?executiveHistory=true');
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
       const data = await response.json();
-      // Filter only CONFIRMED bookings
-      const confirmedBookings = data.filter((booking: Booking) => booking.status === 'CONFIRMED');
-      setBookings(confirmedBookings);
+      // API จะกรองเฉพาะ bookings ที่ current user อนุมัติแล้ว
+      // แสดงทุก status ที่ executive อนุมัติแล้ว (แม้งานจะจบกระบวนการแล้ว)
+      // ไม่กรอง status เพื่อให้แสดงทั้งหมด
+      setBookings(data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
       setBookings([]);
@@ -91,7 +109,7 @@ export default function ExecutiveHistoryPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#004c80] mb-2">ประวัติการยืนยัน</h1>
-        <p className="text-gray-600">รายการการเดินทางที่ได้รับการยืนยันแล้ว</p>
+        <p className="text-gray-600">รายการการเดินทางที่คุณเคยอนุมัติทั้งหมด รวมถึงงานที่จบกระบวนการแล้ว</p>
       </div>
 
       {/* Search */}
@@ -184,20 +202,23 @@ export default function ExecutiveHistoryPage() {
 
                   {/* Status Badge & Actions */}
                   <div className="flex flex-col items-end gap-2">
-                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-green-50 text-green-700 ring-1 ring-black/5">
-                      ยืนยันแล้ว
-                    </span>
+                    <StatusBadge status={booking.status} />
                     <p className="text-xs text-gray-500">
-                      ยืนยันเมื่อ: {formatDate(booking.createdAt)}
+                      {booking.executiveConfirmer && (
+                        <>อนุมัติโดย: {booking.executiveConfirmer.name}<br /></>
+                      )}
+                      อัปเดตล่าสุด: {formatDate(booking.createdAt)}
                     </p>
-                    {/* PDF Print Button */}
-                    <button
-                      onClick={() => window.open(`/api/bookings/${booking.id}/pdf`, '_blank')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-medium transition-colors flex items-center gap-1"
-                      title="พิมพ์ใบขอรถ"
-                    >
-                      🖨️ พิมพ์ใบขอรถ
-                    </button>
+                    {/* PDF Print Button - แสดงเฉพาะ status ที่สามารถพิมพ์ได้ */}
+                    {(booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED') && (
+                      <button
+                        onClick={() => window.open(`/api/bookings/${booking.id}/pdf`, '_blank')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-medium transition-colors flex items-center gap-1"
+                        title="พิมพ์ใบขอรถ"
+                      >
+                        🖨️ พิมพ์ใบขอรถ
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

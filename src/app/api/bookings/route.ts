@@ -124,8 +124,95 @@ export async function GET(req: Request) {
         pendingBookings: pendingBookings,
       });
       }
+    } else if (session.user.role === 'Executive') {
+      // ตรวจสอบ query parameter สำหรับ executive history
+      const url = new URL(req.url);
+      const executiveHistory = url.searchParams.get('executiveHistory') === 'true';
+      
+      if (executiveHistory) {
+        // สำหรับ Executive history: ส่งเฉพาะ bookings ที่ executive คนนี้เคยอนุมัติ
+        const bookings = await prisma.booking.findMany({
+          where: {
+            executiveConfirmerId: session.user.id,
+          },
+          include: {
+            requester: {
+              select: {
+                name: true,
+                email: true,
+                position: true,
+              }
+            },
+            adminApprover: {
+              select: {
+                name: true,
+              }
+            },
+            executiveConfirmer: {
+              select: {
+                id: true,
+                name: true,
+                signatureImageUrl: true,
+              }
+            },
+            vehicle: {
+              select: {
+                licensePlate: true,
+                brand: true,
+                model: true,
+              }
+            },
+            driver: {
+              select: {
+                name: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        return NextResponse.json(bookings);
+      } else {
+        // สำหรับ Executive dashboard: ส่งข้อมูลการจองทั้งหมด (เหมือนเดิม)
+        const bookings = await prisma.booking.findMany({
+          include: {
+            requester: {
+              select: {
+                name: true,
+                email: true,
+                position: true,
+              }
+            },
+            adminApprover: {
+              select: {
+                name: true,
+              }
+            },
+            executiveConfirmer: {
+              select: {
+                id: true,
+                name: true,
+                signatureImageUrl: true,
+              }
+            },
+            vehicle: {
+              select: {
+                licensePlate: true,
+                brand: true,
+                model: true,
+              }
+            },
+            driver: {
+              select: {
+                name: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        return NextResponse.json(bookings);
+      }
     } else {
-      // สำหรับ Executive และ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด
+      // สำหรับ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด
       const bookings = await prisma.booking.findMany({
         include: {
           requester: {
@@ -142,6 +229,7 @@ export async function GET(req: Request) {
           },
           executiveConfirmer: {
             select: {
+              id: true,
               name: true,
               signatureImageUrl: true,
             }
@@ -161,7 +249,6 @@ export async function GET(req: Request) {
         },
         orderBy: { createdAt: 'desc' },
       });
-
       return NextResponse.json(bookings);
     }
 
