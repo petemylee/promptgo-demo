@@ -38,7 +38,6 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState('');
   const [endMileage, setEndMileage] = useState<string>('');
-  const [showMileageModal, setShowMileageModal] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     try {

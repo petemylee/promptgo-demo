@@ -284,14 +284,71 @@ export async function POST(
         const signaturePath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
         if (existsSync(signaturePath)) {
           const signatureBytes = await readFile(signaturePath);
-          const signatureImage = await pdfDoc.embedPng(signatureBytes);
           
-          // Add signature image (adjust coordinates based on your template)
+          // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+          let signatureImage;
+          try {
+            signatureImage = await pdfDoc.embedPng(signatureBytes);
+          } catch {
+            signatureImage = await pdfDoc.embedJpg(signatureBytes);
+          }
+          
+          // คำนวณตำแหน่งและขนาดลายเซ็น
+          // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
+          // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
+          const signatureAreaX1 = 256;
+          const signatureAreaX2 = 420;
+          const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
+          const signatureY = 420; // ตำแหน่งด้านล่าง
+          const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
+          const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
+          
+          // ดึงขนาดภาพจริง
+          const imageWidth = signatureImage.width;
+          const imageHeight = signatureImage.height;
+          const aspectRatio = imageWidth / imageHeight;
+          
+          // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
+          let displayWidth = signatureAreaWidth;
+          let displayHeight = signatureAreaWidth / aspectRatio;
+          
+          // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+          if (displayHeight > maxHeight) {
+            displayHeight = maxHeight;
+            displayWidth = maxHeight * aspectRatio;
+          }
+          
+          // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
+          if (displayWidth > signatureAreaWidth) {
+            displayWidth = signatureAreaWidth;
+            displayHeight = signatureAreaWidth / aspectRatio;
+            // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
+            if (displayHeight > maxHeight) {
+              displayHeight = maxHeight;
+              displayWidth = maxHeight * aspectRatio;
+            }
+          }
+          
+          // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
+          const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
+          const signatureX = centerX - (displayWidth / 2);
+          
+          // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
           page.drawImage(signatureImage, {
-            x: 400,
-            y: height - 450,
-            width: 120,
-            height: 60,
+            x: signatureX,
+            y: signatureY,
+            width: displayWidth,
+            height: displayHeight,
+          });
+          
+          // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
+          // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
+          const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
+          page.drawImage(signatureImage, {
+            x: signatureX,
+            y: signatureY2,
+            width: displayWidth,
+            height: displayHeight,
           });
         }
       } catch (error) {
@@ -453,6 +510,7 @@ export async function GET(
 
     // 6. จัดการลายเซ็น (รูปภาพ)
     const page = pdfDoc.getPages()[0];
+    const { height } = page.getSize();
     
     // ลายเซ็นผู้ขอ (ซ้าย)
     if (booking.requester.signatureImageUrl) {
@@ -488,7 +546,64 @@ export async function GET(
                 } catch {
                     img = await pdfDoc.embedJpg(sigBytes);
                 }
-                page.drawImage(img, { x: 400, y: 190, width: 100, height: 50 });
+                
+                // คำนวณตำแหน่งและขนาดลายเซ็น
+                // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
+                // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
+                const signatureAreaX1 = 256;
+                const signatureAreaX2 = 420;
+                const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
+                const signatureY = 420; // ตำแหน่งด้านล่าง
+                const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
+                const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
+                
+                // ดึงขนาดภาพจริง
+                const imageWidth = img.width;
+                const imageHeight = img.height;
+                const aspectRatio = imageWidth / imageHeight;
+                
+                // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
+                let displayWidth = signatureAreaWidth;
+                let displayHeight = signatureAreaWidth / aspectRatio;
+                
+                // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+                if (displayHeight > maxHeight) {
+                    displayHeight = maxHeight;
+                    displayWidth = maxHeight * aspectRatio;
+                }
+                
+                // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
+                if (displayWidth > signatureAreaWidth) {
+                    displayWidth = signatureAreaWidth;
+                    displayHeight = signatureAreaWidth / aspectRatio;
+                    // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
+                    if (displayHeight > maxHeight) {
+                        displayHeight = maxHeight;
+                        displayWidth = maxHeight * aspectRatio;
+                    }
+                }
+                
+                // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
+                const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
+                const signatureX = centerX - (displayWidth / 2);
+                
+                // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
+                page.drawImage(img, { 
+                    x: signatureX, 
+                    y: signatureY, 
+                    width: displayWidth, 
+                    height: displayHeight 
+                });
+                
+                // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
+                // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
+                const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
+                page.drawImage(img, { 
+                    x: signatureX, 
+                    y: signatureY2, 
+                    width: displayWidth, 
+                    height: displayHeight 
+                });
             }
         } catch (e) { 
             console.error('Exec sign load error', e); 
