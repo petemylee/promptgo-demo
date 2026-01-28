@@ -9,6 +9,7 @@ interface User {
   email: string;
   role: Role;
   position?: string | null;
+  phoneNumber?: string | null;
 }
 
 export default function UserManagementPage() {
@@ -108,9 +109,10 @@ export default function UserManagementPage() {
             <table className="min-w-full table-fixed">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
-                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">ชื่อ</th>
-                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">ตำแหน่ง</th>
-                  <th className="text-left py-2 px-4 text-[#004c80] w-1/4">Email</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/6">ชื่อ</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/6">ตำแหน่ง</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">Email</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/6">เบอร์โทร</th>
                   <th className="text-center py-2 px-4 text-[#004c80] w-24">Role</th>
                   <th className="text-center py-2 px-4 text-[#004c80] w-32">Actions</th>
                 </tr>
@@ -121,6 +123,7 @@ export default function UserManagementPage() {
                     <td className="py-2 px-4 whitespace-nowrap">{user.name}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{user.position || '-'}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{user.email}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">{user.phoneNumber || '-'}</td>
                     <td className="py-2 px-4 text-center">
                       <div className="flex justify-center">
                         <RoleBadge role={user.role} />
@@ -155,7 +158,7 @@ export default function UserManagementPage() {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={5} className="py-10">
+                    <td colSpan={6} className="py-10">
                       <div className="mx-auto max-w-md text-center">
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#0076c3] grid place-items-center">🙂</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีผู้ใช้ที่ตรงกับคำค้นหา</h3>

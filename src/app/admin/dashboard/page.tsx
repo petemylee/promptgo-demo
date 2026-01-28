@@ -7,9 +7,14 @@ interface Booking {
   endLocation: string | null;
   startTime: string | null;
   endTime: string | null;
+  purpose: string | null;
+  passengerCount: number | null;
+  tripType: string | null;
   requester: {
     name: string | null;
     position: string | null;
+    email: string;
+    phoneNumber: string | null;
   };
 }
 
@@ -51,6 +56,8 @@ export default function AdminDashboard() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -171,6 +178,22 @@ export default function AdminDashboard() {
       }
     }
   };
+
+  const handleViewDetails = async (bookingId: string) => {
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`);
+      if (!response.ok) throw new Error('Failed to fetch booking details');
+      const bookingData = await response.json();
+      setSelectedBooking(bookingData);
+      setShowDetailModal(true);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert(`Error: ${err.message}`);
+      } else {
+        alert('An unknown error occurred');
+      }
+    }
+  };
   
   if (isLoading) return <p className="p-4 md:p-8">Loading...</p>;
   if (error) return <p className="p-4 md:p-8 text-red-500">Error: {error}</p>;
@@ -238,6 +261,11 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-2 px-4">
                       <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleViewDetails(booking.id)}
+                          className="rounded-md bg-white px-3 py-1 text-[#0076c3] ring-1 ring-[#0076c3]/30 hover:bg-[#0076c3]/5">
+                          ดูรายละเอียด
+                        </button>
                         <button 
                           onClick={() => handleApproveClick(booking.id)}
                           className="rounded-md bg-white px-3 py-1 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">
@@ -331,6 +359,107 @@ export default function AdminDashboard() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Booking Detail Modal */}
+      {showDetailModal && selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#004c80]">รายละเอียดการจอง</h2>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedBooking(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Requester Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้ขอใช้</h3>
+                <p><span className="font-medium">ชื่อ:</span> {selectedBooking.requester.name || '-'}</p>
+                <p><span className="font-medium">ตำแหน่ง:</span> {selectedBooking.requester.position || '-'}</p>
+                <p><span className="font-medium">Email:</span> {selectedBooking.requester.email || '-'}</p>
+                {selectedBooking.requester.phoneNumber && (
+                  <p><span className="font-medium">เบอร์โทร:</span> {selectedBooking.requester.phoneNumber}</p>
+                )}
+              </div>
+
+              {/* Trip Details */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
+                <p><span className="font-medium">ปลายทาง:</span> {selectedBooking.endLocation || '-'}</p>
+                <p><span className="font-medium">วัตถุประสงค์:</span> {selectedBooking.purpose || '-'}</p>
+                {selectedBooking.tripType && (
+                  <p><span className="font-medium">ประเภทการเดินทาง:</span> {
+                    selectedBooking.tripType === 'ONE_WAY' ? 'ส่งอย่างเดียว' :
+                    selectedBooking.tripType === 'PICK_UP' ? 'รับอย่างเดียว' :
+                    selectedBooking.tripType === 'ROUND_TRIP' ? 'ไป-กลับ/รอรับ' :
+                    selectedBooking.tripType
+                  }</p>
+                )}
+                {selectedBooking.passengerCount && (
+                  <p><span className="font-medium">จำนวนคนนั่ง:</span> {selectedBooking.passengerCount} คน</p>
+                )}
+              </div>
+
+              {/* Schedule */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
+                <p><span className="font-medium">วันเวลาเริ่ม:</span> {
+                  selectedBooking.startTime 
+                    ? new Date(selectedBooking.startTime).toLocaleString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : '-'
+                }</p>
+                <p><span className="font-medium">วันเวลาสิ้นสุด:</span> {
+                  selectedBooking.endTime 
+                    ? new Date(selectedBooking.endTime).toLocaleString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : '-'
+                }</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedBooking(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ปิด
+              </button>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  handleApproveClick(selectedBooking.id);
+                }}
+                className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
+              >
+                อนุมัติ
+              </button>
+            </div>
           </div>
         </div>
       )}

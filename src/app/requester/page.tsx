@@ -3,6 +3,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import BookingFormModal from '@/components/BookingFormModal';
+import BookingDetailModal from '@/components/BookingDetailModal';
+import EditBookingModal from '@/components/EditBookingModal';
+import ProfileEditModal from '@/components/ProfileEditModal';
 
 type Booking = {
   id: string;
@@ -182,6 +185,10 @@ export default function RequesterMyBookings() {
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -227,6 +234,48 @@ export default function RequesterMyBookings() {
     );
   }, [activeBookings, query]);
 
+  const handleViewDetails = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleEdit = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async (bookingId: string) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำขอนี้?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'ไม่สามารถลบคำขอได้');
+      }
+
+      // Reload bookings
+      const res = await fetch('/api/my/bookings');
+      if (res.ok) {
+        setBookings(await res.json());
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    }
+  };
+
+  const reloadBookings = async () => {
+    const res = await fetch('/api/my/bookings');
+    if (res.ok) {
+      setBookings(await res.json());
+    }
+  };
+
   const filteredCompleted = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return completedBookings;
@@ -258,7 +307,12 @@ export default function RequesterMyBookings() {
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           </div>
-          <button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
+          <div className="flex gap-2">
+            <button onClick={() => setIsProfileModalOpen(true)} className="rounded-xl bg-gray-600 px-4 py-2.5 text-white shadow hover:bg-gray-700">
+              แก้ไขข้อมูลส่วนตัว
+            </button>
+            <button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
+          </div>
         </div>
 
         {/* In Progress Bookings with Map */}
@@ -285,6 +339,7 @@ export default function RequesterMyBookings() {
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -301,11 +356,37 @@ export default function RequesterMyBookings() {
                       <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
                       <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                       <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
+                      <td className="py-2 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleViewDetails(b.id)}
+                            className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
+                          >
+                            ดูรายละเอียด
+                          </button>
+                          {b.status === 'PENDING' && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(b.id)}
+                                className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                              >
+                                แก้ไข
+                              </button>
+                              <button
+                                onClick={() => handleDelete(b.id)}
+                                className="text-sm text-red-600 hover:text-red-700 underline"
+                              >
+                                ลบ
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-10">
+                    <td colSpan={7} className="py-10">
                       <div className="mx-auto max-w-md text-center">
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#0076c3] grid place-items-center">🗒️</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีคำขอของคุณ</h3>
@@ -316,7 +397,7 @@ export default function RequesterMyBookings() {
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
+                    <td colSpan={7} className="py-4 text-center text-gray-500 text-sm">
                       {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
                     </td>
                   </tr>
@@ -340,6 +421,7 @@ export default function RequesterMyBookings() {
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -352,11 +434,19 @@ export default function RequesterMyBookings() {
                         <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
                         <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                         <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
+                        <td className="py-2 px-4">
+                          <button
+                            onClick={() => handleViewDetails(b.id)}
+                            className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
+                          >
+                            ดูรายละเอียด
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
+                      <td colSpan={7} className="py-4 text-center text-gray-500 text-sm">
                         ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
                       </td>
                     </tr>
@@ -366,13 +456,42 @@ export default function RequesterMyBookings() {
             </div>
           </div>
         )}
-        <BookingFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={() => {
-          // reload list after created
-          (async () => {
-            const res = await fetch('/api/my/bookings');
-            if (res.ok) setBookings(await res.json());
-          })();
-        }} />
+        <BookingFormModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onCreated={reloadBookings} 
+        />
+        {selectedBookingId && (
+          <>
+            <BookingDetailModal
+              isOpen={isDetailModalOpen}
+              onClose={() => {
+                setIsDetailModalOpen(false);
+                setSelectedBookingId(null);
+              }}
+              bookingId={selectedBookingId}
+              onUpdated={reloadBookings}
+            />
+            <EditBookingModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedBookingId(null);
+              }}
+              bookingId={selectedBookingId}
+              onUpdated={reloadBookings}
+            />
+          </>
+        )}
+        <ProfileEditModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          onUpdated={() => {
+            reloadBookings();
+            // Refresh session to update user data
+            window.location.reload();
+          }}
+        />
       </div>
     </div>
   );

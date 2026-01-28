@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, passengerCount, requesterSignatureUrl } = body;
+    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, requesterSignatureUrl, passengerImageUrl } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!endLocation || !purpose || !startTime || !endTime) {
@@ -27,6 +27,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Passenger count must be at least 1' }, { status: 400 });
     }
 
+    // ตรวจสอบ tripType
+    const validTripTypes = ['ONE_WAY', 'PICK_UP', 'ROUND_TRIP'];
+    if (tripType && !validTripTypes.includes(tripType)) {
+      return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
+    }
+
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
     const newBooking = await prisma.booking.create({
       data: {
@@ -35,9 +41,11 @@ export async function POST(req: Request) {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         passengerCount: passengerCountNum,
+        tripType: tripType || null,
         status: 'PENDING', // กำหนดสถานะเริ่มต้น
         requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
         requesterSignatureUrl: requesterSignatureUrl || null, // ลายเซ็นผู้ขอใช้รถ (ถ้ามี)
+        passengerImageUrl: passengerImageUrl || null, // รูปภาพผู้โดยสาร (ถ้ามี)
       },
     });
 
@@ -107,7 +115,16 @@ export async function GET(req: Request) {
         // สำหรับ Admin dashboard: ส่งข้อมูล dashboard format
       const pendingBookings = await prisma.booking.findMany({
         where: { status: 'PENDING' },
-        include: { requester: { select: { name: true, position: true } } },
+        include: { 
+          requester: { 
+            select: { 
+              name: true, 
+              position: true,
+              email: true,
+              phoneNumber: true
+            } 
+          } 
+        },
         orderBy: { createdAt: 'asc' },
       });
 

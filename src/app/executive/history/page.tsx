@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 
 interface Booking {
   id: string;
@@ -43,7 +42,6 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function ExecutiveHistoryPage() {
-  const { data: session } = useSession();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');

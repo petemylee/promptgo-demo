@@ -28,6 +28,12 @@ enum BookingStatus {
   MERGED
 }
 
+enum TripType {
+  ONE_WAY
+  PICK_UP
+  ROUND_TRIP
+}
+
 model User {
   id                String    @id @default(cuid())
   name              String?
@@ -35,6 +41,8 @@ model User {
   position          String?
   password          String
   role              Role      @default(Requester)
+  phoneNumber       String?
+  profileImageUrl   String?
   signatureImageUrl String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -53,6 +61,7 @@ model Vehicle {
   type            String?
   capacity        Int?
   currentMileage  Int?      // เลขไมล์ปัจจุบัน
+  vehicleImageUrl String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -66,11 +75,14 @@ model Booking {
   startTime           DateTime?
   endTime             DateTime?
   passengerCount      Int?
+  tripType            TripType?
   status              BookingStatus  @default(PENDING)
   generatedFormUrl    String?
   requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ
+  passengerImageUrl   String?        // รูปภาพผู้โดยสาร
   startMileage        Int?           // เลขไมล์ก่อนออกเดินทาง
   endMileage          Int?           // เลขไมล์หลังเดินทาง
+  executiveConfirmedAt DateTime?     // วันที่ Executive ยืนยัน
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 

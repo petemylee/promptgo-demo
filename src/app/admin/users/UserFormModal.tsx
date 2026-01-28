@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: Role;
   position?: string | null;
+  phoneNumber?: string | null;
 }
 
 interface UserFormModalProps {
@@ -24,6 +25,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Requester');
   const [position, setPosition] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -35,6 +37,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setEmail(initialData.email || '');
       setRole(initialData.role || 'Requester');
       setPosition(initialData.position || '');
+      setPhoneNumber(initialData.phoneNumber || '');
       setPassword('');
     } else {
       setName('');
@@ -42,6 +45,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setPassword('');
       setRole('Requester');
       setPosition('');
+      setPhoneNumber('');
     }
   }, [initialData, isEditMode]);
 
@@ -82,11 +86,12 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
         return;
       }
       
-      const body: { name: string; email: string; role: Role; position: string; password?: string } = { 
+      const body: { name: string; email: string; role: Role; position: string; phoneNumber?: string; password?: string } = { 
         name: name.trim(), 
         email: email.trim(), 
         role, 
-        position: position.trim() 
+        position: position.trim(),
+        ...(phoneNumber.trim() ? { phoneNumber: phoneNumber.trim() } : {})
       };
       if (!isEditMode) {
         body.password = password;
@@ -135,6 +140,10 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
           <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
+            <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="เช่น 0812345678" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
           </div>
           
           {!isEditMode && (

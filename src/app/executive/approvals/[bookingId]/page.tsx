@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
+import SignaturePad from '@/components/SignaturePad';
 
 interface Booking {
   id: string;
@@ -16,19 +17,25 @@ interface Booking {
     name: string | null;
     email: string;
     position: string | null;
+    phoneNumber: string | null;
+    profileImageUrl: string | null;
   };
   adminApprover: {
     name: string | null;
+    phoneNumber: string | null;
   } | null;
   vehicle: {
     id: string;
     licensePlate: string;
     brand: string | null;
     model: string | null;
+    vehicleImageUrl: string | null;
   } | null;
   driver: {
     id: string;
     name: string | null;
+    phoneNumber: string | null;
+    profileImageUrl: string | null;
   } | null;
 }
 
@@ -39,6 +46,7 @@ interface Vehicle {
   model: string | null;
   type: string | null;
   capacity: number | null;
+  vehicleImageUrl: string | null;
 }
 
 interface Driver {
@@ -46,111 +54,10 @@ interface Driver {
   name: string | null;
   email: string;
   position: string | null;
+  phoneNumber: string | null;
+  profileImageUrl: string | null;
 }
 
-interface SignatureUploadProps {
-  onSignatureUpload: (file: File) => void;
-  isLoading: boolean;
-}
-
-function SignatureUpload({ onSignatureUpload, isLoading }: SignatureUploadProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        handleFile(file);
-      }
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleFile = (file: File) => {
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    
-    // Pass file to parent
-    onSignatureUpload(file);
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-[#004c80]">อัปโหลดลายเซ็น</h3>
-      
-      {/* Upload Area */}
-      <div
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive 
-            ? 'border-[#0076c3] bg-[#0076c3]/5' 
-            : 'border-gray-300 hover:border-[#0076c3] hover:bg-gray-50'
-        }`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileInput}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isLoading}
-        />
-        
-        {preview ? (
-          <div className="space-y-4">
-            <Image 
-              src={preview} 
-              alt="Signature Preview" 
-              width={200}
-              height={128}
-              className="mx-auto max-h-32 border rounded-lg"
-            />
-            <p className="text-sm text-green-600">✓ ลายเซ็นพร้อมใช้งาน</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="mx-auto w-12 h-12 bg-[#0076c3]/10 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#0076c3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-              </svg>
-            </div>
-            <div>
-              <p className="text-lg font-medium text-gray-900">ลากไฟลายเซ็นมาวางที่นี่</p>
-              <p className="text-sm text-gray-500">หรือคลิกเพื่อเลือกไฟล์</p>
-            </div>
-            <p className="text-xs text-gray-400">รองรับไฟล์: JPG, PNG, GIF (ขนาดไม่เกิน 5MB)</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function BookingConfirmationPage({ params }: { params: Promise<{ bookingId: string }> }) {
   const { bookingId } = use(params);
@@ -159,7 +66,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
@@ -236,8 +143,8 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
     fetchDrivers();
   }, [fetchBooking, fetchVehicles, fetchDrivers]);
 
-  const handleSignatureUpload = (file: File) => {
-    setSignatureFile(file);
+  const handleSignatureSave = (dataUrl: string) => {
+    setSignatureDataUrl(dataUrl);
   };
 
   const handleConfirm = async () => {
@@ -258,10 +165,14 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
       // Try to upload signature (optional - continue even if it fails)
       let signatureImageUrl: string | null = null;
       
-      if (signatureFile) {
+      if (signatureDataUrl) {
         try {
+          // Convert data URL to blob
+          const response = await fetch(signatureDataUrl);
+          const blob = await response.blob();
+          
           const signatureFormData = new FormData();
-          signatureFormData.append('signature', signatureFile);
+          signatureFormData.append('signature', blob, 'signature.png');
 
           const signatureResponse = await fetch('/api/upload/signature', {
             method: 'POST',
@@ -434,10 +345,24 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             {/* Requester Info */}
             <div>
               <h3 className="font-semibold text-[#004c80] mb-3">ผู้ขอใช้</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                {booking.requester.profileImageUrl && (
+                  <div className="mb-2">
+                    <Image
+                      src={booking.requester.profileImageUrl}
+                      alt="Requester Photo"
+                      width={80}
+                      height={80}
+                      className="rounded-lg object-cover"
+                    />
+                  </div>
+                )}
                 <p className="font-medium">{booking.requester.name}</p>
                 <p className="text-sm text-gray-600">{booking.requester.position}</p>
                 <p className="text-sm text-gray-500">{booking.requester.email}</p>
+                {booking.requester.phoneNumber && (
+                  <p className="text-sm text-gray-500">โทร: {booking.requester.phoneNumber}</p>
+                )}
               </div>
             </div>
 
@@ -447,6 +372,30 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p><span className="font-medium">ไป:</span> {booking.endLocation}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
+                {booking.endLocation && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-gray-700 mb-2">แผนที่:</p>
+                    <div className="w-full h-48 rounded-lg overflow-hidden border border-gray-300">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&q=${encodeURIComponent(booking.endLocation)}`}
+                      />
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.endLocation)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#0076c3] hover:underline mt-2 inline-block"
+                    >
+                      เปิดใน Google Maps
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -462,7 +411,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             {/* Vehicle & Driver */}
             <div>
               <h3 className="font-semibold text-[#004c80] mb-3">ยานพาหนะ & คนขับ</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     รถยนต์ <span className="text-red-500">*</span>
@@ -470,24 +419,50 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                   {isLoadingVehicles ? (
                     <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลรถยนต์...</p>
                   ) : (
-                    <select
-                      value={selectedVehicleId}
-                      onChange={(e) => setSelectedVehicleId(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
-                      required
-                    >
-                      <option value="">-- เลือกรถยนต์ (บังคับ) --</option>
-                      {vehicles.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {booking.vehicle && !selectedVehicleId && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      รถยนต์ที่ Admin เลือก: {booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}
-                    </p>
+                    <>
+                      <select
+                        value={selectedVehicleId}
+                        onChange={(e) => setSelectedVehicleId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                        required
+                      >
+                        <option value="">-- เลือกรถยนต์ (บังคับ) --</option>
+                        {vehicles.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>
+                            {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedVehicleId && vehicles.find(v => v.id === selectedVehicleId)?.vehicleImageUrl && (
+                        <div className="mt-2">
+                          <Image
+                            src={vehicles.find(v => v.id === selectedVehicleId)!.vehicleImageUrl!}
+                            alt="Vehicle Photo"
+                            width={200}
+                            height={150}
+                            className="rounded-lg object-cover mt-2"
+                          />
+                        </div>
+                      )}
+                      {booking.vehicle && !selectedVehicleId && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-1">
+                            รถยนต์ที่ Admin เลือก: {booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}
+                          </p>
+                          {booking.vehicle.vehicleImageUrl && (
+                            <div className="mt-2">
+                              <Image
+                                src={booking.vehicle.vehicleImageUrl}
+                                alt="Vehicle Photo"
+                                width={200}
+                                height={150}
+                                className="rounded-lg object-cover"
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
@@ -497,24 +472,53 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                   {isLoadingDrivers ? (
                     <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลคนขับ...</p>
                   ) : (
-                    <select
-                      value={selectedDriverId}
-                      onChange={(e) => setSelectedDriverId(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
-                      required
-                    >
-                      <option value="">-- เลือกคนขับ (บังคับ) --</option>
-                      {drivers.map((driver) => (
-                        <option key={driver.id} value={driver.id}>
-                          {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {booking.driver && !selectedDriverId && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      คนขับที่ Admin เลือก: {booking.driver.name || '-'}
-                    </p>
+                    <>
+                      <select
+                        value={selectedDriverId}
+                        onChange={(e) => setSelectedDriverId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                        required
+                      >
+                        <option value="">-- เลือกคนขับ (บังคับ) --</option>
+                        {drivers.map((driver) => (
+                          <option key={driver.id} value={driver.id}>
+                            {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedDriverId && drivers.find(d => d.id === selectedDriverId)?.profileImageUrl && (
+                        <div className="mt-2">
+                          <Image
+                            src={drivers.find(d => d.id === selectedDriverId)!.profileImageUrl!}
+                            alt="Driver Photo"
+                            width={100}
+                            height={100}
+                            className="rounded-lg object-cover mt-2"
+                          />
+                        </div>
+                      )}
+                      {booking.driver && !selectedDriverId && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-1">
+                            คนขับที่ Admin เลือก: {booking.driver.name || '-'}
+                          </p>
+                          {booking.driver.profileImageUrl && (
+                            <div className="mt-2">
+                              <Image
+                                src={booking.driver.profileImageUrl}
+                                alt="Driver Photo"
+                                width={100}
+                                height={100}
+                                className="rounded-lg object-cover"
+                              />
+                            </div>
+                          )}
+                          {booking.driver.phoneNumber && (
+                            <p className="text-xs text-gray-500 mt-1">โทร: {booking.driver.phoneNumber}</p>
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -524,10 +528,13 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             {booking.adminApprover && (
               <div>
                 <h3 className="font-semibold text-[#004c80] mb-3">การอนุมัติเบื้องต้น</h3>
-                <div className="bg-green-50 p-4 rounded-lg">
+                <div className="bg-green-50 p-4 rounded-lg space-y-1">
                   <p className="text-green-700">
                     <span className="font-medium">อนุมัติโดย:</span> {booking.adminApprover.name}
                   </p>
+                  {booking.adminApprover.phoneNumber && (
+                    <p className="text-sm text-green-600">โทร: {booking.adminApprover.phoneNumber}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -540,10 +547,39 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
           
           <div className="space-y-6">
             {/* Signature Upload */}
-            <SignatureUpload 
-              onSignatureUpload={handleSignatureUpload}
-              isLoading={isConfirming}
-            />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#004c80]">ลายเซ็นผู้ยืนยัน</h3>
+              {signatureDataUrl ? (
+                <div className="space-y-3">
+                  <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
+                    <Image 
+                      src={signatureDataUrl} 
+                      alt="Signature Preview" 
+                      width={300}
+                      height={150}
+                      className="max-h-32 border rounded-lg object-contain"
+                    />
+                  </div>
+                  <p className="text-sm text-green-600 font-medium">✓ ลายเซ็นพร้อมใช้งาน</p>
+                  <button
+                    type="button"
+                    onClick={() => setSignatureDataUrl(null)}
+                    className="text-xs text-red-600 hover:text-red-700 underline"
+                    disabled={isConfirming}
+                  >
+                    ลบและวาดใหม่
+                  </button>
+                </div>
+              ) : (
+                <SignaturePad
+                  onSignatureSave={handleSignatureSave}
+                  onClear={() => setSignatureDataUrl(null)}
+                  disabled={isConfirming}
+                  width={400}
+                  height={200}
+                />
+              )}
+            </div>
 
             {/* Confirmation Notice */}
             <div className="bg-blue-50 p-4 rounded-lg">

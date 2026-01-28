@@ -281,76 +281,91 @@ export async function POST(
     // Add signature image if available
     if (booking.executiveConfirmer?.signatureImageUrl) {
       try {
-        const signaturePath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
-        if (existsSync(signaturePath)) {
-          const signatureBytes = await readFile(signaturePath);
-          
-          // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
-          let signatureImage;
-          try {
-            signatureImage = await pdfDoc.embedPng(signatureBytes);
-          } catch {
-            signatureImage = await pdfDoc.embedJpg(signatureBytes);
+        // Check if URL is from Supabase (starts with http/https) or local path
+        let signatureBytes: Buffer;
+        if (booking.executiveConfirmer.signatureImageUrl.startsWith('http://') || booking.executiveConfirmer.signatureImageUrl.startsWith('https://')) {
+          // Fetch from Supabase URL
+          const response = await fetch(booking.executiveConfirmer.signatureImageUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch signature: ${response.statusText}`);
           }
-          
-          // คำนวณตำแหน่งและขนาดลายเซ็น
-          // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
-          // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
-          const signatureAreaX1 = 256;
-          const signatureAreaX2 = 420;
-          const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
-          const signatureY = 420; // ตำแหน่งด้านล่าง
-          const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
-          const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
-          
-          // ดึงขนาดภาพจริง
-          const imageWidth = signatureImage.width;
-          const imageHeight = signatureImage.height;
-          const aspectRatio = imageWidth / imageHeight;
-          
-          // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
-          let displayWidth = signatureAreaWidth;
-          let displayHeight = signatureAreaWidth / aspectRatio;
-          
-          // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+          const arrayBuffer = await response.arrayBuffer();
+          signatureBytes = Buffer.from(arrayBuffer);
+        } else {
+          // Legacy local file path
+          const signaturePath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
+          if (existsSync(signaturePath)) {
+            signatureBytes = await readFile(signaturePath);
+          } else {
+            throw new Error('Signature file not found');
+          }
+        }
+        
+        // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+        let signatureImage;
+        try {
+          signatureImage = await pdfDoc.embedPng(signatureBytes);
+        } catch {
+          signatureImage = await pdfDoc.embedJpg(signatureBytes);
+        }
+        
+        // คำนวณตำแหน่งและขนาดลายเซ็น
+        // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
+        // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
+        const signatureAreaX1 = 256;
+        const signatureAreaX2 = 420;
+        const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
+        const signatureY = 420; // ตำแหน่งด้านล่าง
+        const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
+        const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
+        
+        // ดึงขนาดภาพจริง
+        const imageWidth = signatureImage.width;
+        const imageHeight = signatureImage.height;
+        const aspectRatio = imageWidth / imageHeight;
+        
+        // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
+        let displayWidth = signatureAreaWidth;
+        let displayHeight = signatureAreaWidth / aspectRatio;
+        
+        // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+        if (displayHeight > maxHeight) {
+          displayHeight = maxHeight;
+          displayWidth = maxHeight * aspectRatio;
+        }
+        
+        // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
+        if (displayWidth > signatureAreaWidth) {
+          displayWidth = signatureAreaWidth;
+          displayHeight = signatureAreaWidth / aspectRatio;
+          // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
           if (displayHeight > maxHeight) {
             displayHeight = maxHeight;
             displayWidth = maxHeight * aspectRatio;
           }
-          
-          // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
-          if (displayWidth > signatureAreaWidth) {
-            displayWidth = signatureAreaWidth;
-            displayHeight = signatureAreaWidth / aspectRatio;
-            // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
-            if (displayHeight > maxHeight) {
-              displayHeight = maxHeight;
-              displayWidth = maxHeight * aspectRatio;
-            }
-          }
-          
-          // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
-          const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
-          const signatureX = centerX - (displayWidth / 2);
-          
-          // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
-          page.drawImage(signatureImage, {
-            x: signatureX,
-            y: signatureY,
-            width: displayWidth,
-            height: displayHeight,
-          });
-          
-          // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
-          // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
-          const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
-          page.drawImage(signatureImage, {
-            x: signatureX,
-            y: signatureY2,
-            width: displayWidth,
-            height: displayHeight,
-          });
         }
+        
+        // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
+        const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
+        const signatureX = centerX - (displayWidth / 2);
+        
+        // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
+        page.drawImage(signatureImage, {
+          x: signatureX,
+          y: signatureY,
+          width: displayWidth,
+          height: displayHeight,
+        });
+        
+        // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
+        // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
+        const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
+        page.drawImage(signatureImage, {
+          x: signatureX,
+          y: signatureY2,
+          width: displayWidth,
+          height: displayHeight,
+        });
       } catch (error) {
         console.error('Error adding signature image:', error);
         // Continue without signature if there's an error
@@ -403,7 +418,7 @@ export async function GET(
 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 1. ดึงข้อมูล Booking
+    // 1. ดึงข้อมูล Booking (รวม executiveConfirmedAt)
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -412,9 +427,17 @@ export async function GET(
         driver: true,
         executiveConfirmer: true, // ผู้บริหารที่จะเซ็นอนุมัติ
       },
+      // Prisma include จะดึงทุก field ของ Booking model รวมถึง executiveConfirmedAt
     });
-
+    
     if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+
+    // Debug: ตรวจสอบว่า executiveConfirmedAt ถูกดึงมาหรือไม่
+    console.log('[PDF] Booking ID:', bookingId);
+    console.log('[PDF] Booking status:', booking.status);
+    type BookingWithConfirmedAtType = typeof booking & { executiveConfirmedAt: Date | null };
+    const bookingWithConfirmedAt = booking as BookingWithConfirmedAtType;
+    console.log('[PDF] executiveConfirmedAt from booking:', bookingWithConfirmedAt?.executiveConfirmedAt);
 
     // 2. เตรียมไฟล์
     // ลองหาไฟล์ template ทั้งสองชื่อ (car-request-template.pdf หรือ car-request-template.pdf.pdf)
@@ -458,7 +481,6 @@ export async function GET(
     // 4. แปลงข้อมูลวันที่
     const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
     const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
-    const approveDate = new Date(); // วันที่กดพิมพ์ (วันที่ปัจจุบัน)
 
     // 5. เริ่มกรอกข้อมูล (Mapping)
     // หมายเหตุ: ขนาดฟอนต์ถูกกำหนดไว้ใน template PDF แล้ว
@@ -515,18 +537,34 @@ export async function GET(
     // ลายเซ็นผู้ขอ (ซ้าย)
     if (booking.requester.signatureImageUrl) {
         try {
-            const sigPath = join(process.cwd(), 'public', booking.requester.signatureImageUrl);
-            if (existsSync(sigPath)) {
-                const sigBytes = readFileSync(sigPath);
-                // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
-                let img;
-                try {
-                    img = await pdfDoc.embedPng(sigBytes);
-                } catch {
-                    img = await pdfDoc.embedJpg(sigBytes);
+            // Check if URL is from Supabase (starts with http/https) or local path
+            let sigBytes: Buffer;
+            if (booking.requester.signatureImageUrl.startsWith('http://') || booking.requester.signatureImageUrl.startsWith('https://')) {
+                // Fetch from Supabase URL
+                const response = await fetch(booking.requester.signatureImageUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch signature: ${response.statusText}`);
                 }
-                page.drawImage(img, { x: 120, y: 180, width: 100, height: 50 });
+                const arrayBuffer = await response.arrayBuffer();
+                sigBytes = Buffer.from(arrayBuffer);
+            } else {
+                // Legacy local file path
+                const sigPath = join(process.cwd(), 'public', booking.requester.signatureImageUrl);
+                if (existsSync(sigPath)) {
+                    sigBytes = readFileSync(sigPath);
+                } else {
+                    throw new Error('Signature file not found');
+                }
             }
+            
+            // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+            let img;
+            try {
+                img = await pdfDoc.embedPng(sigBytes);
+            } catch {
+                img = await pdfDoc.embedJpg(sigBytes);
+            }
+            page.drawImage(img, { x: 120, y: 180, width: 100, height: 50 });
         } catch (e) { 
             console.error('Sign load error', e); 
         }
@@ -536,84 +574,114 @@ export async function GET(
     // ลายเซ็นผู้อนุมัติ (ขวา)
     if (booking.executiveConfirmer?.signatureImageUrl) {
         try {
-            const sigPath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
-            if (existsSync(sigPath)) {
-                const sigBytes = readFileSync(sigPath);
-                // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
-                let img;
-                try {
-                    img = await pdfDoc.embedPng(sigBytes);
-                } catch {
-                    img = await pdfDoc.embedJpg(sigBytes);
+            // Check if URL is from Supabase (starts with http/https) or local path
+            let sigBytes: Buffer;
+            if (booking.executiveConfirmer.signatureImageUrl.startsWith('http://') || booking.executiveConfirmer.signatureImageUrl.startsWith('https://')) {
+                // Fetch from Supabase URL
+                const response = await fetch(booking.executiveConfirmer.signatureImageUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch signature: ${response.statusText}`);
                 }
-                
-                // คำนวณตำแหน่งและขนาดลายเซ็น
-                // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
-                // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
-                const signatureAreaX1 = 256;
-                const signatureAreaX2 = 420;
-                const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
-                const signatureY = 420; // ตำแหน่งด้านล่าง
-                const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
-                const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
-                
-                // ดึงขนาดภาพจริง
-                const imageWidth = img.width;
-                const imageHeight = img.height;
-                const aspectRatio = imageWidth / imageHeight;
-                
-                // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
-                let displayWidth = signatureAreaWidth;
-                let displayHeight = signatureAreaWidth / aspectRatio;
-                
-                // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+                const arrayBuffer = await response.arrayBuffer();
+                sigBytes = Buffer.from(arrayBuffer);
+            } else {
+                // Legacy local file path
+                const sigPath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
+                if (existsSync(sigPath)) {
+                    sigBytes = readFileSync(sigPath);
+                } else {
+                    throw new Error('Signature file not found');
+                }
+            }
+            
+            // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
+            let img;
+            try {
+                img = await pdfDoc.embedPng(sigBytes);
+            } catch {
+                img = await pdfDoc.embedJpg(sigBytes);
+            }
+            
+            // คำนวณตำแหน่งและขนาดลายเซ็น
+            // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
+            // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
+            const signatureAreaX1 = 256;
+            const signatureAreaX2 = 420;
+            const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
+            const signatureY = 420; // ตำแหน่งด้านล่าง
+            const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
+            const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
+            
+            // ดึงขนาดภาพจริง
+            const imageWidth = img.width;
+            const imageHeight = img.height;
+            const aspectRatio = imageWidth / imageHeight;
+            
+            // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
+            let displayWidth = signatureAreaWidth;
+            let displayHeight = signatureAreaWidth / aspectRatio;
+            
+            // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
+            if (displayHeight > maxHeight) {
+                displayHeight = maxHeight;
+                displayWidth = maxHeight * aspectRatio;
+            }
+            
+            // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
+            if (displayWidth > signatureAreaWidth) {
+                displayWidth = signatureAreaWidth;
+                displayHeight = signatureAreaWidth / aspectRatio;
+                // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
                 if (displayHeight > maxHeight) {
                     displayHeight = maxHeight;
                     displayWidth = maxHeight * aspectRatio;
                 }
-                
-                // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
-                if (displayWidth > signatureAreaWidth) {
-                    displayWidth = signatureAreaWidth;
-                    displayHeight = signatureAreaWidth / aspectRatio;
-                    // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
-                    if (displayHeight > maxHeight) {
-                        displayHeight = maxHeight;
-                        displayWidth = maxHeight * aspectRatio;
-                    }
-                }
-                
-                // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
-                const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
-                const signatureX = centerX - (displayWidth / 2);
-                
-                // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
-                page.drawImage(img, { 
-                    x: signatureX, 
-                    y: signatureY, 
-                    width: displayWidth, 
-                    height: displayHeight 
-                });
-                
-                // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
-                // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
-                const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
-                page.drawImage(img, { 
-                    x: signatureX, 
-                    y: signatureY2, 
-                    width: displayWidth, 
-                    height: displayHeight 
-                });
             }
+            
+            // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
+            const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
+            const signatureX = centerX - (displayWidth / 2);
+            
+            // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
+            page.drawImage(img, { 
+                x: signatureX, 
+                y: signatureY, 
+                width: displayWidth, 
+                height: displayHeight 
+            });
+            
+            // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
+            // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
+            const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
+            page.drawImage(img, { 
+                x: signatureX, 
+                y: signatureY2, 
+                width: displayWidth, 
+                height: displayHeight 
+            });
         } catch (e) { 
             console.error('Exec sign load error', e); 
         }
     }
     
-    // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่กดพิมพ์ (วันที่ปัจจุบัน)
-    const d = approveDate.getDate().toString().padStart(2, '0');
-    const m = (approveDate.getMonth() + 1).toString().padStart(2, '0');
-    const y = (approveDate.getFullYear() + 543).toString();
+    // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่ Executive ยืนยัน (executiveConfirmedAt)
+    // เนื่องจาก booking ต้องเป็น CONFIRMED ก่อนถึงจะสร้าง PDF ได้ ดังนั้นควรจะมี executiveConfirmedAt อยู่แล้ว
+    // ใช้ type assertion เพราะ Prisma type อาจจะยังไม่ sync
+    const confirmedAt = bookingWithConfirmedAt.executiveConfirmedAt;
+    console.log('[PDF] executiveConfirmedAt:', confirmedAt, 'Type:', typeof confirmedAt);
+    console.log('[PDF] booking status:', booking.status);
+    
+    if (!confirmedAt) {
+      console.warn('[PDF] WARNING: executiveConfirmedAt is null/undefined, using current date as fallback');
+    }
+    
+    const approvalDate = confirmedAt 
+      ? new Date(confirmedAt) 
+      : new Date(); // Fallback เป็นวันที่ปัจจุบันถ้าไม่มี (ไม่ควรเกิดขึ้น)
+    console.log('[PDF] approvalDate:', approvalDate.toISOString());
+    const d = approvalDate.getDate().toString().padStart(2, '0');
+    const m = (approvalDate.getMonth() + 1).toString().padStart(2, '0');
+    const y = (approvalDate.getFullYear() + 543).toString();
     fill('approve_date_full', `${d}/${m}/${y}`);
 
     // 7. จบงาน
