@@ -99,38 +99,43 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white/90 p-8 shadow-2xl ring-1 ring-black/5 backdrop-blur">
-        <h2 className="text-2xl font-bold mb-6 text-[#004c80]">{isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="mb-4">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
+      <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white/90 shadow-2xl ring-1 ring-black/5 backdrop-blur flex flex-col">
+        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-2xl font-bold text-[#004c80]">{isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto space-y-4 flex-1">
+            <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">License Plate*</label>
             <input type="text" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-          </div>
-          <div className="mb-4">
+            </div>
+            <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Brand</label>
             <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-          </div>
-          <div className="mb-4">
+            </div>
+            <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Model</label>
             <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-          </div>
-          <div className="mb-4">
+            </div>
+            <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Type</label>
             <input type="text" value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-          </div>
-          <div className="mb-4">
+            </div>
+            <div className="mb-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">ความจุเครื่องยนต์ (CC)</label>
             <input type="number" step="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 1800" />
-          </div>
-          <div className="mb-6">
+            </div>
+            <div className="mb-6">
             <label className="block mb-2 text-sm font-medium text-gray-700">เลขไมล์ปัจจุบัน (กม.)</label>
             <input type="number" step="1" min="0" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 50000" />
+            </div>
+
+            {error && <p className="text-red-500 text-center mb-2">{error}</p>}
           </div>
 
-          {error && <p className="text-red-500 text-center mb-2">{error}</p>}
-
-          <div className="flex justify-end gap-4">
+          <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-200 flex justify-end gap-4 flex-shrink-0">
             <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 ring-1 ring-black/10 bg-white hover:bg-gray-50">Cancel</button>
             <button type="submit" disabled={isLoading} className="rounded-xl px-4 py-2 text-white bg-gradient-to-r from-[#004c80] to-[#0076c3] hover:from-[#005b99] hover:to-[#0087de] disabled:from-[#004c80]/60 disabled:to-[#0076c3]/60">
               {isLoading ? 'Saving...' : (isEditMode ? 'Update Vehicle' : 'Save Vehicle')}

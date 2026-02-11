@@ -327,7 +327,6 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
                 onSignatureSave={handleSignatureSave}
                 onClear={handleSignatureClear}
                 disabled={isLoading || isUploadingSignature}
-                width={400}
                 height={200}
               />
             )}

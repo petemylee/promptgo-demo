@@ -141,7 +141,7 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-[#004c80]">รายละเอียดการจอง</h2>
           <button
@@ -271,7 +271,6 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                     onSignatureSave={handleSaveSignature}
                     onClear={() => {}}
                     disabled={isUploadingSignature}
-                    width={400}
                     height={200}
                   />
                   <div className="flex gap-3">

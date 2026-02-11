@@ -397,7 +397,6 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
                     onSignatureSave={handleSignatureSave}
                     onClear={handleSignatureClear}
                     disabled={isLoading || isUploadingSignature}
-                    width={400}
                     height={200}
                   />
                 )}

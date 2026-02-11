@@ -6,6 +6,9 @@ import { useSession, signOut } from 'next-auth/react';
 import type { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import ConnectLineButton from '@/components/ConnectLineButton';
+import LineLinkFeedback from '@/components/LineLinkFeedback';
+import { Suspense } from 'react';
 
 function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () => void, session: Session | null }) {
   const pathname = usePathname();
@@ -100,6 +103,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean, onClose: () =>
         <div className="mt-6 rounded-xl bg-white/5 px-3 py-3 text-xs text-white/80 ring-1 ring-white/10">
           <p className="mb-1">Signed in as</p>
           <p className="truncate font-medium text-white">{session?.user?.name || session?.user?.email || 'Unknown'}</p>
+          <ConnectLineButton />
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="truncate text-white/90 text-[11px]">{session?.user?.role}</span>
             <button
@@ -162,6 +166,9 @@ export default function AdminLayout({
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
         
         <main className="flex-1 md:mt-0 mt-[73px]">
+          <Suspense fallback={null}>
+            <LineLinkFeedback />
+          </Suspense>
           {children}
         </main>
       </div>

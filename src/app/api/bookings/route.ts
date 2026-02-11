@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+// ✅ 1. นำเข้าฟังก์ชันส่งไลน์
+import { sendLineMessage } from '@/lib/line';
 
 export async function POST(req: Request) {
   // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
@@ -49,7 +51,43 @@ export async function POST(req: Request) {
       },
     });
 
-    // 5. ส่งข้อมูลที่สร้างสำเร็จกลับไป
+    // ==========================================
+    // ✅ 5. แจ้งเตือน LINE ไปยังทุก Admin ที่ผูก LINE แล้ว (จาก DB)
+    // ==========================================
+    try {
+      const adminsWithLine = await prisma.user.findMany({
+        where: { role: 'Admin', lineUserId: { not: null } },
+        select: { lineUserId: true },
+      });
+      const adminLineIds = adminsWithLine.map((u) => u.lineUserId).filter((id): id is string => !!id);
+
+      if (adminLineIds.length > 0) {
+        const startDate = new Date(startTime);
+        const dateStr = startDate.toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        const timeStr = startDate.toLocaleTimeString('th-TH', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        const message = `📢 มีรายการจองรถใหม่!\n\n` +
+                        `👤 ผู้ขอ: ${session.user.name || 'ไม่ระบุ'}\n` +
+                        `📍 ไปที่: ${endLocation}\n` +
+                        `📅 วันที่: ${dateStr}\n` +
+                        `⏰ เวลา: ${timeStr}\n` +
+                        `📝 เหตุผล: ${purpose}`;
+
+        await Promise.all(adminLineIds.map((lineUserId) => sendLineMessage(lineUserId, message)));
+      }
+    } catch (lineError) {
+      console.error("Failed to send LINE notification:", lineError);
+    }
+    // ==========================================
+
+    // 6. ส่งข้อมูลที่สร้างสำเร็จกลับไป
     return NextResponse.json(newBooking, { status: 201 });
 
   } catch (error) {
@@ -58,7 +96,7 @@ export async function POST(req: Request) {
   }
 }
 
-// ========== เพิ่มฟังก์ชันนี้เข้าไปใหม่ ==========
+// ========== ฟังก์ชัน GET เดิม (คงไว้เหมือนเดิมทุกประการ) ==========
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {

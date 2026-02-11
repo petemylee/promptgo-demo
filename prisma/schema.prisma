@@ -44,6 +44,7 @@ model User {
   phoneNumber       String?
   profileImageUrl   String?
   signatureImageUrl String?
+  lineUserId        String?   @unique  // LINE User ID after account binding (for notifications)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

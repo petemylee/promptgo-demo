@@ -294,71 +294,75 @@ export default function AdminDashboard() {
 
       {/* Vehicle & Driver Selection Modal */}
       {showVehicleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold text-[#004c80] mb-4">เลือกรถยนต์และคนขับ</h2>
-            
-            {isLoadingVehicles || isLoadingDrivers ? (
-              <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เลือกรถยนต์
-                  </label>
-                  <select
-                    value={selectedVehicleId}
-                    onChange={(e) => setSelectedVehicleId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
-                  >
-                    <option value="">-- เลือกรถยนต์ (ไม่บังคับ) --</option>
-                    {vehicles.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 overflow-y-auto">
+          <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <h2 className="text-xl font-semibold text-[#004c80]">เลือกรถยนต์และคนขับ</h2>
+            </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    เลือกคนขับ
-                  </label>
-                  <select
-                    value={selectedDriverId}
-                    onChange={(e) => setSelectedDriverId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
-                  >
-                    <option value="">-- เลือกคนขับ (ไม่บังคับ) --</option>
-                    {drivers.map((driver) => (
-                      <option key={driver.id} value={driver.id}>
-                        {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 space-y-4">
+              {isLoadingVehicles || isLoadingDrivers ? (
+                <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      เลือกรถยนต์
+                    </label>
+                    <select
+                      value={selectedVehicleId}
+                      onChange={(e) => setSelectedVehicleId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                    >
+                      <option value="">-- เลือกรถยนต์ (ไม่บังคับ) --</option>
+                      {vehicles.map((vehicle) => (
+                        <option key={vehicle.id} value={vehicle.id}>
+                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} {vehicle.type ? `(${vehicle.type})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => {
-                      setShowVehicleModal(false);
-                      setSelectedBookingId(null);
-                      setSelectedVehicleId('');
-                      setSelectedDriverId('');
-                    }}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    onClick={handleApproveConfirm}
-                    className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
-                  >
-                    อนุมัติ
-                  </button>
-                </div>
-              </>
-            )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      เลือกคนขับ
+                    </label>
+                    <select
+                      value={selectedDriverId}
+                      onChange={(e) => setSelectedDriverId(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                    >
+                      <option value="">-- เลือกคนขับ (ไม่บังคับ) --</option>
+                      {drivers.map((driver) => (
+                        <option key={driver.id} value={driver.id}>
+                          {driver.name || driver.email} {driver.position ? `(${driver.position})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex gap-3 justify-end flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowVehicleModal(false);
+                  setSelectedBookingId(null);
+                  setSelectedVehicleId('');
+                  setSelectedDriverId('');
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleApproveConfirm}
+                className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
+              >
+                อนุมัติ
+              </button>
+            </div>
           </div>
         </div>
       )}
