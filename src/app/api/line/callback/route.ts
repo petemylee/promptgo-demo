@@ -5,12 +5,14 @@ const LINE_TOKEN_URL = 'https://api.line.me/oauth2/v2.1/token';
 const LINE_PROFILE_URL = 'https://api.line.me/v2/profile';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const url = new URL(req.url);
+  const { searchParams } = url;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
-  const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/line/callback`;
+  // ใช้ origin จาก request ให้ตรงกับ URL ที่ LINE redirect กลับมา (สำคัญบน Vercel)
+  const baseUrl = url.origin;
+  const redirectUri = `${baseUrl}/api/line/callback`;
 
   if (!code || !state) {
     const returnTo = state ? decodeStateReturnTo(state) : '/';
