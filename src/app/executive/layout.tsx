@@ -29,7 +29,7 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
 
   return (
     <div
-      className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:relative md:translate-x-0`}
+      className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:flex-shrink-0 md:translate-x-0`}
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] to-[#0076c3]" />
@@ -122,10 +122,9 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff] text-slate-800">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff] text-slate-800">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} />
-      
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
         <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
           <h1 className="text-xl font-bold">OFM PROMPTGO</h1>
           <button 
@@ -141,7 +140,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
         
-        <main className="flex-1 md:mt-0 mt-[73px]">
+        <main className="flex-1 min-h-0 overflow-y-auto md:mt-0 mt-[73px]">
           <Suspense fallback={null}>
             <LineLinkFeedback />
           </Suspense>
