@@ -82,6 +82,24 @@ export async function POST(req: Request) {
 
         await Promise.all(adminLineIds.map((lineUserId) => sendLineMessage(lineUserId, message)));
       }
+
+      // แจ้งผู้ขอ (requester) ถ้าผูก LINE แล้ว
+      const requester = await prisma.user.findUnique({
+        where: { id: session.user.id as string },
+        select: { lineUserId: true },
+      });
+      if (requester?.lineUserId) {
+        const startDate = new Date(startTime);
+        const dateStr = startDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const requesterMsg =
+          `✅ สร้างคำขอจองรถสำเร็จ\n\n` +
+          `📍 ไปที่: ${endLocation}\n` +
+          `📅 วันที่: ${dateStr}\n` +
+          `⏰ เวลา: ${timeStr}\n\n` +
+          `กำลังรอการอนุมัติจากแอดมิน`;
+        sendLineMessage(requester.lineUserId, requesterMsg).catch((e) => console.error('LINE to requester:', e));
+      }
     } catch (lineError) {
       console.error("Failed to send LINE notification:", lineError);
     }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { BookingStatus, TripType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { sendLineMessage } from '@/lib/line';
 
 // GET: ดึงข้อมูลการจองตาม ID
 export async function GET(
@@ -214,6 +215,28 @@ export async function PATCH(
         },
       });
 
+      // แจ้งเตือน LINE ผู้ขอเมื่ออนุมัติเบื้องต้น
+      if (status === 'APPROVED') {
+        const bookingWithRequester = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          include: { requester: { select: { lineUserId: true } } },
+        });
+        if (bookingWithRequester?.requester?.lineUserId) {
+          const startTime = bookingWithRequester.startTime;
+          const dateStr = startTime
+            ? new Date(startTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+            : '-';
+          const msg =
+            `✅ คำขอจองรถของคุณได้รับการอนุมัติเบื้องต้นแล้ว\n\n` +
+            `📍 ไปที่: ${bookingWithRequester.endLocation || '-'}\n` +
+            `📅 วันที่: ${dateStr}\n\n` +
+            `รอการยืนยันขั้นสุดท้ายจากผู้บริหาร`;
+          sendLineMessage(bookingWithRequester.requester.lineUserId, msg).catch((e) =>
+            console.error('LINE approved notification:', e)
+          );
+        }
+      }
+
       return NextResponse.json(updatedBooking);
     } else if (session.user.role === 'Executive') {
       // Executive สามารถยืนยันขั้นสุดท้ายได้
@@ -268,6 +291,30 @@ export async function PATCH(
         where: { id: bookingId },
         data: updateData,
       });
+
+      // แจ้งเตือน LINE ผู้ขอเมื่อยืนยันขั้นสุดท้าย
+      const bookingForNotif = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { requester: { select: { lineUserId: true } }, vehicle: { select: { licensePlate: true } }, driver: { select: { name: true } } },
+      });
+      if (bookingForNotif?.requester?.lineUserId) {
+        const startTime = bookingForNotif.startTime;
+        const dateStr = startTime
+          ? new Date(startTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+          : '-';
+        const car = bookingForNotif.vehicle?.licensePlate || '-';
+        const driverName = bookingForNotif.driver?.name || '-';
+        const msg =
+          `🎉 คำขอจองรถของคุณได้รับการยืนยันขั้นสุดท้ายแล้ว\n\n` +
+          `📍 ไปที่: ${bookingForNotif.endLocation || '-'}\n` +
+          `📅 วันที่: ${dateStr}\n` +
+          `🚗 รถ: ${car}\n` +
+          `👤 คนขับ: ${driverName}\n\n` +
+          `พร้อมออกเดินทางได้ตามกำหนด`;
+        sendLineMessage(bookingForNotif.requester.lineUserId, msg).catch((e) =>
+          console.error('LINE confirmed notification:', e)
+        );
+      }
 
       // อัปเดต signature URL ใน user profile
       if (signatureImageUrl) {

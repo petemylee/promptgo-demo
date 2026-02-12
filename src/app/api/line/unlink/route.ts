@@ -9,11 +9,15 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = session.user.id as string;
   try {
-    await prisma.user.update({
-      where: { id: session.user.id as string },
-      data: { lineUserId: null },
-    });
+    await prisma.$transaction([
+      prisma.account.deleteMany({ where: { userId, provider: 'line' } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { lineUserId: null },
+      }),
+    ]);
     return NextResponse.json({ success: true, linked: false });
   } catch (error) {
     console.error('LINE unlink error:', error);

@@ -2,6 +2,7 @@
 import NextAuth from 'next-auth';
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import LineProvider from 'next-auth/providers/line';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
@@ -40,27 +41,43 @@ export const authOptions: AuthOptions = {
         return user;
       },
     }),
+    LineProvider({
+      clientId: process.env.NEXT_PUBLIC_LINE_CHANNEL_ID ?? '',
+      clientSecret: process.env.LINE_LOGIN_CHANNEL_SECRET ?? '',
+    }),
   ],
   session: {
     strategy: 'jwt',
   },
   callbacks: {
-    // Callback นี้จะถูกเรียกเมื่อ JWT ถูกสร้างหรืออัปเดต
+    signIn: async ({ account, profile }) => {
+      const p = profile as { id?: string; sub?: string } | null;
+      const lineId = p?.id ?? p?.sub;
+      if (account?.provider === 'line' && lineId) {
+        const linked = await prisma.user.findFirst({
+          where: { lineUserId: lineId },
+        });
+        if (!linked) {
+          return '/login?error=LineNotLinked';
+        }
+        return true;
+      }
+      return true;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
-        token.role = user.role; // เพิ่ม role เข้าไปใน token
+        token.role = user.role;
       }
       return token;
     },
-    // Callback นี้จะถูกเรียกเมื่อ Session ถูกเข้าถึง
     session: async ({ session, token }) => {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role; // เพิ่ม role เข้าไปใน session
+        session.user.role = token.role;
       }
       return session;
-    },  
+    },
   },
   secret: process.env.NEXTAUTH_SECRET, // ต้องสร้าง NEXTAUTH_SECRET ใน .env
   pages: {

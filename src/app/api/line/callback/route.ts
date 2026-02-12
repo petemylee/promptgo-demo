@@ -73,10 +73,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${baseUrl}${returnTo}?line_linked=error&reason=already_used`);
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { lineUserId },
-    });
+    // Ensure this LINE id is linked only to the current user: clear from others and
+    // take over the Account row so Login with LINE resolves to this user.
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { lineUserId },
+        data: { lineUserId: null },
+      }),
+      prisma.account.deleteMany({
+        where: { provider: 'line', providerAccountId: lineUserId },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { lineUserId },
+      }),
+      prisma.account.create({
+        data: {
+          userId,
+          type: 'oauth',
+          provider: 'line',
+          providerAccountId: lineUserId,
+        },
+      }),
+    ]);
 
     return NextResponse.redirect(`${baseUrl}${returnTo}?line_linked=success`);
   } catch (error) {
