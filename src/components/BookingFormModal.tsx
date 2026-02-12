@@ -226,7 +226,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
                   className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                   required
                 />
-                <span className="text-sm text-gray-700">ส่งอย่างเดียว (ONE_WAY)</span>
+                <span className="text-sm text-gray-700">ส่งอย่างเดียว</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -238,7 +238,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
                   className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                   required
                 />
-                <span className="text-sm text-gray-700">รับอย่างเดียว (PICK_UP)</span>
+                <span className="text-sm text-gray-700">รับอย่างเดียว</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -250,7 +250,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
                   className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                   required
                 />
-                <span className="text-sm text-gray-700">ไป-กลับ/รอรับ (ROUND_TRIP)</span>
+                <span className="text-sm text-gray-700">ไป-กลับ/รอรับ</span>
               </label>
             </div>
           </div>

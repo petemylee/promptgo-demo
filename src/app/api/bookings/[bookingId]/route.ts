@@ -105,29 +105,23 @@ export async function PATCH(
       passengerImageUrl
     } = body;
 
-    // ตรวจสอบสิทธิ์ตาม role
-    // Requester สามารถแก้ไขคำขอได้ (เฉพาะ PENDING status) หรืออัปเดตลายเซ็น
-    if (session.user.role === 'Requester') {
-      // ตรวจสอบว่า booking เป็นของ requester คนนี้หรือไม่
-      const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        select: { requesterId: true, status: true },
-      });
-
-      if (!booking) {
-        return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
-      }
-
-      if (booking.requesterId !== session.user.id) {
-        return NextResponse.json({ error: 'Unauthorized to update this booking' }, { status: 403 });
-      }
-
+    // ดึง booking เพื่อตรวจสอบสิทธิ์
+    const bookingForAuth = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { requesterId: true, status: true },
+    });
+    if (!bookingForAuth) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+    // เจ้าของการจอง (ทุก role) แก้ไขคำขอได้เฉพาะ PENDING หรืออัปเดตลายเซ็น
+    const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
+    if (isRequesterOfBooking) {
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
-      if (endLocation !== undefined || purpose !== undefined || startTime !== undefined || 
-          endTime !== undefined || passengerCount !== undefined || tripType !== undefined || 
+      if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
+          endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
           passengerImageUrl !== undefined) {
         // ตรวจสอบว่า status เป็น PENDING เท่านั้น
-        if (booking.status !== 'PENDING') {
+        if (bookingForAuth.status !== 'PENDING') {
           return NextResponse.json({ 
             error: 'สามารถแก้ไขได้เฉพาะคำขอที่อยู่ในสถานะ PENDING เท่านั้น' 
           }, { status: 400 });
@@ -360,12 +354,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    // Requester สามารถลบได้เฉพาะคำขอที่อยู่ในสถานะ PENDING
-    if (session.user.role === 'Requester') {
-      if (booking.requesterId !== session.user.id) {
-        return NextResponse.json({ error: 'Unauthorized to delete this booking' }, { status: 403 });
-      }
-
+    // เจ้าของการจอง (ทุก role) ลบได้เฉพาะคำขอที่อยู่ในสถานะ PENDING
+    if (booking.requesterId === session.user.id) {
       if (booking.status !== 'PENDING') {
         return NextResponse.json({ 
           error: 'สามารถลบได้เฉพาะคำขอที่อยู่ในสถานะ PENDING เท่านั้น' 
