@@ -430,7 +430,7 @@ export default function MyBookingsPage() {
                                 onClick={() => setFeedbackModal({
                                   bookingId: b.id,
                                   driverId: b.driver!.id,
-                                  driverName: b.driver.name,
+                                  driverName: b.driver!.name ?? '',
                                 })}
                                 className="text-sm text-amber-700 hover:text-amber-800 underline"
                               >
