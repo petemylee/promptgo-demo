@@ -26,7 +26,14 @@ interface Booking {
     model: string | null;
   } | null;
   driver: {
+    id: string;
     name: string | null;
+  } | null;
+  driverFeedback?: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    requester: { name: string | null };
   } | null;
 }
 
@@ -194,6 +201,20 @@ export default function ExecutiveHistoryPage() {
                         <p className="text-sm text-green-700">
                           <span className="font-medium">อนุมัติโดย:</span> {booking.adminApprover.name}
                         </p>
+                      </div>
+                    )}
+                    {/* Feedback จากผู้ขอใช้รถให้คนขับ (Admin, Executive, Driver เห็นได้) */}
+                    {booking.driverFeedback && (
+                      <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                        <p className="text-sm text-amber-800">
+                          <span className="font-medium">Feedback คนขับ:</span> {'⭐'.repeat(booking.driverFeedback.rating)} ({booking.driverFeedback.rating}/5)
+                          {booking.driverFeedback.requester?.name && ` โดย ${booking.driverFeedback.requester.name}`}
+                        </p>
+                        {booking.driverFeedback.comment && (
+                          <p className="text-sm text-amber-800 mt-1">
+                            <span className="font-medium">ข้อเสนอแนะ:</span> {booking.driverFeedback.comment}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

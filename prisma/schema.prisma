@@ -54,6 +54,8 @@ model User {
   bookingsDriven         Booking[] @relation("DriverTrips")
   bookingsApprovedByAdmin Booking[] @relation("AdminApprovals")
   bookingsConfirmedByExec Booking[] @relation("ExecutiveConfirmations")
+  driverFeedbackGivenAsRequester DriverFeedback[] @relation("RequesterDriverFeedback")
+  driverFeedbackReceived DriverFeedback[] @relation("DriverFeedbackReceived")
 }
 
 model Account {
@@ -136,6 +138,24 @@ model Booking {
   executiveConfirmer User?     @relation("ExecutiveConfirmations", fields: [executiveConfirmerId], references: [id])
 
   feedback           Feedback?
+  driverFeedback     DriverFeedback?
+}
+
+// Feedback จาก Requester (ผู้ขอใช้รถ) ให้คนขับ (Admin, Executive, Driver เห็นได้)
+model DriverFeedback {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 ดาว
+  comment   String?  // ข้อเสนอแนะเพิ่มเติม (ไม่บังคับ)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  driverId    String
+  requesterId String
+  bookingId   String   @unique
+
+  driver    User    @relation("DriverFeedbackReceived", fields: [driverId], references: [id], onDelete: Cascade)
+  requester User    @relation("RequesterDriverFeedback", fields: [requesterId], references: [id], onDelete: Cascade)
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }
 
 model Feedback {

@@ -60,6 +60,15 @@ export async function GET() {
             comment: true,
           },
         },
+        driverFeedback: {
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            requester: { select: { name: true } },
+          },
+        },
       },
       orderBy: {
         updatedAt: 'desc',

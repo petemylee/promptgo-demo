@@ -6,6 +6,7 @@ import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
 import ProfileEditModal from '@/components/ProfileEditModal';
+import DriverFeedbackModal from '@/components/DriverFeedbackModal';
 
 type Booking = {
   id: string;
@@ -27,6 +28,11 @@ type Booking = {
     brand: string | null;
     model: string | null;
     type: string | null;
+  } | null;
+  driverFeedback?: {
+    id: string;
+    rating: number;
+    comment: string | null;
   } | null;
 };
 
@@ -175,6 +181,7 @@ export default function MyBookingsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState<{ bookingId: string; driverId: string; driverName: string | null } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -411,12 +418,26 @@ export default function MyBookingsPage() {
                         <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                         <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                         <td className="py-2 px-4">
-                          <button
-                            onClick={() => handleViewDetails(b.id)}
-                            className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
-                          >
-                            ดูรายละเอียด
-                          </button>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              onClick={() => handleViewDetails(b.id)}
+                              className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
+                            >
+                              ดูรายละเอียด
+                            </button>
+                            {b.status === 'COMPLETED' && b.driver && !b.driverFeedback && (
+                              <button
+                                onClick={() => setFeedbackModal({
+                                  bookingId: b.id,
+                                  driverId: b.driver!.id,
+                                  driverName: b.driver.name,
+                                })}
+                                className="text-sm text-amber-700 hover:text-amber-800 underline"
+                              >
+                                ⭐ ให้ Feedback คนขับ
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -468,6 +489,15 @@ export default function MyBookingsPage() {
             window.location.reload();
           }}
         />
+        {feedbackModal && (
+          <DriverFeedbackModal
+            bookingId={feedbackModal.bookingId}
+            driverId={feedbackModal.driverId}
+            driverName={feedbackModal.driverName}
+            onClose={() => setFeedbackModal(null)}
+            onSuccess={reloadBookings}
+          />
+        )}
       </div>
     </div>
   );

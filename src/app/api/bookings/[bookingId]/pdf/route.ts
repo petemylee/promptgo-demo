@@ -534,14 +534,15 @@ export async function GET(
     const page = pdfDoc.getPages()[0];
     const { height } = page.getSize();
     
-    // ลายเซ็นผู้ขอ (ซ้าย)
-    if (booking.requester.signatureImageUrl) {
+    // ลายเซ็นผู้ขอ (ซ้าย) - ใช้ requesterSignatureUrl จาก Booking (ไม่ใช่ requester.signatureImageUrl จาก User)
+    const requesterSigUrl = booking.requesterSignatureUrl ?? booking.requester.signatureImageUrl;
+    if (requesterSigUrl) {
         try {
             // Check if URL is from Supabase (starts with http/https) or local path
             let sigBytes: Buffer;
-            if (booking.requester.signatureImageUrl.startsWith('http://') || booking.requester.signatureImageUrl.startsWith('https://')) {
+            if (requesterSigUrl.startsWith('http://') || requesterSigUrl.startsWith('https://')) {
                 // Fetch from Supabase URL
-                const response = await fetch(booking.requester.signatureImageUrl);
+                const response = await fetch(requesterSigUrl);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch signature: ${response.statusText}`);
                 }
@@ -549,7 +550,7 @@ export async function GET(
                 sigBytes = Buffer.from(arrayBuffer);
             } else {
                 // Legacy local file path
-                const sigPath = join(process.cwd(), 'public', booking.requester.signatureImageUrl);
+                const sigPath = join(process.cwd(), 'public', requesterSigUrl);
                 if (existsSync(sigPath)) {
                     sigBytes = readFileSync(sigPath);
                 } else {
@@ -564,7 +565,36 @@ export async function GET(
             } catch {
                 img = await pdfDoc.embedJpg(sigBytes);
             }
-            page.drawImage(img, { x: 120, y: 180, width: 100, height: 50 });
+            // พื้นที่ลายเซ็นผู้ขอใช้: x: 257 ถึง 417, y: 493 ถึง 523
+            const reqSigAreaX1 = 257;
+            const reqSigAreaX2 = 417;
+            const reqSigAreaWidth = reqSigAreaX2 - reqSigAreaX1; // 160
+            const reqSigYBottom = 493; // ตำแหน่งด้านล่าง
+            const reqSigYTop = 523; // ตำแหน่งด้านบน
+            const reqSigMaxHeight = reqSigYTop - reqSigYBottom; // 30
+            const reqAspectRatio = img.width / img.height;
+            let reqDisplayWidth = reqSigAreaWidth;
+            let reqDisplayHeight = reqSigAreaWidth / reqAspectRatio;
+            if (reqDisplayHeight > reqSigMaxHeight) {
+                reqDisplayHeight = reqSigMaxHeight;
+                reqDisplayWidth = reqSigMaxHeight * reqAspectRatio;
+            }
+            if (reqDisplayWidth > reqSigAreaWidth) {
+                reqDisplayWidth = reqSigAreaWidth;
+                reqDisplayHeight = reqSigAreaWidth / reqAspectRatio;
+                if (reqDisplayHeight > reqSigMaxHeight) {
+                    reqDisplayHeight = reqSigMaxHeight;
+                    reqDisplayWidth = reqSigMaxHeight * reqAspectRatio;
+                }
+            }
+            const reqCenterX = (reqSigAreaX1 + reqSigAreaX2) / 2;
+            const reqSignatureX = reqCenterX - (reqDisplayWidth / 2);
+            page.drawImage(img, {
+                x: reqSignatureX,
+                y: reqSigYBottom,
+                width: reqDisplayWidth,
+                height: reqDisplayHeight,
+            });
         } catch (e) { 
             console.error('Sign load error', e); 
         }

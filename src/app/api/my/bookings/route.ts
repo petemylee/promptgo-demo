@@ -36,6 +36,13 @@ export async function GET() {
             model: true,
             type: true,
           }
+        },
+        driverFeedback: {
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+          }
         }
       }
     });

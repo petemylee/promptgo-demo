@@ -35,6 +35,13 @@ type Job = {
     rating: number;
     comment: string | null;
   } | null;
+  driverFeedback: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+    requester: { name: string | null };
+  } | null;
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -193,15 +200,29 @@ export default function DriverHistoryPage() {
                         </div>
                       </div>
 
-                      {/* Feedback */}
+                      {/* Feedback จาก Requester */}
                       {job.feedback && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                           <p className="text-sm text-blue-700">
-                            <span className="font-medium">คะแนน:</span> {'⭐'.repeat(job.feedback.rating)} ({job.feedback.rating}/5)
+                            <span className="font-medium">คะแนนจากผู้ขอ:</span> {'⭐'.repeat(job.feedback.rating)} ({job.feedback.rating}/5)
                           </p>
                           {job.feedback.comment && (
                             <p className="text-sm text-blue-700 mt-1">
                               <span className="font-medium">ความคิดเห็น:</span> {job.feedback.comment}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {/* Feedback จากผู้ขอใช้รถ (Admin, Executive, Driver เห็นได้) */}
+                      {job.driverFeedback && (
+                        <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                          <p className="text-sm text-amber-800">
+                            <span className="font-medium">Feedback จากผู้ขอใช้:</span> {'⭐'.repeat(job.driverFeedback.rating)} ({job.driverFeedback.rating}/5)
+                            {job.driverFeedback.requester?.name && ` โดย ${job.driverFeedback.requester.name}`}
+                          </p>
+                          {job.driverFeedback.comment && (
+                            <p className="text-sm text-amber-800 mt-1">
+                              <span className="font-medium">ข้อเสนอแนะ:</span> {job.driverFeedback.comment}
                             </p>
                           )}
                         </div>

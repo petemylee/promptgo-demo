@@ -25,6 +25,7 @@ interface Booking {
     type: string | null;
   } | null;
   driver: {
+    id: string;
     name: string | null;
   } | null;
   adminApprover: {
@@ -32,6 +33,12 @@ interface Booking {
   } | null;
   executiveConfirmer: {
     name: string | null;
+  } | null;
+  driverFeedback?: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    requester: { name: string | null };
   } | null;
 }
 
@@ -56,43 +63,35 @@ export default function AdminHistoryPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  const fetchBookings = async () => {
+    if (status !== 'authenticated') return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/bookings?all=true');
+      if (!response.ok) throw new Error('Failed to fetch bookings');
+      const data = await response.json();
+      const adminBookings = data.filter((booking: Booking) =>
+        booking.adminApprover !== null &&
+        (booking.status === 'APPROVED' || booking.status === 'REJECTED' ||
+          booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' ||
+          booking.status === 'COMPLETED' || booking.status === 'CANCELLED')
+      );
+      setBookings(adminBookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setBookings([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
     if (status === 'authenticated' && session?.user?.role !== 'Admin') router.replace('/');
   }, [status, session, router]);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      if (status !== 'authenticated') return;
-      
-      setIsLoading(true);
-      try {
-        // ใช้ query parameter ?all=true เพื่อดึงข้อมูล bookings ทั้งหมด
-        const response = await fetch('/api/bookings?all=true');
-        if (!response.ok) {
-          throw new Error('Failed to fetch bookings');
-        }
-        const data = await response.json();
-        
-        // กรองเฉพาะ bookings ที่ admin อนุมัติหรือปฏิเสธ (มี adminApprover)
-        const adminBookings = data.filter((booking: Booking) => 
-          booking.adminApprover !== null && 
-          (booking.status === 'APPROVED' || booking.status === 'REJECTED' || 
-           booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' || 
-           booking.status === 'COMPLETED' || booking.status === 'CANCELLED')
-        );
-        setBookings(adminBookings);
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
-        setBookings([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (status === 'authenticated') {
-      fetchBookings();
-    }
+    if (status === 'authenticated') fetchBookings();
   }, [status, session]);
 
   const filtered = useMemo(() => {
@@ -264,6 +263,21 @@ export default function AdminHistoryPage() {
                           </p>
                         </div>
                       )}
+
+                      {/* Feedback จาก Admin ให้คนขับ */}
+                      {booking.driverFeedback && (
+                        <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                          <p className="text-sm text-amber-800">
+                            <span className="font-medium">Feedback คนขับ:</span> {'⭐'.repeat(booking.driverFeedback.rating)} ({booking.driverFeedback.rating}/5)
+                            {booking.driverFeedback.requester?.name && ` โดย ${booking.driverFeedback.requester.name}`}
+                          </p>
+                          {booking.driverFeedback.comment && (
+                            <p className="text-sm text-amber-800 mt-1">
+                              <span className="font-medium">ข้อเสนอแนะ:</span> {booking.driverFeedback.comment}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Status Badge & Actions */}
@@ -302,6 +316,7 @@ export default function AdminHistoryPage() {
           )}
         </div>
       </div>
+
     </div>
   );
 }

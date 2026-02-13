@@ -160,7 +160,16 @@ export async function GET(req: Request) {
             },
             driver: {
               select: {
+                id: true,
                 name: true,
+              }
+            },
+            driverFeedback: {
+              select: {
+                id: true,
+                rating: true,
+                comment: true,
+                requester: { select: { name: true } },
               }
             }
           },
@@ -237,7 +246,16 @@ export async function GET(req: Request) {
             },
             driver: {
               select: {
+                id: true,
                 name: true,
+              }
+            },
+            driverFeedback: {
+              select: {
+                id: true,
+                rating: true,
+                comment: true,
+                requester: { select: { name: true } },
               }
             }
           },
