@@ -9,6 +9,7 @@ interface Vehicle {
   model: string | null;
   type: string | null;
   capacity: number | null;
+  passengerCapacity: number | null;
   currentMileage: number | null;
 }
 
@@ -72,6 +73,7 @@ export default function VehicleManagementPage() {
                   <th className="text-left py-2 px-4 text-[#004c80]">Brand & Model</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">Type</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ความจุ (CC)</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">จำนวนที่สามารถโดยสารได้ (คน)</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">เลขไมล์ปัจจุบัน (กม.)</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
                 </tr>
@@ -82,7 +84,8 @@ export default function VehicleManagementPage() {
                     <td className="py-2 px-4 font-mono whitespace-nowrap">{vehicle.licensePlate}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{vehicle.brand} {vehicle.model}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{vehicle.type}</td>
-                    <td className="py-2 px-4">{vehicle.capacity}</td>
+                    <td className="py-2 px-4">{vehicle.capacity ?? '-'}</td>
+                    <td className="py-2 px-4">{vehicle.passengerCapacity ?? '-'}</td>
                     <td className="py-2 px-4">
                       {vehicle.currentMileage !== null 
                         ? `${vehicle.currentMileage.toLocaleString()} กม.` 

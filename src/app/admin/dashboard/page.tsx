@@ -25,6 +25,7 @@ interface Vehicle {
   model: string | null;
   type: string | null;
   capacity: number | null;
+  passengerCapacity: number | null;
 }
 
 interface Driver {

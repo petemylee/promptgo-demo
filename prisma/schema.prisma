@@ -93,16 +93,17 @@ model VerificationToken {
 }
 
 model Vehicle {
-  id             String    @id @default(cuid())
-  licensePlate   String    @unique
-  brand           String?
-  model           String?
-  type            String?
-  capacity        Int?
-  currentMileage  Int?      // เลขไมล์ปัจจุบัน
-  vehicleImageUrl String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  licensePlate       String    @unique
+  brand              String?
+  model              String?
+  type               String?
+  capacity           Int?      // ความจุเครื่องยนต์ (CC)
+  passengerCapacity  Int?      // จำนวนที่สามารถโดยสารได้ (คน)
+  currentMileage     Int?      // เลขไมล์ปัจจุบัน
+  vehicleImageUrl    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   bookings Booking[]
 }

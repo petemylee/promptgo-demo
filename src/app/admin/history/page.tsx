@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -63,7 +63,7 @@ export default function AdminHistoryPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (status !== 'authenticated') return;
     setIsLoading(true);
     try {
@@ -83,7 +83,7 @@ export default function AdminHistoryPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [status]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -92,7 +92,7 @@ export default function AdminHistoryPage() {
 
   useEffect(() => {
     if (status === 'authenticated') fetchBookings();
-  }, [status, session]);
+  }, [status, fetchBookings]);
 
   const filtered = useMemo(() => {
     let result = bookings;
