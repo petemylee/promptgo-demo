@@ -22,6 +22,11 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [passengerCount, setPassengerCount] = useState('');
   const [tripType, setTripType] = useState<TripType | ''>('');
   const [expresswayOption, setExpresswayOption] = useState<ExpresswayOption | ''>('');
+  const [requestForSelf, setRequestForSelf] = useState(true);
+  const [travelerName, setTravelerName] = useState('');
+  const [travelerPosition, setTravelerPosition] = useState('');
+  const [travelerPhone, setTravelerPhone] = useState('');
+  const [userProfile, setUserProfile] = useState<{ name: string; position: string; phoneNumber: string } | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
@@ -29,6 +34,18 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
   const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
+
+  useEffect(() => {
+    const shouldFetch = variant === 'fullpage' || (variant === 'modal' && isOpen);
+    if (shouldFetch && requestForSelf) {
+      fetch('/api/users/me')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setUserProfile({ name: data.name || '', position: data.position || '', phoneNumber: data.phoneNumber || '' });
+        })
+        .catch(() => setUserProfile(null));
+    }
+  }, [variant, isOpen, requestForSelf]);
 
   useEffect(() => {
     if (variant === 'modal' && !isOpen) {
@@ -39,6 +56,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setPassengerCount('');
       setTripType('');
       setExpresswayOption('');
+      setRequestForSelf(true);
+      setTravelerName('');
+      setTravelerPosition('');
+      setTravelerPhone('');
       setError('');
       setIsLoading(false);
       setSignatureDataUrl(null);
@@ -92,6 +113,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!requestForSelf && (!travelerName?.trim() || !travelerPosition?.trim() || !travelerPhone?.trim())) {
+      setError('กรุณากรอกข้อมูลผู้เดินทางให้ครบถ้วน');
+      return;
+    }
     setIsLoading(true);
     setIsUploadingSignature(false);
     setIsUploadingPassengerPhoto(false);
@@ -175,6 +200,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
           expresswayOption: expresswayOption || null,
+          requestForSelf,
+          travelerName: requestForSelf ? null : travelerName?.trim() || null,
+          travelerPosition: requestForSelf ? null : travelerPosition?.trim() || null,
+          travelerPhone: requestForSelf ? null : travelerPhone?.trim() || null,
           requesterSignatureUrl,
           passengerImageUrl,
         }),
@@ -212,6 +241,57 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         <div className={`px-8 py-6 space-y-4 flex-1 ${variant === 'modal' ? 'overflow-y-auto' : ''}`}>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">ขอใช้สำหรับ*</label>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="requestFor"
+                  checked={requestForSelf}
+                  onChange={() => { setRequestForSelf(true); setTravelerName(''); setTravelerPosition(''); setTravelerPhone(''); }}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                />
+                <span className="text-sm text-gray-700">ขอใช้สำหรับตนเอง</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="requestFor"
+                  checked={!requestForSelf}
+                  onChange={() => setRequestForSelf(false)}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                />
+                <span className="text-sm text-gray-700">ขอใช้สำหรับบุคคลอื่น</span>
+              </label>
+            </div>
+          </div>
+          {requestForSelf ? (
+            <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง (จากข้อมูลส่วนตัว)</p>
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <div><span className="text-gray-500">ชื่อ-นามสกุล:</span> <span className="text-gray-900">{userProfile?.name || '-'}</span></div>
+                <div><span className="text-gray-500">ตำแหน่ง:</span> <span className="text-gray-900">{userProfile?.position || '-'}</span></div>
+                <div><span className="text-gray-500">เบอร์โทร:</span> <span className="text-gray-900">{userProfile?.phoneNumber || '-'}</span></div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-xl border border-gray-200 bg-amber-50/30 p-4">
+              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง (กรอกเอง)*</p>
+              <div>
+                <label className="block mb-1 text-sm text-gray-600">ชื่อ-นามสกุล*</label>
+                <input value={travelerName} onChange={(e) => setTravelerName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุชื่อ-นามสกุลผู้เดินทาง" />
+              </div>
+              <div>
+                <label className="block mb-1 text-sm text-gray-600">ตำแหน่ง*</label>
+                <input value={travelerPosition} onChange={(e) => setTravelerPosition(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุตำแหน่ง" />
+              </div>
+              <div>
+                <label className="block mb-1 text-sm text-gray-600">เบอร์โทร*</label>
+                <input type="tel" value={travelerPhone} onChange={(e) => setTravelerPhone(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุเบอร์โทรศัพท์" />
+              </div>
+            </div>
+          )}
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
             <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />

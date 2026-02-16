@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requesterSignatureUrl, passengerImageUrl } = body;
+    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!endLocation || !purpose || !startTime || !endTime) {
@@ -41,6 +41,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid expressway option' }, { status: 400 });
     }
 
+    // ตรวจสอบข้อมูลเมื่อขอใช้สำหรับบุคคลอื่น
+    const isForSelf = requestForSelf !== false;
+    if (!isForSelf) {
+      if (!travelerName?.trim() || !travelerPosition?.trim() || !travelerPhone?.trim()) {
+        return NextResponse.json({ error: 'กรุณากรอกข้อมูลผู้เดินทางให้ครบถ้วน' }, { status: 400 });
+      }
+    }
+
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
     const newBooking = await prisma.booking.create({
       data: {
@@ -51,6 +59,10 @@ export async function POST(req: Request) {
         passengerCount: passengerCountNum,
         tripType: tripType || null,
         expresswayOption: expresswayOption || null,
+        requestForSelf: isForSelf,
+        travelerName: isForSelf ? null : (travelerName?.trim() || null),
+        travelerPosition: isForSelf ? null : (travelerPosition?.trim() || null),
+        travelerPhone: isForSelf ? null : (travelerPhone?.trim() || null),
         status: 'PENDING', // กำหนดสถานะเริ่มต้น
         requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
         requesterSignatureUrl: requesterSignatureUrl || null, // ลายเซ็นผู้ขอใช้รถ (ถ้ามี)
