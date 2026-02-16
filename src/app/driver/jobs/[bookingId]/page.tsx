@@ -12,6 +12,10 @@ interface Booking {
   endTime: string | null;
   status: string;
   createdAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
+  travelerPhone?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -177,13 +181,15 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
           <h2 className="text-xl font-semibold text-[#004c80] mb-6">รายละเอียดงาน</h2>
           
           <div className="space-y-6">
-            {/* Requester Info */}
+            {/* ผู้เดินทาง */}
             <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">ผู้ขอใช้</h3>
+              <h3 className="font-semibold text-[#004c80] mb-3">ผู้เดินทาง</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-medium">{booking.requester.name || '-'}</p>
-                <p className="text-sm text-gray-600">{booking.requester.position || '-'}</p>
-                <p className="text-sm text-gray-500">{booking.requester.email}</p>
+                <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+                <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
+                {booking.requestForSelf === false && (
+                  <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
+                )}
               </div>
             </div>
 

@@ -14,6 +14,9 @@ type Job = {
   endTime: string | null;
   status: string;
   createdAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -116,9 +119,9 @@ export default function DriverDashboard() {
                       <td className="py-2 px-4 whitespace-nowrap font-mono text-xs">{job.id.substring(0, 8)}...</td>
                       <td className="py-2 px-4">
                         <div>
-                          <div className="font-medium">{job.requester.name || job.requester.email}</div>
-                          {job.requester.position && (
-                            <div className="text-xs text-gray-500">{job.requester.position}</div>
+                          <div className="font-medium">{job.requestForSelf !== false ? (job.requester.name || job.requester.email) : (job.travelerName || '-')}</div>
+                          {(job.requestForSelf !== false ? job.requester.position : job.travelerPosition) && (
+                            <div className="text-xs text-gray-500">{job.requestForSelf !== false ? job.requester.position : job.travelerPosition}</div>
                           )}
                         </div>
                       </td>

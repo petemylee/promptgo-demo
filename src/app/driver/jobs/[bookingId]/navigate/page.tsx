@@ -14,6 +14,9 @@ interface Booking {
   startMileage: number | null;
   endMileage: number | null;
   createdAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -278,11 +281,13 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
             {/* Job Details */}
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-[#004c80] mb-2">ผู้ขอใช้</h3>
+                <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="font-medium">{booking.requester.name || '-'}</p>
-                  <p className="text-sm text-gray-600">{booking.requester.position || '-'}</p>
-                  <p className="text-sm text-gray-500">{booking.requester.email}</p>
+                  <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+                  <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
+                  {booking.requestForSelf === false && (
+                    <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
+                  )}
                 </div>
               </div>
 

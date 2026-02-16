@@ -15,6 +15,9 @@ type Job = {
   status: string;
   createdAt: string;
   updatedAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -103,12 +106,14 @@ export default function InProgressJobsPage() {
                       {/* Job Info */}
                       <div className="flex-1">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Requester Info */}
+                          {/* ผู้เดินทาง */}
                           <div>
-                            <h3 className="font-semibold text-[#004c80] mb-2">ผู้ขอใช้</h3>
-                            <p className="font-medium">{job.requester.name || '-'}</p>
-                            <p className="text-sm text-gray-600">{job.requester.position || '-'}</p>
-                            <p className="text-sm text-gray-500">{job.requester.email}</p>
+                            <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
+                            <p className="font-medium">{job.requestForSelf !== false ? (job.requester.name || '-') : (job.travelerName || '-')}</p>
+                            <p className="text-sm text-gray-600">{job.requestForSelf !== false ? (job.requester.position || '-') : (job.travelerPosition || '-')}</p>
+                            {job.requestForSelf === false && (
+                              <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {job.requester.name} ({job.requester.email})</p>
+                            )}
                           </div>
 
                           {/* Trip Details */}

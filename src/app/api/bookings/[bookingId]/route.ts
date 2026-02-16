@@ -113,9 +113,11 @@ export async function PATCH(
     if (!bookingForAuth) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
-    // เจ้าของการจอง (ทุก role) แก้ไขคำขอได้เฉพาะ PENDING หรืออัปเดตลายเซ็น
+    // ถ้า Admin กำลังอนุมัติ/ปฏิเสธ ให้ใช้ flow อนุมัติเสมอ (แม้จะเป็นผู้สร้างคำขอเอง)
+    const isAdminApprovalRequest = session.user.role === 'Admin' && (status === 'APPROVED' || status === 'REJECTED');
     const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
-    if (isRequesterOfBooking) {
+
+    if (isRequesterOfBooking && !isAdminApprovalRequest) {
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
       if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||

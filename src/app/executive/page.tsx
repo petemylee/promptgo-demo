@@ -11,6 +11,9 @@ interface Booking {
   endTime: string | null;
   status: string;
   createdAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -205,8 +208,8 @@ export default function ExecutiveDashboard() {
                 <tr key={booking.id} className="border-b hover:bg-[#0076c3]/5">
                   <td className="py-3 px-4">
                     <div>
-                      <p className="font-medium">{booking.requester.name}</p>
-                      <p className="text-sm text-gray-500">{booking.requester.position}</p>
+                      <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+                      <p className="text-sm text-gray-500">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
                     </div>
                   </td>
                   <td className="py-3 px-4">

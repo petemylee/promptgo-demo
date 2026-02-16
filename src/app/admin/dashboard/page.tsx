@@ -10,6 +10,10 @@ interface Booking {
   purpose: string | null;
   passengerCount: number | null;
   tripType: string | null;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
+  travelerPhone?: string | null;
   requester: {
     name: string | null;
     position: string | null;
@@ -251,8 +255,8 @@ export default function AdminDashboard() {
                 data.pendingBookings.map((booking) => (
                   <tr key={booking.id} className="border-b hover:bg-[#0076c3]/5">
                     <td className="py-2 px-4">{booking.id.substring(0, 8)}...</td>
-                    <td className="py-2 px-4">{booking.requester.name}</td>
-                    <td className="py-2 px-4">{booking.requester.position || '-'}</td>
+                    <td className="py-2 px-4">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</td>
+                    <td className="py-2 px-4">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</td>
                     <td className="py-2 px-4">{booking.endLocation}</td>
                     <td className="py-2 px-4">
                       {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
@@ -388,14 +392,14 @@ export default function AdminDashboard() {
             </div>
             
             <div className="space-y-4">
-              {/* Requester Info */}
+              {/* ผู้เดินทาง */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้ขอใช้</h3>
-                <p><span className="font-medium">ชื่อ:</span> {selectedBooking.requester.name || '-'}</p>
-                <p><span className="font-medium">ตำแหน่ง:</span> {selectedBooking.requester.position || '-'}</p>
-                <p><span className="font-medium">Email:</span> {selectedBooking.requester.email || '-'}</p>
-                {selectedBooking.requester.phoneNumber && (
-                  <p><span className="font-medium">เบอร์โทร:</span> {selectedBooking.requester.phoneNumber}</p>
+                <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้เดินทาง</h3>
+                <p><span className="font-medium">ชื่อ:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.name || '-') : (selectedBooking.travelerName || '-')}</p>
+                <p><span className="font-medium">ตำแหน่ง:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.position || '-') : (selectedBooking.travelerPosition || '-')}</p>
+                <p><span className="font-medium">เบอร์โทร:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.phoneNumber || '-') : (selectedBooking.travelerPhone || '-')}</p>
+                {selectedBooking.requestForSelf === false && (
+                  <p className="mt-2 text-sm text-gray-500"><span className="font-medium">ผู้สร้างคำขอ:</span> {selectedBooking.requester.name} ({selectedBooking.requester.email})</p>
                 )}
               </div>
 

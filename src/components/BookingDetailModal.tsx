@@ -21,6 +21,10 @@ interface BookingDetail {
   status: string;
   requesterSignatureUrl: string | null;
   passengerImageUrl: string | null;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
+  travelerPhone?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -171,14 +175,14 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
           </div>
         ) : booking ? (
           <div className="space-y-6">
-            {/* Requester Info */}
+            {/* ผู้เดินทาง / ผู้ขอใช้ */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้ขอใช้</h3>
-              <p><span className="font-medium">ชื่อ:</span> {booking.requester.name || '-'}</p>
-              <p><span className="font-medium">ตำแหน่ง:</span> {booking.requester.position || '-'}</p>
-              <p><span className="font-medium">Email:</span> {booking.requester.email}</p>
-              {booking.requester.phoneNumber && (
-                <p><span className="font-medium">เบอร์โทร:</span> {booking.requester.phoneNumber}</p>
+              <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้เดินทาง</h3>
+              <p><span className="font-medium">ชื่อ:</span> {booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+              <p><span className="font-medium">ตำแหน่ง:</span> {booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
+              <p><span className="font-medium">เบอร์โทร:</span> {booking.requestForSelf !== false ? (booking.requester.phoneNumber || '-') : (booking.travelerPhone || '-')}</p>
+              {booking.requestForSelf === false && (
+                <p className="mt-2 text-sm text-gray-500"><span className="font-medium">ผู้สร้างคำขอ:</span> {booking.requester.name} ({booking.requester.email})</p>
               )}
             </div>
 

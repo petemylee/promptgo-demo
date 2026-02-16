@@ -148,8 +148,11 @@ export async function POST(
       color: textColor,
     });
 
-    // ชื่อ (Name) - Main content area
-    page.drawText(booking.requester.name || '-', {
+    // ชื่อผู้เดินทาง (Name) - ใช้ traveler เมื่อขอใช้สำหรับบุคคลอื่น
+    const b = booking as typeof booking & { requestForSelf?: boolean | null; travelerName?: string | null; travelerPosition?: string | null };
+    const displayName = b.requestForSelf !== false ? (b.requester.name || '-') : (b.travelerName || '-');
+    const displayPosition = b.requestForSelf !== false ? (b.requester.position || '-') : (b.travelerPosition || '-');
+    page.drawText(displayName, {
       x: 100,
       y: height - 200,
       size: 14,
@@ -158,7 +161,7 @@ export async function POST(
     });
 
     // ตำแหน่ง (Position)
-    page.drawText(booking.requester.position || '-', {
+    page.drawText(displayPosition, {
       x: 100,
       y: height - 220,
       size: 12,
@@ -490,9 +493,12 @@ export async function GET(
     fill('req_month', thaiMonths[startDate.getMonth()]);
     fill('req_year', (startDate.getFullYear() + 543).toString());
 
-    // --- ผู้ขอ ---
-    fill('requester_name', booking.requester.name || '-');
-    fill('requester_position', booking.requester.position || '-');
+    // --- ผู้เดินทาง (ใช้ traveler เมื่อขอใช้สำหรับบุคคลอื่น) ---
+    const bookingWithTraveler = booking as typeof booking & { requestForSelf?: boolean | null; travelerName?: string | null; travelerPosition?: string | null };
+    const pdfDisplayName = bookingWithTraveler.requestForSelf !== false ? (booking.requester.name || '-') : (bookingWithTraveler.travelerName || '-');
+    const pdfDisplayPosition = bookingWithTraveler.requestForSelf !== false ? (booking.requester.position || '-') : (bookingWithTraveler.travelerPosition || '-');
+    fill('requester_name', pdfDisplayName);
+    fill('requester_position', pdfDisplayPosition);
     
     // --- รายละเอียด ---
     fill('destination', booking.endLocation || '-');
@@ -599,7 +605,7 @@ export async function GET(
             console.error('Sign load error', e); 
         }
     }
-    fill('requester_sign_name', booking.requester.name || '-');
+    fill('requester_sign_name', pdfDisplayName);
 
     // ลายเซ็นผู้อนุมัติ (ขวา)
     if (booking.executiveConfirmer?.signatureImageUrl) {

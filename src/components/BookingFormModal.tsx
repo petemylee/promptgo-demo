@@ -268,7 +268,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           </div>
           {requestForSelf ? (
             <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-2">
-              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง (จากข้อมูลส่วนตัว)</p>
+              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง</p>
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div><span className="text-gray-500">ชื่อ-นามสกุล:</span> <span className="text-gray-900">{userProfile?.name || '-'}</span></div>
                 <div><span className="text-gray-500">ตำแหน่ง:</span> <span className="text-gray-900">{userProfile?.position || '-'}</span></div>
@@ -277,7 +277,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             </div>
           ) : (
             <div className="space-y-4 rounded-xl border border-gray-200 bg-amber-50/30 p-4">
-              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง (กรอกเอง)*</p>
+              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง*</p>
               <div>
                 <label className="block mb-1 text-sm text-gray-600">ชื่อ-นามสกุล*</label>
                 <input value={travelerName} onChange={(e) => setTravelerName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุชื่อ-นามสกุลผู้เดินทาง" />

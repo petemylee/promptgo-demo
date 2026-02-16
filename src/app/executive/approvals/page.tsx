@@ -10,6 +10,10 @@ interface Booking {
   endTime: string | null;
   status: string;
   createdAt: string;
+  requestForSelf?: boolean | null;
+  travelerName?: string | null;
+  travelerPosition?: string | null;
+  travelerPhone?: string | null;
   requester: {
     name: string | null;
     email: string;
@@ -58,6 +62,7 @@ export default function ExecutiveApprovalsPage() {
     return (
       (booking.requester.name || '').toLowerCase().includes(q) ||
       (booking.requester.position || '').toLowerCase().includes(q) ||
+      (booking.requestForSelf === false && (booking.travelerName || '').toLowerCase().includes(q)) ||
       (booking.endLocation || '').toLowerCase().includes(q) ||
       (booking.purpose || '').toLowerCase().includes(q)
     );
@@ -122,12 +127,14 @@ export default function ExecutiveApprovalsPage() {
                   {/* Booking Info */}
                   <div className="flex-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Requester Info */}
+                      {/* ผู้เดินทาง */}
                       <div>
-                        <h3 className="font-semibold text-[#004c80] mb-2">ผู้ขอใช้</h3>
-                        <p className="font-medium">{booking.requester.name}</p>
-                        <p className="text-sm text-gray-600">{booking.requester.position}</p>
-                        <p className="text-sm text-gray-500">{booking.requester.email}</p>
+                        <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
+                        <p className="font-medium">{booking.requestForSelf !== false ? booking.requester.name : (booking.travelerName || '-')}</p>
+                        <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? booking.requester.position : (booking.travelerPosition || '-')}</p>
+                        {booking.requestForSelf === false && (
+                          <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
+                        )}
                       </div>
 
                       {/* Trip Details */}
