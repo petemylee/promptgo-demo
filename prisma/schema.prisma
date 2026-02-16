@@ -34,6 +34,11 @@ enum TripType {
   ROUND_TRIP
 }
 
+enum ExpresswayOption {
+  EXPRESSWAY    // ขึ้นทางด่วน
+  NO_EXPRESSWAY // ไม่ขึ้นทางด่วน
+}
+
 model User {
   id                String    @id @default(cuid())
   name              String?
@@ -116,6 +121,7 @@ model Booking {
   endTime             DateTime?
   passengerCount      Int?
   tripType            TripType?
+  expresswayOption    ExpresswayOption? // ขึ้นทางด่วน/ไม่ขึ้นทางด่วน (ใช้เลือก template ในอนาคต)
   status              BookingStatus  @default(PENDING)
   generatedFormUrl    String?
   requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ

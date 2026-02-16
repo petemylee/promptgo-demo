@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, requesterSignatureUrl, passengerImageUrl } = body;
+    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requesterSignatureUrl, passengerImageUrl } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!endLocation || !purpose || !startTime || !endTime) {
@@ -35,6 +35,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
     }
 
+    // ตรวจสอบ expresswayOption (สำหรับเลือก template ในอนาคต)
+    const validExpresswayOptions = ['EXPRESSWAY', 'NO_EXPRESSWAY'];
+    if (expresswayOption && !validExpresswayOptions.includes(expresswayOption)) {
+      return NextResponse.json({ error: 'Invalid expressway option' }, { status: 400 });
+    }
+
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
     const newBooking = await prisma.booking.create({
       data: {
@@ -44,6 +50,7 @@ export async function POST(req: Request) {
         endTime: new Date(endTime),
         passengerCount: passengerCountNum,
         tripType: tripType || null,
+        expresswayOption: expresswayOption || null,
         status: 'PENDING', // กำหนดสถานะเริ่มต้น
         requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
         requesterSignatureUrl: requesterSignatureUrl || null, // ลายเซ็นผู้ขอใช้รถ (ถ้ามี)

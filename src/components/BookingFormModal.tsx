@@ -5,19 +5,23 @@ import SignaturePad from './SignaturePad';
 
 type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
 
+type ExpresswayOption = 'EXPRESSWAY' | 'NO_EXPRESSWAY';
+
 interface BookingFormModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   onCreated: () => void;
+  variant?: 'modal' | 'fullpage';
 }
 
-export default function BookingFormModal({ isOpen, onClose, onCreated }: BookingFormModalProps) {
+export default function BookingFormModal({ isOpen = true, onClose, onCreated, variant = 'modal' }: BookingFormModalProps) {
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [passengerCount, setPassengerCount] = useState('');
   const [tripType, setTripType] = useState<TripType | ''>('');
+  const [expresswayOption, setExpresswayOption] = useState<ExpresswayOption | ''>('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
@@ -27,13 +31,14 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (variant === 'modal' && !isOpen) {
       setDestination('');
       setPurpose('');
       setStartTime('');
       setEndTime('');
       setPassengerCount('');
       setTripType('');
+      setExpresswayOption('');
       setError('');
       setIsLoading(false);
       setSignatureDataUrl(null);
@@ -42,7 +47,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
       setPassengerPhotoPreview(null);
       setIsUploadingPassengerPhoto(false);
     }
-  }, [isOpen]);
+  }, [variant, isOpen]);
 
   const handleSignatureSave = (dataUrl: string) => {
     setSignatureDataUrl(dataUrl);
@@ -82,7 +87,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
     setPassengerPhotoPreview(null);
   };
 
-  if (!isOpen) return null;
+  if (variant === 'modal' && !isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +174,7 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
           endTime: endTime ? new Date(endTime) : null,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
+          expresswayOption: expresswayOption || null,
           requesterSignatureUrl,
           passengerImageUrl,
         }),
@@ -189,17 +195,42 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white/90 shadow-2xl ring-1 ring-black/5 backdrop-blur flex flex-col">
-        <div className="px-8 pt-8 pb-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-2xl font-bold text-[#004c80]">สร้างคำขอใช้งาน</h2>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="px-8 py-6 overflow-y-auto space-y-4 flex-1">
+  const innerForm = (
+    <>
+      <div className={`flex-shrink-0 border-b border-gray-200 ${variant === 'fullpage' ? 'px-6 py-4 flex items-center gap-4' : 'px-8 pt-8 pb-4'}`}>
+        {variant === 'fullpage' && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          >
+            <span aria-hidden>←</span>
+            <span>กลับ</span>
+          </button>
+        )}
+        <h2 className={`text-2xl font-bold text-[#004c80] ${variant === 'fullpage' ? 'flex-1' : ''}`}>ขออนุญาตใช้รถยนต์ส่วนกลาง</h2>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <div className={`px-8 py-6 space-y-4 flex-1 ${variant === 'modal' ? 'overflow-y-auto' : ''}`}>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
             <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
+            <textarea rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
+            <input 
+              type="number" 
+              min="1" 
+              value={passengerCount} 
+              onChange={(e) => setPassengerCount(e.target.value)} 
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
+              required 
+              placeholder="ระบุจำนวนคนนั่ง"
+            />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วันเวลาออกเดินทาง*</label>
@@ -210,11 +241,6 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
             <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
-            <textarea rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">ประเภทการเดินทาง*</label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -255,16 +281,33 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
             </div>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
-            <input 
-              type="number" 
-              min="1" 
-              value={passengerCount} 
-              onChange={(e) => setPassengerCount(e.target.value)} 
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
-              required 
-              placeholder="ระบุจำนวนคนนั่ง"
-            />
+            <label className="block mb-2 text-sm font-medium text-gray-700">การเดินทาง*</label>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="expresswayOption"
+                  value="EXPRESSWAY"
+                  checked={expresswayOption === 'EXPRESSWAY'}
+                  onChange={(e) => setExpresswayOption(e.target.value as ExpresswayOption)}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                  required
+                />
+                <span className="text-sm text-gray-700">ใช้ทางด่วน</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="expresswayOption"
+                  value="NO_EXPRESSWAY"
+                  checked={expresswayOption === 'NO_EXPRESSWAY'}
+                  onChange={(e) => setExpresswayOption(e.target.value as ExpresswayOption)}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                  required
+                />
+                <span className="text-sm text-gray-700">ไม่ใช้ทางด่วน</span>
+              </label>
+            </div>
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">รูปภาพผู้โดยสาร (ไม่บังคับ)</label>
@@ -331,15 +374,30 @@ export default function BookingFormModal({ isOpen, onClose, onCreated }: Booking
               />
             )}
           </div>
-            {error && <p className="text-red-600 text-center text-sm">{error}</p>}
-            {isUploadingSignature && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดลายเซ็น...</p>}
-            {isUploadingPassengerPhoto && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดรูปภาพผู้โดยสาร...</p>}
-          </div>
-          <div className="px-8 py-6 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-            <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 ring-1 ring-black/10 bg-white hover:bg-gray-50">ยกเลิก</button>
-            <button type="submit" disabled={isLoading} className="rounded-xl px-4 py-2 text-white bg-gradient-to-r from-[#004c80] to-[#0076c3] hover:from-[#005b99] hover:to-[#0087de] disabled:from-[#004c80]/60 disabled:to-[#0076c3]/60">{isLoading ? 'กำลังบันทึก...' : 'สร้างคำขอ'}</button>
-          </div>
-        </form>
+          {error && <p className="text-red-600 text-center text-sm">{error}</p>}
+          {isUploadingSignature && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดลายเซ็น...</p>}
+          {isUploadingPassengerPhoto && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดรูปภาพผู้โดยสาร...</p>}
+        </div>
+        <div className="px-8 py-6 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+          <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 ring-1 ring-black/10 bg-white hover:bg-gray-50">ยกเลิก</button>
+          <button type="submit" disabled={isLoading} className="rounded-xl px-4 py-2 text-white bg-gradient-to-r from-[#004c80] to-[#0076c3] hover:from-[#005b99] hover:to-[#0087de] disabled:from-[#004c80]/60 disabled:to-[#0076c3]/60">{isLoading ? 'กำลังบันทึก...' : 'สร้างคำขอ'}</button>
+        </div>
+      </form>
+    </>
+  );
+
+  if (variant === 'fullpage') {
+    return (
+      <div className="w-full max-w-2xl mx-auto rounded-2xl bg-white/90 shadow ring-1 ring-black/5 flex flex-col">
+        {innerForm}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
+      <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white/90 shadow-2xl ring-1 ring-black/5 backdrop-blur flex flex-col">
+        {innerForm}
       </div>
     </div>
   );

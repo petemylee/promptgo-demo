@@ -176,7 +176,7 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -200,7 +200,7 @@ export default function MyBookingsPage() {
   }, [status]);
 
   useEffect(() => {
-    const handleOpenModal = () => setIsModalOpen(true);
+    const handleOpenModal = () => setShowCreateForm(true);
     window.addEventListener('openBookingModal', handleOpenModal);
     return () => {
       window.removeEventListener('openBookingModal', handleOpenModal);
@@ -274,13 +274,31 @@ export default function MyBookingsPage() {
 
   if (status === 'loading') return <div className="p-6">Loading...</div>;
 
+  if (showCreateForm) {
+    return (
+      <div className="relative min-h-screen overflow-hidden p-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
+        <div className="relative z-10 mx-auto w-full max-w-5xl">
+          <BookingFormModal
+            variant="fullpage"
+            onClose={() => setShowCreateForm(false)}
+            onCreated={async () => {
+              await reloadBookings();
+              setShowCreateForm(false);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
       <div className="relative z-10 mx-auto w-full max-w-5xl">
         <div className="mb-6 flex flex-col gap-1">
           <h1 className="text-2xl font-bold text-[#004c80]">My Bookings</h1>
-          <p className="text-gray-700">ติดตามสถานะคำขอใช้งานยานพาหนะของคุณ</p>
+          <p className="text-gray-700">ติดตามสถานะคำขอใช้รถยนต์ของคุณ</p>
         </div>
 
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -297,7 +315,7 @@ export default function MyBookingsPage() {
             <button onClick={() => setIsProfileModalOpen(true)} className="rounded-xl bg-gray-600 px-4 py-2.5 text-white shadow hover:bg-gray-700">
               แก้ไขข้อมูลส่วนตัว
             </button>
-            <button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
+            <button onClick={() => setShowCreateForm(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ ขอใช้รถยนต์</button>
           </div>
         </div>
 
@@ -375,7 +393,7 @@ export default function MyBookingsPage() {
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#004c80] grid place-items-center">🗒️</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีคำขอของคุณ</h3>
                         <p className="text-sm text-gray-500 mt-1">เริ่มต้นสร้างคำขอแรกของคุณได้เลย</p>
-                        <button onClick={() => setIsModalOpen(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ สร้างคำขอใหม่</button>
+                        <button onClick={() => setShowCreateForm(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ ขอใช้รถยนต์</button>
                       </div>
                     </td>
                   </tr>
@@ -454,11 +472,6 @@ export default function MyBookingsPage() {
           </div>
         )}
 
-        <BookingFormModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onCreated={reloadBookings}
-        />
         {selectedBookingId && (
           <>
             <BookingDetailModal
