@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 const LINE_ERROR_MESSAGE =
@@ -128,7 +128,10 @@ export default function LoginForm({
 
               <button
                 type="button"
-                onClick={() => signIn('line', { callbackUrl: '/' })}
+                onClick={async () => {
+                  await signOut({ redirect: false });
+                  signIn('line', { callbackUrl: '/' });
+                }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#06C755] bg-[#06C755] px-5 py-3 font-medium text-white shadow-sm transition hover:bg-[#05b34a]"
               >
                 <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
