@@ -6,21 +6,24 @@ import type { Session } from 'next-auth';
 import { useRouter, usePathname } from 'next/navigation';
 import ConnectLineButton from '@/components/ConnectLineButton';
 import LineLinkFeedback from '@/components/LineLinkFeedback';
+import ProfileEditModal from '@/components/ProfileEditModal';
 import { Suspense } from 'react';
 
-function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () => void; session: Session | null }) {
+function Sidebar({ isOpen, onClose, session, onOpenProfile }: { isOpen: boolean; onClose: () => void; session: Session | null; onOpenProfile: () => void }) {
   const pathname = usePathname();
   const NavItem = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => {
     const isActive = pathname === href || (href !== '/executive' && pathname.startsWith(href));
     return (
-      <li className="mb-1">
+      <li className="mb-1.5">
         <Link
           href={href}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2 transition ring-1 ${
-            isActive ? 'bg-white text-[#004c80] ring-white' : 'text-white/90 ring-white/10 hover:bg-white/10 hover:text-white'
+          className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 ${
+            isActive
+              ? 'bg-white text-[#004c80] shadow-md'
+              : 'text-white/90 hover:bg-white/10 hover:text-white'
           }`}
         >
-          <span className={`grid h-6 w-6 place-items-center rounded-md ${isActive ? 'bg-[#004c80]/10 text-[#004c80]' : 'bg-white/10 text-white'}`}>{icon}</span>
+          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${isActive ? 'bg-[#004c80]/10 text-[#004c80]' : 'bg-white/10 text-white'}`}>{icon}</span>
           <span className="text-sm font-medium">{label}</span>
         </Link>
       </li>
@@ -29,19 +32,19 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
 
   return (
     <div
-      className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:flex-shrink-0 md:translate-x-0`}
+      className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-out md:sticky md:top-0 md:h-screen md:flex-shrink-0 md:translate-x-0`}
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] to-[#0076c3]" />
-      <div className="relative z-10 flex h-full flex-col pt-[73px] md:pt-4 p-4">
-        <div className="mb-6 flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3 ring-1 ring-white/20">
-          <div className="h-8 w-8 rounded-lg bg-white/20" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] via-[#0066ad] to-[#0076c3]" />
+      <div className="relative z-10 flex h-full flex-col pt-[73px] md:pt-5 p-4">
+        <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
+          <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center font-bold text-white text-sm">O</div>
           <div>
-            <p className="text-sm leading-5 text-white/80">OFM</p>
-            <h2 className="text-lg font-bold leading-5">PROMPTGO</h2>
+            <p className="text-xs font-medium uppercase tracking-wider text-white/80">OFM</p>
+            <h2 className="text-lg font-bold leading-tight text-white">PROMPTGO</h2>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto py-1 -mx-1">
           <ul>
             <NavItem
               href="/executive"
@@ -81,15 +84,23 @@ function Sidebar({ isOpen, onClose, session }: { isOpen: boolean; onClose: () =>
             />
           </ul>
         </nav>
-        <div className="mt-6 rounded-xl bg-white/5 px-3 py-3 text-xs text-white/80 ring-1 ring-white/10">
-          <p className="mb-1">Signed in as</p>
+        <div className="mt-6 rounded-2xl bg-white/5 px-3 py-3.5 text-xs text-white/80 ring-1 ring-white/10 backdrop-blur-sm">
+          <p className="mb-1 text-white/70">Signed in as</p>
           <p className="truncate font-medium text-white">{session?.user?.name || session?.user?.email || 'Unknown'}</p>
           <ConnectLineButton />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onOpenProfile(); }}
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white ring-1 ring-white/20 hover:bg-white/20 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712zM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l8.4-8.4z"/><path d="M5.25 5.25a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3V13.5a.75.75 0 0 0-1.5 0v5.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V8.25a1.5 1.5 0 0 1 1.5-1.5h5.25a.75.75 0 0 0 0-1.5H5.25z"/></svg>
+            แก้ไขข้อมูลส่วนตัว
+          </button>
           <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="truncate text-white/90 text-[11px]">{session?.user?.role}</span>
+            <span className="truncate text-white/90 text-xs">{session?.user?.role}</span>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white ring-1 ring-white/20 hover:bg-white/20 hover:ring-white/30"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white ring-1 ring-white/20 hover:bg-white/20 transition-colors"
               title="Logout"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M13 3a1 1 0 0 1 1 1v4h-2V5H6v14h6v-3h2v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8z"/><path d="M16.293 7.293a1 1 0 0 1 1.414 0L22 11.586a1 1 0 0 1 0 1.414l-4.293 4.293a1 1 0 1 1-1.414-1.414L18.586 13H10a1 1 0 1 1 0-2h8.586l-2.293-2.293a1 1 0 0 1 0-1.414z"/></svg>
@@ -106,6 +117,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -118,33 +130,52 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   }, [status, session, router]);
 
   if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Executive')) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/30">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#004c80] border-t-transparent" />
+          <p className="text-sm text-slate-600">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff] text-slate-800">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} />
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-[#f0f7ff] to-[#e6f3ff] text-slate-800">
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} onOpenProfile={() => setShowProfileModal(true)} />
       <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
-        <header className="md:hidden bg-white/80 backdrop-blur border-b border-white/60 shadow-sm p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
-          <h1 className="text-xl font-bold">OFM PROMPTGO</h1>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSidebarOpen(!isSidebarOpen);
-            }}
-            className="relative z-50"
+        <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
+          <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
+            className="relative z-50 p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+            aria-label="เปิดเมนู"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
           </button>
         </header>
 
-        {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"></div>}
-        
-        <main className="flex-1 min-h-0 overflow-y-auto md:mt-0 mt-[73px]">
+        {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden transition-opacity" aria-hidden />}
+
+        <main className="flex-1 min-h-0 overflow-y-auto md:mt-0 mt-[57px]">
           <Suspense fallback={null}>
             <LineLinkFeedback />
           </Suspense>
-          {children}
+          {showProfileModal ? (
+            <div className="p-4">
+              <div className="mx-auto w-full max-w-5xl">
+                <ProfileEditModal
+                  variant="fullpage"
+                  isOpen
+                  onClose={() => setShowProfileModal(false)}
+                  onUpdated={() => setShowProfileModal(false)}
+                />
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

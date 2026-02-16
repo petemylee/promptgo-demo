@@ -36,11 +36,22 @@
 
 // src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans, Prompt } from 'next/font/google';
 import './globals.css';
-import AuthProvider from './AuthProvider'; // <-- Import เข้ามา
+import AuthProvider from './AuthProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+const prompt = Prompt({
+  subsets: ['latin', 'thai'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-prompt',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'OFM PROMPTGO',
@@ -53,9 +64,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <AuthProvider> {/* <-- นำมาครอบ children */}
+    <html lang="th" suppressHydrationWarning className={`${plusJakarta.variable} ${prompt.variable}`}>
+      <body className="font-sans antialiased">
+        <AuthProvider>
           {children}
         </AuthProvider>
       </body>

@@ -56,28 +56,27 @@ export async function PATCH(
     const body = await req.json();
     const { name, email, role, position, phoneNumber } = body;
 
-    // ตรวจสอบสิทธิ์: Admin สามารถแก้ไขได้ทุกคน, Requester แก้ไขได้เฉพาะตัวเอง
-    if (session.user.role === 'Admin') {
-      // Admin สามารถแก้ไขได้ทุกคน
-      // ตรวจสอบว่าตำแหน่งต้องกรอก
+    // ตรวจสอบสิทธิ์: Admin แก้ไขได้ทุกคน (รวม role), ผู้ใช้ทุก role แก้ไขข้อมูลตัวเองได้ (ไม่รวม role)
+    const isEditingSelf = session.user.id === userId;
+    if (session.user.role === 'Admin' && !isEditingSelf) {
+      // Admin แก้ไขผู้ใช้คนอื่น
       if (!position || position.trim() === '') {
         return NextResponse.json({ error: 'Position is required' }, { status: 400 });
       }
-
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: { 
-          name, 
-          email, 
-          role, 
+        data: {
+          name,
+          email,
+          role,
           position: position.trim(),
           phoneNumber: phoneNumber?.trim() || null,
         },
       });
-
       return NextResponse.json(updatedUser, { status: 200 });
-    } else if (session.user.role === 'Requester' && session.user.id === userId) {
-      // Requester สามารถแก้ไขข้อมูลส่วนตัวของตัวเองได้ (ไม่สามารถเปลี่ยน role)
+    }
+    if (isEditingSelf) {
+      // แก้ไขข้อมูลส่วนตัวตัวเอง (ทุก role) – ไม่เปลี่ยน role
       const updateData: {
         name?: string;
         email?: string;
@@ -88,24 +87,19 @@ export async function PATCH(
         email: email?.trim(),
         phoneNumber: phoneNumber?.trim() || null,
       };
-
-      // ถ้ามี position ให้อัปเดตด้วย
       if (position !== undefined) {
         if (!position || position.trim() === '') {
           return NextResponse.json({ error: 'Position is required' }, { status: 400 });
         }
         updateData.position = position.trim();
       }
-
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: updateData,
       });
-
       return NextResponse.json(updatedUser, { status: 200 });
-    } else {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   } catch (error) {
     console.error('Error updating user:', error);
     return NextResponse.json(

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
-import ProfileEditModal from '@/components/ProfileEditModal';
 import DriverFeedbackModal from '@/components/DriverFeedbackModal';
 
 type Booking = {
@@ -43,8 +42,8 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
     CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'Confirmed' },
     REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
     IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'In Progress' },
-    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Completed' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Cancelled' },
+    COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Completed' },
+    CANCELLED: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Cancelled' },
     MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Merged' },
   };
   const p = map[status];
@@ -73,14 +72,14 @@ const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
   const mapUrl = getMapUrl();
 
   return (
-    <div className="border border-indigo-200 rounded-lg p-6 bg-gradient-to-br from-indigo-50/50 to-white">
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-semibold text-[#004c80]">Booking #{booking.id.substring(0, 8)}</h3>
             <StatusBadge status={booking.status} />
           </div>
-          <p className="text-gray-600">{booking.purpose || '-'}</p>
+          <p className="text-slate-600">{booking.purpose || '-'}</p>
         </div>
       </div>
 
@@ -88,7 +87,7 @@ const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
         <div className="space-y-4">
           <h4 className="font-semibold text-[#004c80]">แผนที่เส้นทาง</h4>
           {mapUrl ? (
-            <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
+            <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
               <iframe
                 width="100%"
                 height="100%"
@@ -100,12 +99,12 @@ const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
               />
             </div>
           ) : (
-            <div className="w-full h-80 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+            <div className="w-full h-80 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200">
               <div className="text-center">
-                <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-300 text-gray-600 grid place-items-center">
+                <div className="mx-auto mb-4 h-12 w-12 rounded-2xl bg-slate-200 text-slate-500 grid place-items-center text-2xl">
                   🗺️
                 </div>
-                <p className="text-gray-600 text-sm">
+                <p className="text-slate-600 text-sm">
                   {!googleMapsApiKey
                     ? 'กรุณาตั้งค่า NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
                     : !booking.endLocation
@@ -179,7 +178,6 @@ export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{ bookingId: string; driverId: string; driverName: string | null } | null>(null);
 
@@ -312,9 +310,6 @@ export default function MyBookingsPage() {
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setIsProfileModalOpen(true)} className="rounded-xl bg-gray-600 px-4 py-2.5 text-white shadow hover:bg-gray-700">
-              แก้ไขข้อมูลส่วนตัว
-            </button>
             <button onClick={() => setShowCreateForm(true)} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ ขอใช้รถยนต์</button>
           </div>
         </div>
@@ -494,14 +489,6 @@ export default function MyBookingsPage() {
             />
           </>
         )}
-        <ProfileEditModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          onUpdated={() => {
-            reloadBookings();
-            window.location.reload();
-          }}
-        />
         {feedbackModal && (
           <DriverFeedbackModal
             bookingId={feedbackModal.bookingId}
