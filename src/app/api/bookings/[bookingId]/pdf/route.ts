@@ -189,11 +189,23 @@ export async function POST(
       color: textColor,
     });
 
+    // หมายเหตุเพิ่มเติม (ถ้ามี) และเลื่อนบรรทัดถัดไป
+    const notesOffset = booking.additionalNotes ? 20 : 0;
+    if (booking.additionalNotes) {
+      page.drawText(`หมายเหตุ: ${booking.additionalNotes}`, {
+        x: 100,
+        y: height - 290,
+        size: 11,
+        font: font,
+        color: textColor,
+      });
+    }
+
     // ในวันที่... (วันที่เดินทาง)
     const travelDate = booking.startTime ? formatDate(booking.startTime.toISOString()) : '-';
     page.drawText(`ในวันที่${travelDate}`, {
       x: 100,
-      y: height - 290,
+      y: height - 290 - notesOffset,
       size: 12,
       font: font,
       color: textColor,
@@ -204,7 +216,7 @@ export async function POST(
     if (booking.vehicle) {
       page.drawText(`รถยนต์: ${booking.vehicle.brand} ${booking.vehicle.model} (${booking.vehicle.licensePlate})`, {
         x: 100,
-        y: height - 320,
+        y: height - 320 - notesOffset,
         size: 12,
         font: font,
         color: textColor,
@@ -215,7 +227,7 @@ export async function POST(
     if (booking.driver) {
       page.drawText(`คนขับ: ${booking.driver.name}`, {
         x: 100,
-        y: height - 340,
+        y: height - 340 - notesOffset,
         size: 12,
         font: font,
         color: textColor,

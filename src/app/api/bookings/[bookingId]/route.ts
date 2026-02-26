@@ -102,7 +102,8 @@ export async function PATCH(
       endTime,
       passengerCount,
       tripType,
-      passengerImageUrl
+      passengerImageUrl,
+      additionalNotes
     } = body;
 
     // ดึง booking เพื่อตรวจสอบสิทธิ์
@@ -121,7 +122,7 @@ export async function PATCH(
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
       if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
-          passengerImageUrl !== undefined) {
+          passengerImageUrl !== undefined || additionalNotes !== undefined) {
         // ตรวจสอบว่า status เป็น PENDING เท่านั้น
         if (bookingForAuth.status !== 'PENDING') {
           return NextResponse.json({ 
@@ -139,9 +140,11 @@ export async function PATCH(
           tripType?: TripType | null;
           passengerImageUrl?: string | null;
           requesterSignatureUrl?: string | null;
+          additionalNotes?: string | null;
         } = {};
         if (endLocation !== undefined) updateData.endLocation = endLocation;
         if (purpose !== undefined) updateData.purpose = purpose;
+        if (additionalNotes !== undefined) updateData.additionalNotes = additionalNotes?.trim() || null;
         if (startTime !== undefined) updateData.startTime = startTime ? new Date(startTime) : null;
         if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
         if (passengerCount !== undefined) {

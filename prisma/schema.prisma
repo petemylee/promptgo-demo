@@ -130,6 +130,7 @@ model Booking {
   travelerName       String?        // ชื่อผู้เดินทาง (เมื่อขอใช้สำหรับบุคคลอื่น)
   travelerPosition   String?        // ตำแหน่งผู้เดินทาง (เมื่อขอใช้สำหรับบุคคลอื่น)
   travelerPhone      String?        // เบอร์โทรผู้เดินทาง (เมื่อขอใช้สำหรับบุคคลอื่น)
+  additionalNotes     String?        // หมายเหตุเพิ่มเติม (ผู้ใช้พิมพ์ได้)
   startMileage        Int?           // เลขไมล์ก่อนออกเดินทาง
   endMileage          Int?           // เลขไมล์หลังเดินทาง
   executiveConfirmedAt DateTime?     // วันที่ Executive ยืนยัน

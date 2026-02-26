@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 interface Booking {
   id: string;
   purpose: string | null;
+  additionalNotes: string | null;
   startLocation: string | null;
   endLocation: string | null;
   startTime: string | null;
@@ -202,6 +203,17 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>
               </div>
             </div>
+
+            {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
+            {booking.additionalNotes && (
+              <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+                <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                  <span className="text-amber-600" aria-hidden>📌</span>
+                  หมายเหตุเพิ่มเติม
+                </h3>
+                <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
+              </div>
+            )}
 
             {/* Schedule */}
             <div>

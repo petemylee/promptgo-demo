@@ -8,6 +8,7 @@ interface Booking {
   startTime: string | null;
   endTime: string | null;
   purpose: string | null;
+  additionalNotes?: string | null;
   passengerCount: number | null;
   tripType: string | null;
   requestForSelf?: boolean | null;
@@ -420,6 +421,17 @@ export default function AdminDashboard() {
                   <p><span className="font-medium">จำนวนคนนั่ง:</span> {selectedBooking.passengerCount} คน</p>
                 )}
               </div>
+
+              {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
+              {selectedBooking.additionalNotes && (
+                <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                    <span className="text-amber-600" aria-hidden>📌</span>
+                    หมายเหตุเพิ่มเติม
+                  </h3>
+                  <p className="text-gray-800 whitespace-pre-wrap">{selectedBooking.additionalNotes}</p>
+                </div>
+              )}
 
               {/* Schedule */}
               <div className="bg-gray-50 p-4 rounded-lg">

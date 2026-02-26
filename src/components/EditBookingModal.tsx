@@ -16,6 +16,7 @@ interface BookingData {
   id: string;
   endLocation: string | null;
   purpose: string | null;
+  additionalNotes: string | null;
   startTime: string | null;
   endTime: string | null;
   passengerCount: number | null;
@@ -40,6 +41,7 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
   const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
   const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
+  const [additionalNotes, setAdditionalNotes] = useState('');
 
   const fetchBookingData = useCallback(async () => {
     setIsLoadingData(true);
@@ -59,6 +61,7 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
 
       setDestination(data.endLocation || '');
       setPurpose(data.purpose || '');
+      setAdditionalNotes(data.additionalNotes || '');
       setStartTime(data.startTime ? new Date(data.startTime).toISOString().slice(0, 16) : '');
       setEndTime(data.endTime ? new Date(data.endTime).toISOString().slice(0, 16) : '');
       setPassengerCount(data.passengerCount?.toString() || '');
@@ -79,6 +82,7 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
       // Reset form when modal closes
       setDestination('');
       setPurpose('');
+      setAdditionalNotes('');
       setStartTime('');
       setEndTime('');
       setPassengerCount('');
@@ -202,6 +206,7 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
         body: JSON.stringify({
           endLocation: destination,
           purpose,
+          additionalNotes: additionalNotes?.trim() || null,
           startTime: startTime ? new Date(startTime).toISOString() : null,
           endTime: endTime ? new Date(endTime).toISOString() : null,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
@@ -281,6 +286,16 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
                   onChange={(e) => setPurpose(e.target.value)} 
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
                   required 
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">หมายเหตุเพิ่มเติม (ไม่บังคับ)</label>
+                <textarea 
+                  rows={3} 
+                  value={additionalNotes} 
+                  onChange={(e) => setAdditionalNotes(e.target.value)} 
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
+                  placeholder="ระบุหมายเหตุเพิ่มเติมถ้ามี"
                 />
               </div>
               <div>

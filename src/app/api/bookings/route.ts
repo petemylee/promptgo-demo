@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl } = body;
+    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl, additionalNotes } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!endLocation || !purpose || !startTime || !endTime) {
@@ -50,24 +50,26 @@ export async function POST(req: Request) {
     }
 
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
+    const createData = {
+      endLocation,
+      purpose,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      passengerCount: passengerCountNum,
+      tripType: tripType || null,
+      expresswayOption: expresswayOption || null,
+      requestForSelf: isForSelf,
+      travelerName: isForSelf ? null : (travelerName?.trim() || null),
+      travelerPosition: isForSelf ? null : (travelerPosition?.trim() || null),
+      travelerPhone: isForSelf ? null : (travelerPhone?.trim() || null),
+      status: 'PENDING' as const,
+      requesterId: session.user.id,
+      requesterSignatureUrl: requesterSignatureUrl || null,
+      passengerImageUrl: passengerImageUrl || null,
+      additionalNotes: additionalNotes?.trim() || null,
+    };
     const newBooking = await prisma.booking.create({
-      data: {
-        endLocation,
-        purpose,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        passengerCount: passengerCountNum,
-        tripType: tripType || null,
-        expresswayOption: expresswayOption || null,
-        requestForSelf: isForSelf,
-        travelerName: isForSelf ? null : (travelerName?.trim() || null),
-        travelerPosition: isForSelf ? null : (travelerPosition?.trim() || null),
-        travelerPhone: isForSelf ? null : (travelerPhone?.trim() || null),
-        status: 'PENDING', // กำหนดสถานะเริ่มต้น
-        requesterId: session.user.id, // เชื่อมโยงกับผู้ใช้ที่ Login อยู่
-        requesterSignatureUrl: requesterSignatureUrl || null, // ลายเซ็นผู้ขอใช้รถ (ถ้ามี)
-        passengerImageUrl: passengerImageUrl || null, // รูปภาพผู้โดยสาร (ถ้ามี)
-      },
+      data: createData,
     });
 
     // ==========================================

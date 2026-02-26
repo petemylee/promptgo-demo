@@ -14,6 +14,7 @@ interface BookingDetail {
   id: string;
   purpose: string | null;
   endLocation: string | null;
+  additionalNotes: string | null;
   startTime: string | null;
   endTime: string | null;
   passengerCount: number | null;
@@ -203,6 +204,17 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                 <p><span className="font-medium">จำนวนคนนั่ง:</span> {booking.passengerCount} คน</p>
               )}
             </div>
+
+            {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
+            {booking.additionalNotes && (
+              <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+                <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                  <span className="text-amber-600" aria-hidden>📌</span>
+                  หมายเหตุเพิ่มเติม
+                </h3>
+                <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
+              </div>
+            )}
 
             {/* Schedule */}
             <div className="bg-gray-50 p-4 rounded-lg">

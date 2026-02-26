@@ -34,6 +34,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
   const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
+  const [additionalNotes, setAdditionalNotes] = useState('');
 
   useEffect(() => {
     const shouldFetch = variant === 'fullpage' || (variant === 'modal' && isOpen);
@@ -67,6 +68,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setPassengerPhotoFile(null);
       setPassengerPhotoPreview(null);
       setIsUploadingPassengerPhoto(false);
+      setAdditionalNotes('');
     }
   }, [variant, isOpen]);
 
@@ -206,6 +208,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           travelerPhone: requestForSelf ? null : travelerPhone?.trim() || null,
           requesterSignatureUrl,
           passengerImageUrl,
+          additionalNotes: additionalNotes?.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -299,6 +302,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
             <textarea rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">หมายเหตุเพิ่มเติม (ไม่บังคับ)</label>
+            <textarea rows={3} value={additionalNotes} onChange={(e) => setAdditionalNotes(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="ระบุหมายเหตุเพิ่มเติมถ้ามี" />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
