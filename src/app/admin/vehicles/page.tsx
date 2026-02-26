@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import VehicleFormModal from './VehicleFormModal';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface Vehicle {
   id: string;
@@ -60,7 +61,7 @@ export default function VehicleManagementPage() {
     setEditingVehicle(null);
   }, [pathname]);
 
-  if (isLoading) return <p className="p-4 md:p-8">Loading vehicles...</p>;
+  if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูลรถยนต์..." /></div>;
 
   return (
     <div className="p-4 md:p-8">

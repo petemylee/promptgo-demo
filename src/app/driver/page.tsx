@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import LoadingScreen from '@/components/LoadingScreen';
 
 type Job = {
   id: string;
@@ -82,7 +83,7 @@ export default function DriverDashboard() {
     if (status === 'authenticated') load();
   }, [status]);
 
-  if (status === 'loading') return <div className="p-6">Loading...</div>;
+  if (status === 'loading') return <LoadingScreen fullScreen message="กำลังโหลด..." />;
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4">
@@ -96,7 +97,9 @@ export default function DriverDashboard() {
         <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
           <div className="overflow-x-auto">
             {isLoading ? (
-              <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
+              <div className="py-12">
+                <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
+              </div>
             ) : jobs.length > 0 ? (
               <table className="min-w-full">
                 <thead>

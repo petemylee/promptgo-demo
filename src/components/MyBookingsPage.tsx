@@ -6,6 +6,7 @@ import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
 import DriverFeedbackModal from '@/components/DriverFeedbackModal';
+import LoadingScreen from '@/components/LoadingScreen';
 
 type Booking = {
   id: string;
@@ -270,7 +271,7 @@ export default function MyBookingsPage() {
     );
   }, [completedBookings, query]);
 
-  if (status === 'loading') return <div className="p-6">Loading...</div>;
+  if (status === 'loading') return <LoadingScreen fullScreen message="กำลังโหลด..." />;
 
   if (showCreateForm) {
     return (
@@ -342,7 +343,9 @@ export default function MyBookingsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
+                    <td colSpan={7} className="py-12">
+                      <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
+                    </td>
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((b) => (

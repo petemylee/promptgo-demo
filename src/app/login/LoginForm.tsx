@@ -14,6 +14,7 @@ export default function LoginForm({
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [lineError, setLineError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,7 @@ export default function LoginForm({
         redirect: false,
         email,
         password,
+        rememberMe: rememberMe ? 'true' : 'false',
       });
 
       if (result?.error) {
@@ -111,7 +113,12 @@ export default function LoginForm({
 
               <div className="flex items-center">
                 <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm text-slate-600">
-                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-[#0076c3] focus:ring-[#0076c3]" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#0076c3] focus:ring-[#0076c3]"
+                  />
                   จดจำฉันไว้ในระบบ
                 </label>
               </div>
@@ -129,6 +136,23 @@ export default function LoginForm({
               )}
 
               <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full rounded-xl bg-gradient-to-r from-[#004c80] to-[#0076c3] px-5 py-3.5 font-medium text-white shadow-lg transition hover:shadow-xl hover:from-[#005b99] hover:to-[#0087de] disabled:opacity-70 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-[#0076c3]/50 focus:ring-offset-2"
+              >
+                {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+              </button>
+
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-xs text-slate-500">หรือเข้าสู่ระบบด้วย LINE</span>
+                </div>
+              </div>
+
+              <button
                 type="button"
                 onClick={async () => {
                   await signOut({ redirect: false });
@@ -140,23 +164,6 @@ export default function LoginForm({
                   <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.348 0-.63-.285-.63-.629V8.108c0-.345.282-.63.63-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .63.285.63.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314z" />
                 </svg>
                 Login with LINE
-              </button>
-
-              <div className="relative py-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-xs text-slate-500">หรือเข้าสู่ระบบด้วยอีเมล</span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-xl bg-gradient-to-r from-[#004c80] to-[#0076c3] px-5 py-3.5 font-medium text-white shadow-lg transition hover:shadow-xl hover:from-[#005b99] hover:to-[#0087de] disabled:opacity-70 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-[#0076c3]/50 focus:ring-offset-2"
-              >
-                {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </button>
             </form>
 

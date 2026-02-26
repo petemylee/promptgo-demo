@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Role } from '@/types/roles';
 import UserFormModal from './UserFormModal';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface User {
   id: string;
@@ -60,7 +61,7 @@ export default function UserManagementPage() {
     setEditingUser(null);
   }, [pathname]);
 
-  if (isLoading) return <p className="p-4 md:p-8">Loading users...</p>;
+  if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูลผู้ใช้..." /></div>;
 
   const filteredUsers = users.filter((u) => {
     const q = query.trim().toLowerCase();

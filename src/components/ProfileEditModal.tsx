@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -170,10 +171,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
       {header}
       {isLoadingData ? (
         <div className="flex-1 flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#0076c3] border-t-transparent mx-auto" />
-            <p className="mt-4 text-gray-600">กำลังโหลดข้อมูล...</p>
-          </div>
+          <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className={`flex flex-col flex-1 min-h-0 ${variant === 'fullpage' ? '' : ''}`}>

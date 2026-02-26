@@ -7,6 +7,9 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 
+const SESSION_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60; // 30 วัน (วินาที)
+const SESSION_MAX_AGE_DEFAULT = 24 * 60 * 60; // 1 วัน
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -15,6 +18,7 @@ export const authOptions: AuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        rememberMe: { label: 'Remember me', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -87,5 +91,38 @@ export const authOptions: AuthOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+async function getRememberMeFromRequest(req: Request): Promise<string | null> {
+  if (req.method !== 'POST') return null;
+  const contentType = req.headers.get('content-type') ?? '';
+  try {
+    const clone = req.clone();
+    if (contentType.includes('application/json')) {
+      const body = await clone.json();
+      const raw = body?.rememberMe ?? body?.credentials?.rememberMe ?? null;
+      return raw != null ? String(raw) : null;
+    }
+    const form = await clone.formData();
+    const raw = form.get('rememberMe');
+    return raw != null ? String(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function createHandler(sessionMaxAge: number) {
+  return NextAuth({
+    ...authOptions,
+    session: { strategy: 'jwt', maxAge: sessionMaxAge },
+  });
+}
+
+export async function GET(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+  const maxAge = SESSION_MAX_AGE_DEFAULT;
+  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, context);
+}
+
+export async function POST(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+  const rememberMe = await getRememberMeFromRequest(req);
+  const maxAge = rememberMe === 'true' ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
+  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, context);
+}

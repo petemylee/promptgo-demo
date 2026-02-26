@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -21,5 +22,5 @@ export default function Home() {
     else router.replace('/requester');
   }, [status, session, router]);
 
-  return <div className="p-4">Loading...</div>;
+  return <LoadingScreen fullScreen message="กำลังโหลด..." />;
 }

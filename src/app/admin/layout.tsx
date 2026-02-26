@@ -7,8 +7,9 @@ import type { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import LineLinkFeedback from '@/components/LineLinkFeedback';
-import ProfileEditModal from '@/components/ProfileEditModal';
+import ProfileViewPage from '@/components/ProfileViewPage';
 import SidebarProfile from '@/components/SidebarProfile';
+import LoadingScreen from '@/components/LoadingScreen';
 import { Suspense } from 'react';
 
 function Sidebar({ isOpen, onClose, session, onOpenProfile }: { isOpen: boolean; onClose: () => void; session: Session | null; onOpenProfile: () => void }) {
@@ -127,14 +128,7 @@ export default function AdminLayout({
   }, [status, session, router]);
 
   if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Admin')) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/30">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#004c80] border-t-transparent" />
-          <p className="text-sm text-slate-600">กำลังโหลด...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen fullScreen message="กำลังโหลด..." />;
   }
 
   return (
@@ -162,12 +156,7 @@ export default function AdminLayout({
           {showProfileModal ? (
             <div className="p-4">
               <div className="mx-auto w-full max-w-5xl">
-                <ProfileEditModal
-                  variant="fullpage"
-                  isOpen
-                  onClose={() => setShowProfileModal(false)}
-                  onUpdated={() => setShowProfileModal(false)}
-                />
+                <ProfileViewPage onClose={() => setShowProfileModal(false)} />
               </div>
             </div>
           ) : (

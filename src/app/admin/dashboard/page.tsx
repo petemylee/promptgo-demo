@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface Booking {
   id: string;
@@ -201,7 +202,7 @@ export default function AdminDashboard() {
     }
   };
   
-  if (isLoading) return <p className="p-4 md:p-8">Loading...</p>;
+  if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." /></div>;
   if (error) return <p className="p-4 md:p-8 text-red-500">Error: {error}</p>;
 
   // ... ส่วนของ return JSX เหมือนเดิม ...
