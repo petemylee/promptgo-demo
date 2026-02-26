@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import VehicleFormModal from './VehicleFormModal';
 
 interface Vehicle {
@@ -53,11 +54,28 @@ export default function VehicleManagementPage() {
     setEditingVehicle(null);
   };
 
+  const pathname = usePathname();
+  useEffect(() => {
+    setIsModalOpen(false);
+    setEditingVehicle(null);
+  }, [pathname]);
+
   if (isLoading) return <p className="p-4 md:p-8">Loading vehicles...</p>;
 
   return (
-    <>
-      <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8">
+      {isModalOpen ? (
+        <div className="mx-auto w-full max-w-5xl">
+          <VehicleFormModal
+            variant="fullpage"
+            isOpen
+            onClose={handleCloseModal}
+            onVehicleUpdated={fetchVehicles}
+            initialData={editingVehicle}
+          />
+        </div>
+      ) : (
+        <>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold text-[#004c80]">Vehicle Management</h1>
           <button onClick={handleAdd} className="bg-[#0076c3] text-white px-4 py-2 rounded-md shadow hover:bg-[#0087de] w-full md:w-auto">
@@ -123,14 +141,8 @@ export default function VehicleManagementPage() {
             </table>
           </div>
         </div>
-      </div>
-      
-      <VehicleFormModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onVehicleUpdated={fetchVehicles}
-        initialData={editingVehicle}
-      />
-    </>
+        </>
+      )}
+    </div>
   );
 }

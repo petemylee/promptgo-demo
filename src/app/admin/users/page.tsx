@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import type { Role } from '@/types/roles';
 import UserFormModal from './UserFormModal';
 
@@ -53,6 +54,12 @@ export default function UserManagementPage() {
     setEditingUser(null);
   };
 
+  const pathname = usePathname();
+  useEffect(() => {
+    setIsModalOpen(false);
+    setEditingUser(null);
+  }, [pathname]);
+
   if (isLoading) return <p className="p-4 md:p-8">Loading users...</p>;
 
   const filteredUsers = users.filter((u) => {
@@ -82,8 +89,19 @@ export default function UserManagementPage() {
   };
 
   return (
-    <>
-      <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8">
+      {isModalOpen ? (
+        <div className="mx-auto w-full max-w-5xl">
+          <UserFormModal
+            variant="fullpage"
+            isOpen
+            onClose={handleCloseModal}
+            onUserUpdated={fetchUsers}
+            initialData={editingUser}
+          />
+        </div>
+      ) : (
+        <>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-[#004c80]">User Management</h1>
@@ -172,14 +190,8 @@ export default function UserManagementPage() {
             </table>
           </div>
         </div>
-      </div>
-      
-      <UserFormModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onUserUpdated={fetchUsers}
-        initialData={editingUser}
-      />
-    </>
+        </>
+      )}
+    </div>
   );
 }

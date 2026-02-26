@@ -116,8 +116,14 @@ function Sidebar({ isOpen, onClose, session, onOpenProfile }: { isOpen: boolean;
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // ปิด modal เมื่อเปลี่ยน tab/หน้า
+  useEffect(() => {
+    setShowProfileModal(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

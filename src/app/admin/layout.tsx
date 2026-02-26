@@ -130,8 +130,14 @@ export default function AdminLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // ปิด modal เมื่อเปลี่ยน tab/หน้า
+  useEffect(() => {
+    setShowProfileModal(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
