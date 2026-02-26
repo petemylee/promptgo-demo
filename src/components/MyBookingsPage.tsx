@@ -51,7 +51,7 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
-const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
+const InProgressBookingCard = ({ booking, onCancel }: { booking: Booking; onCancel: (id: string) => void }) => {
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const getMapUrl = () => {
@@ -164,6 +164,15 @@ const InProgressBookingCard = ({ booking }: { booking: Booking }) => {
               </p>
             )}
           </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => onCancel(booking.id)}
+              className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+            >
+              ยกเลิกคำขอ
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -233,22 +242,25 @@ export default function MyBookingsPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async (bookingId: string) => {
-    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำขอนี้?')) {
+  const cancellableStatuses: Booking['status'][] = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
+  const handleCancel = async (bookingId: string) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอนี้?')) {
       return;
     }
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'DELETE',
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CANCELLED' }),
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'ไม่สามารถลบคำขอได้');
+        throw new Error(data.error || 'ไม่สามารถยกเลิกคำขอได้');
       }
-      const res = await fetch('/api/my/bookings');
-      if (res.ok) {
-        setBookings(await res.json());
-      }
+      await reloadBookings();
+      setSelectedBookingId(null);
+      setIsDetailModalOpen(false);
+      setIsEditModalOpen(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     }
@@ -272,6 +284,30 @@ export default function MyBookingsPage() {
   }, [completedBookings, query]);
 
   if (status === 'loading') return <LoadingScreen fullScreen message="กำลังโหลด..." />;
+
+  if (isEditModalOpen && selectedBookingId) {
+    return (
+      <div className="relative min-h-screen overflow-hidden p-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
+        <div className="relative z-10 mx-auto w-full max-w-5xl">
+          <EditBookingModal
+            variant="fullpage"
+            isOpen
+            bookingId={selectedBookingId}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedBookingId(null);
+            }}
+            onUpdated={async () => {
+              await reloadBookings();
+              setIsEditModalOpen(false);
+              setSelectedBookingId(null);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (showCreateForm) {
     return (
@@ -320,7 +356,7 @@ export default function MyBookingsPage() {
             <h2 className="text-xl font-bold text-[#004c80] mb-4">งานที่กำลังดำเนินการ</h2>
             <div className="space-y-6">
               {inProgressBookings.map((booking) => (
-                <InProgressBookingCard key={booking.id} booking={booking} />
+                <InProgressBookingCard key={booking.id} booking={booking} onCancel={handleCancel} />
               ))}
             </div>
           </div>
@@ -357,7 +393,7 @@ export default function MyBookingsPage() {
                       <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
                       <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
                       <td className="py-2 px-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             onClick={() => handleViewDetails(b.id)}
                             className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
@@ -365,20 +401,20 @@ export default function MyBookingsPage() {
                             ดูรายละเอียด
                           </button>
                           {b.status === 'PENDING' && (
-                            <>
-                              <button
-                                onClick={() => handleEdit(b.id)}
-                                className="text-sm text-emerald-600 hover:text-emerald-700 underline"
-                              >
-                                แก้ไข
-                              </button>
-                              <button
-                                onClick={() => handleDelete(b.id)}
-                                className="text-sm text-red-600 hover:text-red-700 underline"
-                              >
-                                ลบ
-                              </button>
-                            </>
+                            <button
+                              onClick={() => handleEdit(b.id)}
+                              className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                            >
+                              แก้ไข
+                            </button>
+                          )}
+                          {cancellableStatuses.includes(b.status) && (
+                            <button
+                              onClick={() => handleCancel(b.id)}
+                              className="text-sm text-red-600 hover:text-red-700 underline"
+                            >
+                              ยกเลิกคำขอ
+                            </button>
                           )}
                         </div>
                       </td>
@@ -471,26 +507,16 @@ export default function MyBookingsPage() {
         )}
 
         {selectedBookingId && (
-          <>
-            <BookingDetailModal
-              isOpen={isDetailModalOpen}
-              onClose={() => {
-                setIsDetailModalOpen(false);
-                setSelectedBookingId(null);
-              }}
-              bookingId={selectedBookingId}
-              onUpdated={reloadBookings}
-            />
-            <EditBookingModal
-              isOpen={isEditModalOpen}
-              onClose={() => {
-                setIsEditModalOpen(false);
-                setSelectedBookingId(null);
-              }}
-              bookingId={selectedBookingId}
-              onUpdated={reloadBookings}
-            />
-          </>
+          <BookingDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={() => {
+              setIsDetailModalOpen(false);
+              setSelectedBookingId(null);
+            }}
+            bookingId={selectedBookingId}
+            onUpdated={reloadBookings}
+            onCancelRequest={handleCancel}
+          />
         )}
         {feedbackModal && (
           <DriverFeedbackModal

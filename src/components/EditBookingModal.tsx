@@ -2,14 +2,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import SignaturePad from './SignaturePad';
 import Image from 'next/image';
+import LoadingScreen from '@/components/LoadingScreen';
 
 type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
 
 interface EditBookingModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   bookingId: string;
   onUpdated: () => void;
+  variant?: 'modal' | 'fullpage';
 }
 
 interface BookingData {
@@ -26,7 +28,7 @@ interface BookingData {
   status: string;
 }
 
-export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated }: EditBookingModalProps) {
+export default function EditBookingModal({ isOpen = true, onClose, bookingId, onUpdated, variant = 'modal' }: EditBookingModalProps) {
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -235,20 +237,28 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white/90 shadow-2xl ring-1 ring-black/5 backdrop-blur flex flex-col">
-        <div className="px-8 pt-8 pb-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-2xl font-bold text-[#004c80]">แก้ไขคำขอ</h2>
+  const innerForm = (
+    <>
+      <div className={`flex-shrink-0 border-b border-gray-200 ${variant === 'fullpage' ? 'px-6 py-4 flex items-center gap-4' : 'px-8 pt-8 pb-4'}`}>
+        {variant === 'fullpage' && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          >
+            <span aria-hidden>←</span>
+            <span>กลับ</span>
+          </button>
+        )}
+        <h2 className={`text-2xl font-bold text-[#004c80] ${variant === 'fullpage' ? 'flex-1' : ''}`}>แก้ไขคำขอใช้รถยนต์ส่วนกลาง</h2>
+      </div>
+      {isLoadingData ? (
+        <div className="flex-1 flex items-center justify-center py-12">
+          <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
         </div>
-        {isLoadingData ? (
-          <div className="px-8 py-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076c3] mx-auto"></div>
-            <p className="mt-4 text-gray-600">กำลังโหลดข้อมูล...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-            <div className="px-8 py-6 overflow-y-auto space-y-4 flex-1">
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className={`px-8 py-6 overflow-y-auto space-y-4 flex-1 ${variant === 'fullpage' ? '' : ''}`}>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
                 <input 
@@ -439,6 +449,21 @@ export default function EditBookingModal({ isOpen, onClose, bookingId, onUpdated
             </div>
           </form>
         )}
+    </>
+  );
+
+  if (variant === 'fullpage') {
+    return (
+      <div className="w-full max-w-2xl mx-auto rounded-2xl bg-white/90 shadow ring-1 ring-black/5 flex flex-col">
+        {innerForm}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
+      <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white/90 shadow-2xl ring-1 ring-black/5 backdrop-blur flex flex-col">
+        {innerForm}
       </div>
     </div>
   );

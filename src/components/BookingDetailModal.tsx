@@ -3,11 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
 
+const CANCELLABLE_STATUSES = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
+
 interface BookingDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   bookingId: string;
   onUpdated: () => void;
+  onCancelRequest?: (bookingId: string) => void;
 }
 
 interface BookingDetail {
@@ -50,7 +53,7 @@ interface BookingDetail {
   } | null;
 }
 
-export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdated }: BookingDetailModalProps) {
+export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdated, onCancelRequest }: BookingDetailModalProps) {
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -252,6 +255,19 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                 <p className="text-sm text-gray-600 mt-1">ยืนยันโดย: {booking.executiveConfirmer.name}</p>
               )}
             </div>
+
+            {/* ยกเลิกคำขอ - สำหรับผู้ขอใช้รถ */}
+            {onCancelRequest && CANCELLABLE_STATUSES.includes(booking.status) && (
+              <div className="pt-2 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => onCancelRequest(bookingId)}
+                  className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                >
+                  ยกเลิกคำขอ
+                </button>
+              </div>
+            )}
 
             {/* Passenger Photo */}
             {booking.passengerImageUrl && (

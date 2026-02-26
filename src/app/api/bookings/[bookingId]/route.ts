@@ -119,6 +119,22 @@ export async function PATCH(
     const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
 
     if (isRequesterOfBooking && !isAdminApprovalRequest) {
+      // ผู้ขอใช้รถสามารถยกเลิกคำขอได้ตลอดเวลา (ยกเว้นสถานะที่จบแล้ว)
+      const cancellableStatuses: BookingStatus[] = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
+      if (status === 'CANCELLED') {
+        if (!cancellableStatuses.includes(bookingForAuth.status)) {
+          return NextResponse.json(
+            { error: 'ไม่สามารถยกเลิกคำขอที่อยู่ในสถานะนี้ได้' },
+            { status: 400 }
+          );
+        }
+        const updatedBooking = await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: 'CANCELLED' as BookingStatus },
+        });
+        return NextResponse.json(updatedBooking);
+      }
+
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
       if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||

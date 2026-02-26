@@ -119,7 +119,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-[#f0f7ff] to-[#e6f3ff] text-slate-800">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} onOpenProfile={() => setShowProfileModal(true)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} onOpenProfile={() => { setIsSidebarOpen(false); setShowProfileModal(true); }} />
       <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
         <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
           <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
