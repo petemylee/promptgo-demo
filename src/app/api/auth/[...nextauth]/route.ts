@@ -68,6 +68,7 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.position = (user as { position?: string | null }).position ?? null;
       }
       return token;
     },
@@ -75,6 +76,7 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role;
+        session.user.position = token.position ?? null;
       }
       return session;
     },

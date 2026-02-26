@@ -7,12 +7,14 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      role: Role; // เพิ่ม role เข้าไป
+      role: Role;
+      position?: string | null;
     } & DefaultSession['user'];
   }
 
   interface User extends DefaultUser {
-    role: Role; // เพิ่ม role เข้าไป
+    role: Role;
+    position?: string | null;
   }
 }
 
@@ -21,5 +23,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: Role;
+    position?: string | null;
   }
 }
