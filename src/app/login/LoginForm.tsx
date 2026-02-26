@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 const LINE_ERROR_MESSAGE =
   'ยังไม่มีการเชื่อมต่อ LINE กรุณาล็อกอินด้วยอีเมลก่อน แล้วไปที่เมนู "เชื่อมต่อ LINE" ในแอป';
 
-export default function LoginForm({
-  initialLineError,
-}: {
+type LoginFormProps = {
   initialLineError?: string;
-}) {
+  resetSuccess?: boolean;
+};
+
+export default function LoginForm({ initialLineError, resetSuccess }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -79,6 +81,12 @@ export default function LoginForm({
               <p className="mt-1.5 text-slate-500">ระบบบริหารจัดการยานพาหนะ</p>
             </div>
 
+            {resetSuccess && (
+              <div className="mb-5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800 ring-1 ring-green-100" role="alert">
+                ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว สามารถเข้าสู่ระบบได้
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="email">อีเมล</label>
@@ -97,7 +105,7 @@ export default function LoginForm({
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="block text-sm font-medium text-slate-700" htmlFor="password">รหัสผ่าน</label>
-                  <a className="text-xs text-[#0076c3] hover:text-[#004c80] hover:underline" href="#">ลืมรหัสผ่าน?</a>
+                  <Link className="text-xs text-[#0076c3] hover:text-[#004c80] hover:underline" href="/forgot-password">ลืมรหัสผ่าน?</Link>
                 </div>
                 <input
                   id="password"

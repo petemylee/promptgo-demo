@@ -14,7 +14,7 @@ function getHomePathByRole(role: string): string {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; reset?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role) {
@@ -22,5 +22,10 @@ export default async function LoginPage({
   }
 
   const params = await searchParams;
-  return <LoginForm initialLineError={params?.error} />;
+  return (
+    <LoginForm
+      initialLineError={params?.error}
+      resetSuccess={params?.reset === 'success'}
+    />
+  );
 }
