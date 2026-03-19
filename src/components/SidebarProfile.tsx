@@ -44,11 +44,11 @@ export default function SidebarProfile({ session, onOpenProfile }: SidebarProfil
           </span>
         ) : lineLinked ? (
           <span className="rounded-full bg-[#06C755]/90 px-2 py-0.5 text-[11px] font-medium text-white ring-1 ring-[#06C755]/70">
-            เชื่อมแล้ว
+            เชื่อมต่อแล้ว
           </span>
         ) : (
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/80 ring-1 ring-white/15">
-            ยังไม่เชื่อม
+            ยังไม่เชื่อมต่อ
           </span>
         )}
       </div>
