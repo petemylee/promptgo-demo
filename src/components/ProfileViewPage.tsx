@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import ConnectLineButton from '@/components/ConnectLineButton';
 
 interface ProfileViewPageProps {
   onClose: () => void;
@@ -107,6 +108,18 @@ export default function ProfileViewPage({ onClose }: ProfileViewPageProps) {
               </div>
             ))}
           </dl>
+
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">การเชื่อมต่อ LINE</h3>
+                <p className="mt-1 text-sm text-gray-600">เชื่อมต่อเพื่อรับการแจ้งเตือนผ่าน LINE และสามารถยกเลิกได้ที่นี่</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <ConnectLineButton />
+            </div>
+          </div>
 
           <div className="mt-8 flex justify-end">
             <button

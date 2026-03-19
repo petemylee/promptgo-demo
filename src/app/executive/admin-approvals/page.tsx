@@ -1,6 +1,5 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
 
 interface Booking {
@@ -51,10 +50,11 @@ interface DashboardData {
   pendingBookings: Booking[];
 }
 
-export default function AdminDashboard() {
+export default function ExecutiveAdminApprovalsPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -63,8 +63,6 @@ export default function AdminDashboard() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -73,12 +71,9 @@ export default function AdminDashboard() {
       if (!response.ok) throw new Error('Failed to fetch data');
       const dashboardData = await response.json();
       setData(dashboardData);
-    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError('An unknown error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -96,11 +91,8 @@ export default function AdminDashboard() {
       const vehiclesData = await response.json();
       setVehicles(vehiclesData);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('An unknown error occurred');
-      }
+      if (err instanceof Error) alert(`Error: ${err.message}`);
+      else alert('An unknown error occurred');
     } finally {
       setIsLoadingVehicles(false);
     }
@@ -112,15 +104,11 @@ export default function AdminDashboard() {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch drivers');
       const usersData = await response.json();
-      // กรองเฉพาะผู้ใช้ที่มี role เป็น Driver
       const driversData = usersData.filter((user: Driver) => user.role === 'Driver');
       setDrivers(driversData);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('An unknown error occurred');
-      }
+      if (err instanceof Error) alert(`Error: ${err.message}`);
+      else alert('An unknown error occurred');
     } finally {
       setIsLoadingDrivers(false);
     }
@@ -144,7 +132,7 @@ export default function AdminDashboard() {
       const response = await fetch(`/api/bookings/${selectedBookingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: 'APPROVED',
           ...(selectedVehicleId ? { vehicleId: selectedVehicleId } : {}),
           ...(selectedDriverId ? { driverId: selectedDriverId } : {}),
@@ -154,17 +142,15 @@ export default function AdminDashboard() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update status');
       }
+
       setShowVehicleModal(false);
       setSelectedBookingId(null);
       setSelectedVehicleId('');
       setSelectedDriverId('');
       fetchDashboardData();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('An unknown error occurred');
-      }
+      if (err instanceof Error) alert(`Error: ${err.message}`);
+      else alert('An unknown error occurred');
     }
   };
 
@@ -175,65 +161,48 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED' }),
       });
-      if (!response.ok) throw new Error('Failed to update status');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to update status');
+      }
       fetchDashboardData();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('An unknown error occurred');
-      }
+      if (err instanceof Error) alert(`Error: ${err.message}`);
+      else alert('An unknown error occurred');
     }
   };
 
-  const handleViewDetails = async (bookingId: string) => {
-    try {
-      const response = await fetch(`/api/bookings/${bookingId}`);
-      if (!response.ok) throw new Error('Failed to fetch booking details');
-      const bookingData = await response.json();
-      setSelectedBooking(bookingData);
-      setShowDetailModal(true);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('An unknown error occurred');
-      }
-    }
-  };
-  
   if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." /></div>;
   if (error) return <p className="p-4 md:p-8 text-red-500">Error: {error}</p>;
 
-  // ... ส่วนของ return JSX เหมือนเดิม ...
   return (
     <div className="p-4 md:p-8">
       <div className="mb-6 flex flex-col gap-1">
-        <h1 className="text-3xl font-bold text-[#004c80]">Dashboard</h1>
-        <p className="text-gray-700">ภาพรวมสถานะคำขอ และรายการที่รอการอนุมัติ</p>
+        <h1 className="text-3xl font-bold text-[#004c80]">อนุมัติและจัดสรรรถยนต์</h1>
+        <p className="text-gray-700">รายการคำขอที่รอการอนุมัติเบื้องต้น</p>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
-              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#0076c3]/10" />
-              <h3 className="text-sm font-medium text-gray-500">รอการพิจารณา</h3>
-              <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.pending ?? 0}</p>
-              <p className="mt-1 text-xs text-gray-400">Pending</p>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
-              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-emerald-500/10" />
-              <h3 className="text-sm font-medium text-gray-500">รอการยืนยัน</h3>
-              <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.approved ?? 0}</p>
-              <p className="mt-1 text-xs text-gray-400">Approved</p>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
-              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-amber-500/10" />
-              <h3 className="text-sm font-medium text-gray-500">กำลังเดินทาง</h3>
-              <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.inProgress ?? 0}</p>
-              <p className="mt-1 text-xs text-gray-400">In Progress</p>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
+          <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#0076c3]/10" />
+          <h3 className="text-sm font-medium text-gray-500">รอการพิจารณา</h3>
+          <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.pending ?? 0}</p>
+          <p className="mt-1 text-xs text-gray-400">Pending</p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
+          <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-emerald-500/10" />
+          <h3 className="text-sm font-medium text-gray-500">รอการยืนยัน</h3>
+          <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.approved ?? 0}</p>
+          <p className="mt-1 text-xs text-gray-400">Approved</p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
+          <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-amber-500/10" />
+          <h3 className="text-sm font-medium text-gray-500">กำลังเดินทาง</h3>
+          <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.inProgress ?? 0}</p>
+          <p className="mt-1 text-xs text-gray-400">In Progress</p>
+        </div>
       </div>
-      
+
       <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[#004c80]">รายการรออนุมัติเบื้องต้น</h2>
@@ -268,19 +237,16 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-2 px-4">
                       <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleViewDetails(booking.id)}
-                          className="rounded-md bg-white px-3 py-1 text-[#0076c3] ring-1 ring-[#0076c3]/30 hover:bg-[#0076c3]/5">
-                          ดูรายละเอียด
-                        </button>
-                        <button 
+                        <button
                           onClick={() => handleApproveClick(booking.id)}
-                          className="rounded-md bg-white px-3 py-1 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">
+                          className="rounded-md bg-white px-3 py-1 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50"
+                        >
                           อนุมัติ
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleReject(booking.id)}
-                          className="rounded-md bg-white px-3 py-1 text-red-600 ring-1 ring-red-200 hover:bg-red-50">
+                          className="rounded-md bg-white px-3 py-1 text-red-600 ring-1 ring-red-200 hover:bg-red-50"
+                        >
                           ปฏิเสธ
                         </button>
                       </div>
@@ -299,7 +265,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Vehicle & Driver Selection Modal */}
       {showVehicleModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 overflow-y-auto">
           <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col">
@@ -373,118 +338,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-
-      {/* Booking Detail Modal */}
-      {showDetailModal && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-[#004c80]">รายละเอียดการจอง</h2>
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  setSelectedBooking(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* ผู้เดินทาง */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้เดินทาง</h3>
-                <p><span className="font-medium">ชื่อ:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.name || '-') : (selectedBooking.travelerName || '-')}</p>
-                <p><span className="font-medium">ตำแหน่ง:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.position || '-') : (selectedBooking.travelerPosition || '-')}</p>
-                <p><span className="font-medium">เบอร์โทร:</span> {selectedBooking.requestForSelf !== false ? (selectedBooking.requester.phoneNumber || '-') : (selectedBooking.travelerPhone || '-')}</p>
-                {selectedBooking.requestForSelf === false && (
-                  <p className="mt-2 text-sm text-gray-500"><span className="font-medium">ผู้สร้างคำขอ:</span> {selectedBooking.requester.name} ({selectedBooking.requester.email})</p>
-                )}
-              </div>
-
-              {/* Trip Details */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
-                <p><span className="font-medium">ปลายทาง:</span> {selectedBooking.endLocation || '-'}</p>
-                <p><span className="font-medium">วัตถุประสงค์:</span> {selectedBooking.purpose || '-'}</p>
-                {selectedBooking.tripType && (
-                  <p><span className="font-medium">ประเภทการเดินทาง:</span> {
-                    selectedBooking.tripType === 'ONE_WAY' ? 'ส่งอย่างเดียว' :
-                    selectedBooking.tripType === 'PICK_UP' ? 'รับอย่างเดียว' :
-                    selectedBooking.tripType === 'ROUND_TRIP' ? 'ไป-กลับ/รอรับ' :
-                    selectedBooking.tripType
-                  }</p>
-                )}
-                {selectedBooking.passengerCount && (
-                  <p><span className="font-medium">จำนวนคนนั่ง:</span> {selectedBooking.passengerCount} คน</p>
-                )}
-              </div>
-
-              {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
-              {selectedBooking.additionalNotes && (
-                <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                    <span className="text-amber-600" aria-hidden>📌</span>
-                    หมายเหตุเพิ่มเติม
-                  </h3>
-                  <p className="text-gray-800 whitespace-pre-wrap">{selectedBooking.additionalNotes}</p>
-                </div>
-              )}
-
-              {/* Schedule */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
-                <p><span className="font-medium">วันเวลาเริ่ม:</span> {
-                  selectedBooking.startTime 
-                    ? new Date(selectedBooking.startTime).toLocaleString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : '-'
-                }</p>
-                <p><span className="font-medium">วันเวลาสิ้นสุด:</span> {
-                  selectedBooking.endTime 
-                    ? new Date(selectedBooking.endTime).toLocaleString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : '-'
-                }</p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  setSelectedBooking(null);
-                }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                ปิด
-              </button>
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  handleApproveClick(selectedBooking.id);
-                }}
-                className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
-              >
-                อนุมัติ
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+

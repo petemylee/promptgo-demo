@@ -20,7 +20,6 @@ interface UserFormModalProps {
 }
 
 export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialData, variant = 'modal' }: UserFormModalProps) {
-  // ... (ส่วน state และ useEffect คงไว้เหมือนเดิม)
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,8 +61,6 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       const url = isEditMode ? `/api/users/${initialData?.id}` : '/api/users';
       const method = isEditMode ? 'PATCH' : 'POST';
       
-      // <-- แก้ไข: ใช้ const และกำหนด Type ให้ body
-      // ตรวจสอบว่าทุกช่องต้องกรอก
       if (!name || name.trim() === '') {
         setError('กรุณากรอกชื่อ');
         setIsLoading(false);
@@ -113,7 +110,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       onUserUpdated();
       onClose();
       
-    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown
+    } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -150,42 +147,41 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
   const formContent = (
     <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
       {header}
-      <div className={`px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto space-y-4 flex-1 ${variant === 'fullpage' ? '' : ''}`}>
-            {/* Form fields */}
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ <span className="text-red-500">*</span></label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง <span className="text-red-500">*</span></label>
-            <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
-            <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="เช่น 0812345678" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-            </div>
-          
-            {!isEditMode && (
-              <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium text-gray-700">Password <span className="text-red-500">*</span></label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-              </div>
-            )}
+      <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto space-y-4 flex-1">
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ <span className="text-red-500">*</span></label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง <span className="text-red-500">*</span></label>
+          <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
+          <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="เช่น 0812345678" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
+        </div>
+      
+        {!isEditMode && (
+          <div className="mb-4">
+            <label className="block mb-2 text-sm font-medium text-gray-700">Password <span className="text-red-500">*</span></label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+          </div>
+        )}
 
-            <div className="mb-6">
-              <label className="block mb-2 text-sm font-medium text-gray-700">Role</label>
-              <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60">
-                {ROLES.map(roleValue => (
-                  <option key={roleValue} value={roleValue}>{roleValue}</option>
-                ))}
-              </select>
-            </div>
+        <div className="mb-6">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Role</label>
+          <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60">
+            {ROLES.map(roleValue => (
+              <option key={roleValue} value={roleValue}>{roleValue}</option>
+            ))}
+          </select>
+        </div>
 
-            {error && <p className="text-red-500 text-center mb-2">{error}</p>}
+        {error && <p className="text-red-500 text-center mb-2">{error}</p>}
       </div>
 
       <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-200 flex justify-end gap-4 flex-shrink-0">
@@ -213,3 +209,4 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
     </div>
   );
 }
+

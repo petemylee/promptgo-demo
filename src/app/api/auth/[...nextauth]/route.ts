@@ -33,6 +33,10 @@ export const authOptions: AuthOptions = {
           return null;
         }
 
+        if ((user as { isActive?: boolean }).isActive === false) {
+          return null;
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
@@ -63,6 +67,9 @@ export const authOptions: AuthOptions = {
         });
         if (!linked) {
           return '/login?error=LineNotLinked';
+        }
+        if ((linked as { isActive?: boolean }).isActive === false) {
+          return '/login?error=Deactivated';
         }
         return true;
       }

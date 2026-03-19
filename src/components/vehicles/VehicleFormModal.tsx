@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-// Interface สำหรับโครงสร้างข้อมูล Vehicle
 interface Vehicle {
   id: string;
   licensePlate: string;
@@ -13,7 +12,6 @@ interface Vehicle {
   currentMileage: number | null;
 }
 
-// Props สำหรับ Component
 interface VehicleFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,7 +33,6 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
   
   const isEditMode = !!initialData;
 
-  // เติมข้อมูลลงฟอร์มเมื่อเป็นโหมดแก้ไข
   useEffect(() => {
     if (isEditMode && initialData) {
       setLicensePlate(initialData.licensePlate || '');
@@ -46,7 +43,6 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setPassengerCapacity(initialData.passengerCapacity?.toString() || '');
       setCurrentMileage(initialData.currentMileage?.toString() || '');
     } else {
-      // Reset ฟอร์มเมื่อเป็นโหมดเพิ่ม
       setLicensePlate('');
       setBrand('');
       setModel('');
@@ -90,10 +86,10 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
         throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} vehicle.`);
       }
       
-      onVehicleUpdated(); // สั่งให้หน้าหลักโหลดข้อมูลใหม่
-      onClose(); // ปิด Modal
+      onVehicleUpdated();
+      onClose();
       
-    } catch (err: unknown) { // <-- แก้ไข: ใช้ unknown แทน any
+    } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -131,36 +127,36 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
     <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
       {header}
       <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto space-y-4 flex-1">
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">License Plate*</label>
-            <input type="text" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Brand</label>
-            <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Model</label>
-            <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Type</label>
-            <input type="text" value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">ความจุเครื่องยนต์ (CC)</label>
-            <input type="number" step="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 1800" />
-            </div>
-            <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนที่สามารถโดยสารได้ (คน)</label>
-            <input type="number" step="1" min="1" value={passengerCapacity} onChange={(e) => setPassengerCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 5" />
-            </div>
-            <div className="mb-6">
-            <label className="block mb-2 text-sm font-medium text-gray-700">เลขไมล์ปัจจุบัน (กม.)</label>
-            <input type="number" step="1" min="0" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 50000" />
-            </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">License Plate*</label>
+          <input type="text" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Brand</label>
+          <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Model</label>
+          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Type</label>
+          <input type="text" value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">ความจุเครื่องยนต์ (CC)</label>
+          <input type="number" step="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 1800" />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนที่สามารถโดยสารได้ (คน)</label>
+          <input type="number" step="1" min="1" value={passengerCapacity} onChange={(e) => setPassengerCapacity(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 5" />
+        </div>
+        <div className="mb-6">
+          <label className="block mb-2 text-sm font-medium text-gray-700">เลขไมล์ปัจจุบัน (กม.)</label>
+          <input type="number" step="1" min="0" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 50000" />
+        </div>
 
-            {error && <p className="text-red-500 text-center mb-2">{error}</p>}
+        {error && <p className="text-red-500 text-center mb-2">{error}</p>}
       </div>
 
       <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-200 flex justify-end gap-4 flex-shrink-0">
@@ -188,3 +184,4 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
     </div>
   );
 }
+

@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
+import { writeUsageLog } from '@/lib/usageLogs';
+
+function actorName(session: any) {
+  return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
+}
 
 // GET: ดึงข้อมูลรถยนต์ทั้งหมด
 export async function GET() {
@@ -25,7 +30,7 @@ export async function GET() {
 // POST: สร้างข้อมูลรถยนต์ใหม่
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin') {
+  if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -47,6 +52,17 @@ export async function POST(req: Request) {
         passengerCapacity: passengerCapacity !== undefined && passengerCapacity !== '' ? parseInt(passengerCapacity, 10) : null,
         currentMileage: currentMileage ? parseInt(currentMileage, 10) : null,
       },
+    });
+
+    const actor = actorName(session);
+    await writeUsageLog({
+      action: 'CREATE',
+      path: '/admin/vehicles',
+      userId: session.user.id,
+      role: session.user.role as any,
+      entityType: 'Vehicle',
+      entityId: newVehicle.id,
+      message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} เพิ่มรถยนต์ ${newVehicle.licensePlate}`,
     });
 
     return NextResponse.json(newVehicle, { status: 201 });

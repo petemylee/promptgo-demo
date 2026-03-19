@@ -4,6 +4,11 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import { BookingStatus, TripType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
+import { writeUsageLog } from '@/lib/usageLogs';
+
+function actorName(session: any) {
+  return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
+}
 
 // GET: ดึงข้อมูลการจองตาม ID
 export async function GET(
@@ -114,8 +119,10 @@ export async function PATCH(
     if (!bookingForAuth) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
-    // ถ้า Admin กำลังอนุมัติ/ปฏิเสธ ให้ใช้ flow อนุมัติเสมอ (แม้จะเป็นผู้สร้างคำขอเอง)
-    const isAdminApprovalRequest = session.user.role === 'Admin' && (status === 'APPROVED' || status === 'REJECTED');
+    // ถ้า Admin/Executive กำลังอนุมัติ/ปฏิเสธ ให้ใช้ flow อนุมัติเสมอ (แม้จะเป็นผู้สร้างคำขอเอง)
+    const isAdminApprovalRequest =
+      (session.user.role === 'Admin' || session.user.role === 'Executive') &&
+      (status === 'APPROVED' || status === 'REJECTED');
     const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
 
     if (isRequesterOfBooking && !isAdminApprovalRequest) {
@@ -131,6 +138,16 @@ export async function PATCH(
         const updatedBooking = await prisma.booking.update({
           where: { id: bookingId },
           data: { status: 'CANCELLED' as BookingStatus },
+        });
+
+        await writeUsageLog({
+          action: 'UPDATE',
+          path: '/my-bookings',
+          userId: session.user.id,
+          role: session.user.role as any,
+          entityType: 'Booking',
+          entityId: bookingId,
+          message: `ผู้ใช้ ${actorName(session)} ยกเลิกคำขอจองรถ`,
         });
         return NextResponse.json(updatedBooking);
       }
@@ -177,6 +194,16 @@ export async function PATCH(
           data: updateData,
         });
 
+        await writeUsageLog({
+          action: 'UPDATE',
+          path: '/my-bookings',
+          userId: session.user.id,
+          role: session.user.role as any,
+          entityType: 'Booking',
+          entityId: bookingId,
+          message: `ผู้ใช้ ${actorName(session)} แก้ไขรายละเอียดคำขอจองรถ`,
+        });
+
         return NextResponse.json(updatedBooking);
       } else if (requesterSignatureUrl !== undefined) {
         // อัปเดตเฉพาะลายเซ็น (สามารถทำได้ทุกสถานะ)
@@ -187,6 +214,16 @@ export async function PATCH(
           },
         });
 
+        await writeUsageLog({
+          action: 'UPDATE',
+          path: '/my-bookings',
+          userId: session.user.id,
+          role: session.user.role as any,
+          entityType: 'Booking',
+          entityId: bookingId,
+          message: `ผู้ใช้ ${actorName(session)} อัปเดตลายเซ็นผู้ขอใช้รถ`,
+        });
+
         return NextResponse.json(updatedBooking);
       } else {
         return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
@@ -194,7 +231,7 @@ export async function PATCH(
     } else if (session.user.role === 'Admin') {
       // Admin สามารถอนุมัติเบื้องต้นได้
       if (status !== 'APPROVED' && status !== 'REJECTED') {
-        return NextResponse.json({ error: 'Invalid status for Admin' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid status for approval' }, { status: 400 });
       }
 
       // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
@@ -228,6 +265,19 @@ export async function PATCH(
           ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
           ...(status === 'APPROVED' && driverId ? { driverId } : {}),
         },
+      });
+
+      await writeUsageLog({
+        action: 'UPDATE',
+        path: '/admin/dashboard',
+        userId: session.user.id,
+        role: session.user.role as any,
+        entityType: 'Booking',
+        entityId: bookingId,
+        message:
+          status === 'APPROVED'
+            ? `ผู้มีสิทธิ์ ${actorName(session)} อนุมัติคำขอ และจัดสรรรถ/คนขับ (เบื้องต้น)`
+            : `ผู้มีสิทธิ์ ${actorName(session)} ปฏิเสธคำขอจองรถ`,
       });
 
       // แจ้งเตือน LINE ผู้ขอเมื่ออนุมัติเบื้องต้น
@@ -305,6 +355,16 @@ export async function PATCH(
       const updatedBooking = await prisma.booking.update({
         where: { id: bookingId },
         data: updateData,
+      });
+
+      await writeUsageLog({
+        action: 'UPDATE',
+        path: '/executive/approvals',
+        userId: session.user.id,
+        role: 'Executive',
+        entityType: 'Booking',
+        entityId: bookingId,
+        message: `ผู้บริหาร ${actorName(session)} ยืนยันคำขอขั้นสุดท้าย และจัดสรรรถ/คนขับ`,
       });
 
       // แจ้งเตือน LINE ผู้ขอเมื่อยืนยันขั้นสุดท้าย
@@ -385,6 +445,16 @@ export async function DELETE(
 
       await prisma.booking.delete({
         where: { id: bookingId },
+      });
+
+      await writeUsageLog({
+        action: 'DELETE',
+        path: '/my-bookings',
+        userId: session.user.id,
+        role: session.user.role as any,
+        entityType: 'Booking',
+        entityId: bookingId,
+        message: `ผู้ใช้ ${actorName(session)} ลบคำขอจองรถ (สถานะ PENDING)`,
       });
 
       return NextResponse.json({ message: 'Booking deleted successfully' }, { status: 200 });

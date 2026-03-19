@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Role } from '@/types/roles';
-import UserFormModal from './UserFormModal';
+import UserFormModal from '@/components/users/UserFormModal';
 import LoadingScreen from '@/components/LoadingScreen';
 
 interface User {
@@ -12,6 +12,7 @@ interface User {
   role: Role;
   position?: string | null;
   phoneNumber?: string | null;
+  isActive?: boolean;
 }
 
 export default function UserManagementPage() {
@@ -33,9 +34,26 @@ export default function UserManagementPage() {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (userId: string) => {
-    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้นี้?')) {
-      await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+  const handleToggleActive = async (user: User) => {
+    const nextActive = !(user.isActive ?? true);
+    const label = nextActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน (Deactivate)';
+    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการ${label}ผู้ใช้นี้?`)) {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: nextActive, position: user.position ?? '-' }),
+      });
+      if (!res.ok) {
+        let message = `อัปเดตสถานะผู้ใช้ไม่สำเร็จ (HTTP ${res.status})`;
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore json parse error
+        }
+        window.alert(message);
+        return;
+      }
       fetchUsers();
     }
   };
@@ -89,6 +107,21 @@ export default function UserManagementPage() {
     );
   };
 
+  const StatusBadge = ({ isActive }: { isActive?: boolean }) => {
+    const active = isActive ?? true;
+    return (
+      <span
+        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-black/5 ${
+          active
+            ? 'bg-emerald-50 text-emerald-700'
+            : 'bg-gray-100 text-gray-700'
+        }`}
+      >
+        {active ? 'Active' : 'Inactive'}
+      </span>
+    );
+  };
+
   return (
     <div className="p-4 md:p-8">
       {isModalOpen ? (
@@ -133,6 +166,7 @@ export default function UserManagementPage() {
                   <th className="text-left py-2 px-4 text-[#004c80] w-1/5">Email</th>
                   <th className="text-left py-2 px-4 text-[#004c80] w-1/6">เบอร์โทร</th>
                   <th className="text-center py-2 px-4 text-[#004c80] w-24">Role</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-28">Status</th>
                   <th className="text-center py-2 px-4 text-[#004c80] w-32">Actions</th>
                 </tr>
               </thead>
@@ -149,6 +183,11 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td className="py-2 px-4 text-center">
+                      <div className="flex justify-center">
+                        <StatusBadge isActive={user.isActive} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEdit(user)}
@@ -162,22 +201,27 @@ export default function UserManagementPage() {
                           </svg>
                         </button>
                         <button
-                          onClick={() => handleDelete(user.id)}
-                          aria-label="Delete user"
-                          className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-red-200 bg-white text-red-600 hover:bg-red-50 hover:ring-red-300 transition"
-                          title="Delete"
+                          onClick={() => handleToggleActive(user)}
+                          aria-label="Toggle active"
+                          className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:ring-gray-300 transition"
+                          title={(user.isActive ?? true) ? 'Deactivate' : 'Activate'}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                            <path d="M9 3a1 1 0 0 0-1 1v1H5.5a1 1 0 1 0 0 2h13a1 1 0 1 0 0-2H16V4a1 1 0 0 0-1-1H9z"/>
-                            <path d="M7 9a1 1 0 0 1 1 1v8a1 1 0 1 1-2 0v-8a1 1 0 0 1 1-1zm5 0a1 1 0 0 1 1 1v8a1 1 0 1 1-2 0v-8a1 1 0 0 1 1-1zm6 0a1 1 0 0 0-1 1v8a1 1 0 1 0 2 0v-8a1 1 0 0 0-1-1z"/>
-                          </svg>
+                          {(user.isActive ?? true) ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                              <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a7.934 7.934 0 0 1-4.9-1.7L18.3 7.1A8 8 0 0 1 12 20Zm-6.3-3.1L16.9 5.7A8 8 0 0 1 5.7 16.9Z"/>
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                              <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm-1 14.5-4-4 1.4-1.4 2.6 2.6 5.6-5.6L18 9.1Z"/>
+                            </svg>
+                          )}
                         </button>
                       </div>
                     </td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={6} className="py-10">
+                    <td colSpan={7} className="py-10">
                       <div className="mx-auto max-w-md text-center">
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#0076c3] grid place-items-center">🙂</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีผู้ใช้ที่ตรงกับคำค้นหา</h3>
@@ -196,3 +240,4 @@ export default function UserManagementPage() {
     </div>
   );
 }
+

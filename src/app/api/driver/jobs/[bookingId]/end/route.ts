@@ -4,6 +4,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { writeUsageLog } from '@/lib/usageLogs';
+
+function actorName(session: any) {
+  return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
+}
 
 // PATCH: สิ้นสุดงาน (อัปเดต status เป็น COMPLETED)
 export async function PATCH(
@@ -96,6 +101,16 @@ export async function PATCH(
         },
       });
     }
+
+    await writeUsageLog({
+      action: 'UPDATE',
+      path: '/driver/jobs',
+      userId: session.user.id,
+      role: 'Driver',
+      entityType: 'Booking',
+      entityId: bookingId,
+      message: `คนขับ ${actorName(session)} จบงาน (เลขไมล์สิ้นสุด: ${endMileage})`,
+    });
 
     return NextResponse.json({
       ...updatedBooking,

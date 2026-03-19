@@ -56,3 +56,30 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border);
 }
+
+/* Sidebar scroll area: สไตล์แถบเลื่อน (slider) ให้ดู modern */
+.sidebar-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.45) rgba(255, 255, 255, 0.12); /* Firefox */
+  overscroll-behavior: contain;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.30));
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0); /* ทำให้ thumb ดูเป็น pill */
+  background-clip: padding-box;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.40));
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48));
+}

@@ -1,7 +1,7 @@
 'use client';
 import { signOut } from 'next-auth/react';
 import type { Session } from 'next-auth';
-import ConnectLineButton from '@/components/ConnectLineButton';
+import { useEffect, useState } from 'react';
 
 interface SidebarProfileProps {
   session: Session | null;
@@ -9,6 +9,25 @@ interface SidebarProfileProps {
 }
 
 export default function SidebarProfile({ session, onOpenProfile }: SidebarProfileProps) {
+  const [lineLinked, setLineLinked] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/line/status')
+      .then((res) => (res.ok ? res.json() : { linked: false }))
+      .then((data) => {
+        if (cancelled) return;
+        setLineLinked(data?.linked === true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLineLinked(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="mt-6 rounded-2xl bg-white/5 px-3 py-3.5 text-xs text-white/80 ring-1 ring-white/10 backdrop-blur-sm">
       <p className="mb-1 text-white/70">Signed in as</p>
@@ -16,7 +35,24 @@ export default function SidebarProfile({ session, onOpenProfile }: SidebarProfil
       {session?.user?.position != null && session.user.position !== '' && (
         <p className="mt-0.5 truncate text-white/80">ตำแหน่ง: {session.user.position}</p>
       )}
-      <ConnectLineButton />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="text-[11px] text-white/70">LINE</span>
+        {lineLinked === null ? (
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/75 ring-1 ring-white/15">
+            กำลังตรวจสอบ...
+          </span>
+        ) : lineLinked ? (
+          <span className="rounded-full bg-[#06C755]/90 px-2 py-0.5 text-[11px] font-medium text-white ring-1 ring-[#06C755]/70">
+            เชื่อมแล้ว
+          </span>
+        ) : (
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/80 ring-1 ring-white/15">
+            ยังไม่เชื่อม
+          </span>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onOpenProfile(); }}

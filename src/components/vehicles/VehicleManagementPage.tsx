@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import VehicleFormModal from './VehicleFormModal';
+import VehicleFormModal from '@/components/vehicles/VehicleFormModal';
 import LoadingScreen from '@/components/LoadingScreen';
 
 interface Vehicle {
@@ -147,3 +147,4 @@ export default function VehicleManagementPage() {
     </div>
   );
 }
+

@@ -39,6 +39,17 @@ enum ExpresswayOption {
   NO_EXPRESSWAY // ไม่ขึ้นทางด่วน
 }
 
+enum UsageLogAction {
+  PAGE_VIEW
+  API_CALL
+  AUTH
+  CREATE
+  UPDATE
+  DELETE
+  EXPORT
+  OTHER
+}
+
 model User {
   id                String    @id @default(cuid())
   name              String?
@@ -46,6 +57,7 @@ model User {
   position          String?
   password          String
   role              Role      @default(Requester)
+  isActive          Boolean   @default(true)
   phoneNumber       String?
   profileImageUrl   String?
   signatureImageUrl String?
@@ -61,6 +73,35 @@ model User {
   bookingsConfirmedByExec Booking[] @relation("ExecutiveConfirmations")
   driverFeedbackGivenAsRequester DriverFeedback[] @relation("RequesterDriverFeedback")
   driverFeedbackReceived DriverFeedback[] @relation("DriverFeedbackReceived")
+  usageLogs              UsageLog[]
+}
+
+model UsageLog {
+  id        String         @id @default(cuid())
+  createdAt DateTime       @default(now())
+
+  action    UsageLogAction @default(OTHER)
+  method    String?
+  path      String
+  status    Int?
+
+  userId    String?
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      Role?
+
+  ip        String?
+  userAgent String?
+  referrer  String?
+
+  entityType String?
+  entityId   String?
+  message    String?
+  meta       Json?
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([path, createdAt])
+  @@index([action, createdAt])
 }
 
 model Account {

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
+import { writeUsageLog } from '@/lib/usageLogs';
+
+function actorName(session: any) {
+  return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
+}
 
 // DELETE: ลบข้อมูลรถยนต์
 export async function DELETE(
@@ -11,14 +16,27 @@ export async function DELETE(
   const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin') {
+  if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    await prisma.vehicle.delete({
+    const deleted = await prisma.vehicle.delete({
       where: { id: vehicleId },
+      select: { id: true, licensePlate: true },
     });
+
+    const actor = actorName(session);
+    await writeUsageLog({
+      action: 'DELETE',
+      path: '/admin/vehicles',
+      userId: session.user.id,
+      role: session.user.role as any,
+      entityType: 'Vehicle',
+      entityId: deleted.id,
+      message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} ลบรถยนต์ ${deleted.licensePlate}`,
+    });
+
     return NextResponse.json(
       { message: 'Vehicle deleted successfully' },
       { status: 200 }
@@ -40,7 +58,7 @@ export async function PATCH(
   const { vehicleId } = await context.params;
 
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin') {
+  if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -59,6 +77,17 @@ export async function PATCH(
         passengerCapacity: passengerCapacity !== undefined ? (passengerCapacity !== '' && passengerCapacity !== null ? parseInt(passengerCapacity, 10) : null) : undefined,
         currentMileage: currentMileage !== undefined ? (currentMileage ? parseInt(currentMileage, 10) : null) : undefined,
       },
+    });
+
+    const actor = actorName(session);
+    await writeUsageLog({
+      action: 'UPDATE',
+      path: '/admin/vehicles',
+      userId: session.user.id,
+      role: session.user.role as any,
+      entityType: 'Vehicle',
+      entityId: updatedVehicle.id,
+      message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} แก้ไขรถยนต์ ${updatedVehicle.licensePlate}`,
     });
 
     return NextResponse.json(updatedVehicle, { status: 200 });

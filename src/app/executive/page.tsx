@@ -165,6 +165,24 @@ export default function ExecutiveDashboard() {
           </div>
         </div>
 
+        <Link
+          href="/executive/admin-approvals"
+          className="group bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#0076c3]/50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-amber-100">
+              <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-600">อนุมัติและจัดสรรรถยนต์</p>
+              <p className="text-lg font-bold text-[#004c80] group-hover:text-[#0076c3] transition-colors">ดูคำขอรออนุมัติ</p>
+              <p className="text-xs text-slate-500 mt-1">รายการคำขอที่รอการอนุมัติเบื้องต้น</p>
+            </div>
+          </div>
+        </Link>
+
         <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-2xl bg-violet-100">

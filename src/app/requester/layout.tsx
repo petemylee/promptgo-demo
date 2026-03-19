@@ -1,66 +1,13 @@
 'use client';
-import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import type { Session } from 'next-auth';
 import { useRouter, usePathname } from 'next/navigation';
 import LineLinkFeedback from '@/components/LineLinkFeedback';
 import ProfileViewPage from '@/components/ProfileViewPage';
-import SidebarProfile from '@/components/SidebarProfile';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Suspense } from 'react';
-
-function Sidebar({ isOpen, onClose, session, onOpenProfile }: { isOpen: boolean; onClose: () => void; session: Session | null; onOpenProfile: () => void }) {
-  const pathname = usePathname();
-  const NavItem = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => {
-    const isActive = pathname === href || pathname.startsWith(href);
-    return (
-      <li className="mb-1.5">
-        <Link
-          href={href}
-          className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 ${
-            isActive ? 'bg-white text-[#004c80] shadow-md' : 'text-white/90 hover:bg-white/10 hover:text-white'
-          }`}
-        >
-          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${isActive ? 'bg-[#004c80]/10 text-[#004c80]' : 'bg-white/10 text-white'}`}>{icon}</span>
-          <span className="text-sm font-medium">{label}</span>
-        </Link>
-      </li>
-    );
-  };
-
-  return (
-    <div
-      className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-out md:sticky md:top-0 md:h-screen md:flex-shrink-0 md:translate-x-0`}
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] via-[#0066ad] to-[#0076c3]" />
-      <div className="relative z-10 flex h-full flex-col pt-[73px] md:pt-5 p-4">
-        <div className="mb-6 flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
-          <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center font-bold text-white text-sm">O</div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-white/80">OFM</p>
-            <h2 className="text-lg font-bold leading-tight text-white">PROMPTGO</h2>
-          </div>
-        </div>
-        <nav className="flex-1 overflow-y-auto py-1 -mx-1">
-          <ul>
-            <NavItem
-              href="/requester"
-              label="My Bookings"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                  <path d="M6 4a2 2 0 0 0-2 2v12l4-2 4 2 4-2 4 2V6a2 2 0 0 0-2-2H6z" />
-                </svg>
-              }
-            />
-          </ul>
-        </nav>
-        <SidebarProfile session={session} onOpenProfile={onOpenProfile} />
-      </div>
-    </div>
-  );
-}
+import AppSidebar from '@/components/layout/AppSidebar';
+import { requesterSidebarItems } from '@/config/sidebar/requester';
 
 export default function RequesterLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -90,7 +37,16 @@ export default function RequesterLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-[#f0f7ff] to-[#e6f3ff] text-slate-800">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} session={session} onOpenProfile={() => { setIsSidebarOpen(false); setShowProfileModal(true); }} />
+      <AppSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        session={session}
+        onOpenProfile={() => {
+          setIsSidebarOpen(false);
+          setShowProfileModal(true);
+        }}
+        items={requesterSidebarItems}
+      />
       <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
         <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
           <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
