@@ -5,7 +5,10 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,8 +27,9 @@ function getCurrentMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function TravelStatsOverview({ role, month, className }: TravelStatsOverviewProps) {
+export default function TravelStatsOverview({ month, className }: TravelStatsOverviewProps) {
   const [selectedMonth, setSelectedMonth] = useState(month ?? getCurrentMonthValue());
+  const [trendGranularity, setTrendGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [data, setData] = useState<TravelStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,6 +76,12 @@ export default function TravelStatsOverview({ role, month, className }: TravelSt
 
   const vehicleKmChartData = useMemo(() => (data?.byVehicleKm ?? []).slice(0, 8), [data]);
   const driverJobsChartData = useMemo(() => (data?.byDriverJobs ?? []).slice(0, 8), [data]);
+  const tripTrendChartData = useMemo(() => {
+    if (!data) return [];
+    if (trendGranularity === 'week') return data.tripTrendByWeek;
+    if (trendGranularity === 'month') return data.tripTrendByMonth;
+    return data.tripTrendByDay;
+  }, [data, trendGranularity]);
 
   const escapeCsvValue = (value: string | number) => {
     const text = String(value ?? '');
@@ -350,6 +360,88 @@ export default function TravelStatsOverview({ role, month, className }: TravelSt
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4 xl:col-span-2">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold text-[#004c80]">แนวโน้มจำนวนทริป</h3>
+                  <div className="inline-flex rounded-lg border border-slate-300 bg-white p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setTrendGranularity('day')}
+                      className={`rounded-md px-3 py-1 ${
+                        trendGranularity === 'day' ? 'bg-[#0076c3] text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      วัน
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTrendGranularity('week')}
+                      className={`rounded-md px-3 py-1 ${
+                        trendGranularity === 'week' ? 'bg-[#0076c3] text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      สัปดาห์
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTrendGranularity('month')}
+                      className={`rounded-md px-3 py-1 ${
+                        trendGranularity === 'month' ? 'bg-[#0076c3] text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      เดือน
+                    </button>
+                  </div>
+                </div>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={tripTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="tripCount"
+                        name="จำนวนทริป"
+                        stroke="#0076c3"
+                        strokeWidth={2.5}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4 xl:col-span-2">
+                <h3 className="mb-3 font-semibold text-[#004c80]">ระยะทางรวม vs เวลาเดินทางรวม (ย้อนหลัง 6 เดือน)</h3>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data.distanceVsDurationByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="totalKm" fill="#0076c3" name="ระยะทางรวม (km)" radius={[6, 6, 0, 0]} />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="totalDurationHours"
+                        stroke="#f97316"
+                        strokeWidth={2.5}
+                        name="เวลาเดินทางรวม (ชั่วโมง)"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
               <div className="rounded-xl bg-slate-50 p-4">
                 <h3 className="mb-3 font-semibold text-[#004c80]">ระยะทางที่ใช้ไปในรถยนต์แต่ละคัน</h3>
                 <div className="h-72">

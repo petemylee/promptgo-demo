@@ -35,10 +35,27 @@ export interface TravelStatsDriverJobsItem {
   totalKm: number;
 }
 
+export interface TravelStatsTripTrendItem {
+  key: string;
+  label: string;
+  tripCount: number;
+}
+
+export interface TravelStatsDistanceDurationTrendItem {
+  month: string;
+  label: string;
+  totalKm: number;
+  totalDurationHours: number;
+}
+
 export interface TravelStatsResponse {
   summary: TravelStatsSummary;
   byVehicleKm: TravelStatsVehicleKmItem[];
   byVehicleJobs: TravelStatsVehicleJobsItem[];
   byDriverJobs: TravelStatsDriverJobsItem[];
+  tripTrendByDay: TravelStatsTripTrendItem[];
+  tripTrendByWeek: TravelStatsTripTrendItem[];
+  tripTrendByMonth: TravelStatsTripTrendItem[];
+  distanceVsDurationByMonth: TravelStatsDistanceDurationTrendItem[];
   meta: TravelStatsMeta;
 }
