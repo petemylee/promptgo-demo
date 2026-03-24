@@ -15,6 +15,7 @@ interface BookingFormModalProps {
 }
 
 export default function BookingFormModal({ isOpen = true, onClose, onCreated, variant = 'modal' }: BookingFormModalProps) {
+  type SignatureMode = 'PROFILE' | 'NEW' | 'NONE';
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -26,27 +27,39 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [travelerName, setTravelerName] = useState('');
   const [travelerPosition, setTravelerPosition] = useState('');
   const [travelerPhone, setTravelerPhone] = useState('');
-  const [userProfile, setUserProfile] = useState<{ name: string; position: string; phoneNumber: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id: string; name: string; position: string; phoneNumber: string; signatureImageUrl: string | null } | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>('NONE');
+  const [saveAsProfileSignature, setSaveAsProfileSignature] = useState(true);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
   const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [isSavingProfileSignature, setIsSavingProfileSignature] = useState(false);
 
   useEffect(() => {
     const shouldFetch = variant === 'fullpage' || (variant === 'modal' && isOpen);
-    if (shouldFetch && requestForSelf) {
+    if (shouldFetch) {
       fetch('/api/users/me')
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data) setUserProfile({ name: data.name || '', position: data.position || '', phoneNumber: data.phoneNumber || '' });
+          if (data) {
+            setUserProfile({
+              id: data.id,
+              name: data.name || '',
+              position: data.position || '',
+              phoneNumber: data.phoneNumber || '',
+              signatureImageUrl: data.signatureImageUrl || null,
+            });
+            setSignatureMode(data.signatureImageUrl ? 'PROFILE' : 'NONE');
+          }
         })
         .catch(() => setUserProfile(null));
     }
-  }, [variant, isOpen, requestForSelf]);
+  }, [variant, isOpen]);
 
   useEffect(() => {
     if (variant === 'modal' && !isOpen) {
@@ -64,6 +77,9 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setError('');
       setIsLoading(false);
       setSignatureDataUrl(null);
+      setSignatureMode('NONE');
+      setSaveAsProfileSignature(true);
+      setIsSavingProfileSignature(false);
       setIsUploadingSignature(false);
       setPassengerPhotoFile(null);
       setPassengerPhotoPreview(null);
@@ -79,6 +95,48 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
 
   const handleSignatureClear = () => {
     setSignatureDataUrl(null);
+  };
+
+  const updateProfileSignatureUrl = async (profileSignatureUrl: string): Promise<void> => {
+    const userId = userProfile?.id;
+    if (!userId) throw new Error('ไม่พบข้อมูลผู้ใช้');
+    const updateResponse = await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatureImageUrl: profileSignatureUrl }),
+    });
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json().catch(() => ({}));
+      throw new Error(errorData.error || 'ไม่สามารถบันทึกลายเซ็นเข้าข้อมูลส่วนตัวได้');
+    }
+    setUserProfile((prev) => prev ? ({ ...prev, signatureImageUrl: profileSignatureUrl }) : prev);
+  };
+
+  const saveSignatureToProfile = async (): Promise<void> => {
+    if (!signatureDataUrl) return;
+    setIsSavingProfileSignature(true);
+    try {
+      const signatureBlobResponse = await fetch(signatureDataUrl);
+      const blob = await signatureBlobResponse.blob();
+      const signatureFormData = new FormData();
+      signatureFormData.append('signature', blob, 'signature.png');
+
+      const uploadResponse = await fetch('/api/upload/requester-signature', {
+        method: 'POST',
+        body: signatureFormData,
+      });
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'ไม่สามารถอัปโหลดลายเซ็นได้');
+      }
+      const uploadData = await uploadResponse.json();
+      const profileSignatureUrl = uploadData.url as string;
+      await updateProfileSignatureUrl(profileSignatureUrl);
+      setSignatureDataUrl(null);
+      setSignatureMode('PROFILE');
+    } finally {
+      setIsSavingProfileSignature(false);
+    }
   };
 
   const handlePassengerPhotoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +185,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       // Upload signature first if exists
       let requesterSignatureUrl: string | null = null;
       
-      if (signatureDataUrl) {
+      if (signatureMode === 'NEW' && signatureDataUrl) {
         setIsUploadingSignature(true);
         try {
           // Convert data URL to blob
@@ -145,6 +203,9 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           if (signatureResponse.ok) {
             const signatureData = await signatureResponse.json();
             requesterSignatureUrl = signatureData.url;
+            if (saveAsProfileSignature) {
+              await updateProfileSignatureUrl(signatureData.url);
+            }
           } else {
             const errorData = await signatureResponse.json().catch(() => ({}));
             throw new Error(errorData.error || 'ไม่สามารถอัปโหลดลายเซ็นได้');
@@ -157,6 +218,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
         } finally {
           setIsUploadingSignature(false);
         }
+      } else if (signatureMode === 'PROFILE') {
+        requesterSignatureUrl = userProfile?.signatureImageUrl || null;
+      } else {
+        requesterSignatureUrl = null;
       }
 
       // Upload passenger photo if exists
@@ -429,36 +494,109 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
               )}
             </div>
           </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">ลายเซ็นผู้ขอใช้รถ (ไม่บังคับ)</label>
-            {signatureDataUrl ? (
-              <div className="space-y-3">
-                <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
-                  <Image 
-                    src={signatureDataUrl} 
-                    alt="Signature Preview" 
-                    width={300}
-                    height={150}
-                    className="max-h-32 border rounded-lg object-contain"
-                  />
-                </div>
-                <p className="text-sm text-green-600 font-medium">✓ ลายเซ็นพร้อมใช้งาน</p>
-                <button
-                  type="button"
-                  onClick={handleSignatureClear}
-                  className="text-xs text-red-600 hover:text-red-700 underline"
-                  disabled={isLoading || isUploadingSignature}
-                >
-                  ลบลายเซ็น
-                </button>
+          <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
+            <label className="block text-sm font-medium text-gray-700">ลายเซ็นผู้ขอใช้รถ (ไม่บังคับ)</label>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="signatureMode"
+                  checked={signatureMode === 'PROFILE'}
+                  onChange={() => setSignatureMode('PROFILE')}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                  disabled={!userProfile?.signatureImageUrl}
+                />
+                <span className={`text-sm ${userProfile?.signatureImageUrl ? 'text-gray-700' : 'text-gray-400'}`}>
+                  ใช้ลายเซ็นของฉันจากข้อมูลส่วนตัว {userProfile?.signatureImageUrl ? '' : '(ยังไม่มี)'}
+                </span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="signatureMode"
+                  checked={signatureMode === 'NEW'}
+                  onChange={() => setSignatureMode('NEW')}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                />
+                <span className="text-sm text-gray-700">ใช้ลายเซ็นใหม่เฉพาะคำขอนี้</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="signatureMode"
+                  checked={signatureMode === 'NONE'}
+                  onChange={() => setSignatureMode('NONE')}
+                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                />
+                <span className="text-sm text-gray-700">ไม่ใช้ลายเซ็น</span>
+              </label>
+            </div>
+
+            {signatureMode === 'PROFILE' && userProfile?.signatureImageUrl && (
+              <div className="space-y-2">
+                <Image
+                  src={userProfile.signatureImageUrl}
+                  alt="Profile Signature"
+                  width={300}
+                  height={150}
+                  className="max-h-32 border rounded-lg object-contain"
+                />
+                <p className="text-xs text-green-700">จะใช้ลายเซ็นของฉันจากข้อมูลส่วนตัวอัตโนมัติ</p>
               </div>
-            ) : (
-              <SignaturePad
-                onSignatureSave={handleSignatureSave}
-                onClear={handleSignatureClear}
-                disabled={isLoading || isUploadingSignature}
-                height={200}
-              />
+            )}
+
+            {signatureMode === 'NEW' && (
+              <>
+                {signatureDataUrl ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
+                      <Image
+                        src={signatureDataUrl}
+                        alt="Signature Preview"
+                        width={300}
+                        height={150}
+                        className="max-h-32 border rounded-lg object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={handleSignatureClear}
+                        className="text-xs text-red-600 hover:text-red-700 underline"
+                        disabled={isLoading || isUploadingSignature || isSavingProfileSignature}
+                      >
+                        ล้างลายเซ็นใหม่
+                      </button>
+                    </div>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveAsProfileSignature}
+                        onChange={(e) => setSaveAsProfileSignature(e.target.checked)}
+                        className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                        disabled={isLoading || isUploadingSignature || isSavingProfileSignature}
+                      />
+                      <span className="text-xs text-gray-700">บันทึกลายเซ็นนี้เป็นลายเซ็นหลักในข้อมูลส่วนตัวด้วย</span>
+                    </label>
+                    <p className="text-[11px] text-gray-500">
+                      ระบบจะบันทึกเข้าข้อมูลส่วนตัวตอนกด "สร้างคำขอ" หากติ๊กตัวเลือกนี้ไว้
+                    </p>
+                  </div>
+                ) : (
+                  <SignaturePad
+                    onSignatureSave={handleSignatureSave}
+                    onClear={handleSignatureClear}
+                    disabled={isLoading || isUploadingSignature || isSavingProfileSignature}
+                    height={200}
+                  />
+                )}
+              </>
+            )}
+
+            {!userProfile?.signatureImageUrl && signatureMode !== 'NEW' && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                บัญชีนี้ยังไม่มีลายเซ็นในข้อมูลส่วนตัว สามารถเลือก "ใช้ลายเซ็นใหม่เฉพาะคำขอนี้" แล้วกดบันทึกเป็นลายเซ็นส่วนตัวได้
+              </div>
             )}
           </div>
           {error && <p className="text-red-600 text-center text-sm">{error}</p>}

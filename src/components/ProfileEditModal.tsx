@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import LoadingScreen from '@/components/LoadingScreen';
+import Image from 'next/image';
+import SignaturePad from '@/components/SignaturePad';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
   const [position, setPosition] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -32,6 +35,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
       setPosition('');
       setPhoneNumber('');
       setEmail('');
+      setSignatureImageUrl(null);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -56,6 +60,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
         setPosition(currentUser.position || '');
         setPhoneNumber(currentUser.phoneNumber || '');
         setEmail(currentUser.email || '');
+      setSignatureImageUrl(currentUser.signatureImageUrl || null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -101,6 +106,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
           email: email.trim(),
           position: position.trim(),
           phoneNumber: phoneNumber.trim() || undefined,
+          signatureImageUrl,
         }),
       });
 
@@ -216,6 +222,41 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
                   placeholder="เช่น 0812345678"
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
                 />
+              </div>
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <p className="block mb-3 text-sm font-medium text-gray-700">ลายเซ็นของฉัน</p>
+                {signatureImageUrl ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
+                      <Image
+                        src={signatureImageUrl}
+                        alt="Signature Preview"
+                        width={300}
+                        height={150}
+                        className="max-h-32 border rounded-lg object-contain"
+                      />
+                    </div>
+                    <p className="text-sm text-green-600 font-medium">✓ ตั้งค่าลายเซ็นแล้ว</p>
+                    <button
+                      type="button"
+                      onClick={() => setSignatureImageUrl(null)}
+                      className="text-xs text-red-600 hover:text-red-700 underline"
+                      disabled={isLoading}
+                    >
+                      ลบลายเซ็น
+                    </button>
+                  </div>
+                ) : (
+                  <SignaturePad
+                    onSignatureSave={setSignatureImageUrl}
+                    onClear={() => setSignatureImageUrl(null)}
+                    disabled={isLoading}
+                    height={180}
+                  />
+                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  เซ็นแล้วกด "บันทึกลายเซ็น" จากนั้นกด "บันทึกการแก้ไข" เพื่อบันทึกเข้าบัญชี
+                </p>
               </div>
 
               <div className="border-t border-gray-200 pt-4 mt-4">

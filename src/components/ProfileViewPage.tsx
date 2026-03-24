@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import ConnectLineButton from '@/components/ConnectLineButton';
+import Image from 'next/image';
 
 interface ProfileViewPageProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface ProfileData {
   email: string;
   position: string | null;
   phoneNumber: string | null;
+  signatureImageUrl: string | null;
   role: string;
 }
 
@@ -108,6 +110,22 @@ export default function ProfileViewPage({ onClose }: ProfileViewPageProps) {
               </div>
             ))}
           </dl>
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
+            <h3 className="text-sm font-semibold text-gray-900">ลายเซ็นของฉัน</h3>
+            {profile.signatureImageUrl ? (
+              <div className="mt-3">
+                <Image
+                  src={profile.signatureImageUrl}
+                  alt="Profile Signature"
+                  width={280}
+                  height={120}
+                  className="max-h-28 border rounded-lg object-contain"
+                />
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-gray-600">ยังไม่ได้เพิ่มลายเซ็นในบัญชี</p>
+            )}
+          </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
             <div className="flex items-start justify-between gap-4">

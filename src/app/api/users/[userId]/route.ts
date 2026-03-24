@@ -115,7 +115,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { name, email, role, position, phoneNumber, isActive } = body;
+    const { name, email, role, position, phoneNumber, isActive, signatureImageUrl } = body;
 
     // ตรวจสอบสิทธิ์: Admin แก้ไขได้ทุกคน (รวม role), ผู้ใช้ทุก role แก้ไขข้อมูลตัวเองได้ (ไม่รวม role)
     const isEditingSelf = session.user.id === userId;
@@ -161,6 +161,7 @@ export async function PATCH(
         email?: string;
         phoneNumber?: string | null;
         position?: string;
+        signatureImageUrl?: string | null;
       } = {
         name: name?.trim(),
         email: email?.trim(),
@@ -171,6 +172,9 @@ export async function PATCH(
           return NextResponse.json({ error: 'Position is required' }, { status: 400 });
         }
         updateData.position = position.trim();
+      }
+      if (signatureImageUrl !== undefined) {
+        updateData.signatureImageUrl = signatureImageUrl?.trim() || null;
       }
       const updatedUser = await prisma.user.update({
         where: { id: userId },

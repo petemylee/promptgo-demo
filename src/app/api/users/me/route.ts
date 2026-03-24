@@ -19,6 +19,7 @@ export async function GET() {
         email: true,
         position: true,
         phoneNumber: true,
+        signatureImageUrl: true,
         role: true,
       },
     });
