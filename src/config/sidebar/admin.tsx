@@ -40,6 +40,15 @@ export const adminSidebarItems: SidebarItem[] = [
     ),
   },
   {
+    href: '/admin/feedback',
+    label: 'Feedback คนขับ',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+        <path d="M12 2l2.75 5.57 6.15.9-4.45 4.34 1.05 6.12L12 16.95 6.5 18.93l1.05-6.12L3.1 8.47l6.15-.9L12 2z" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/my-bookings',
     label: 'My Bookings',
     icon: (

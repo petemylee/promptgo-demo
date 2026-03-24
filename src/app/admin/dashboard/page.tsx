@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
 import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
+import FeedbackStatsOverview from '@/components/dashboard/FeedbackStatsOverview';
 
 interface Booking {
   id: string;
@@ -236,6 +237,7 @@ export default function AdminDashboard() {
       </div>
 
       <TravelStatsOverview role="Admin" className="mb-6" />
+      <FeedbackStatsOverview className="mb-6" />
       
       <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
         <div className="mb-4 flex items-center justify-between">

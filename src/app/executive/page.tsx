@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
+import FeedbackStatsOverview from '@/components/dashboard/FeedbackStatsOverview';
 
 interface Booking {
   id: string;
@@ -200,6 +201,7 @@ export default function ExecutiveDashboard() {
       </div>
 
       <TravelStatsOverview role="Executive" className="mb-8" />
+      <FeedbackStatsOverview className="mb-8" />
 
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-6 pb-4">
