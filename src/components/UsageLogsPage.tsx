@@ -141,7 +141,7 @@ export default function UsageLogsPage({ title }: { title: string }) {
   const [take, setTake] = useState(50);
   const [action, setAction] = useState<UsageLogAction | ''>('');
   const [path, setPath] = useState('');
-  const [userId, setUserId] = useState('');
+  const [userQuery, setUserQuery] = useState('');
   const [showSystemLogs, setShowSystemLogs] = useState(false);
 
   const query = useMemo(() => {
@@ -149,9 +149,9 @@ export default function UsageLogsPage({ title }: { title: string }) {
     p.set('take', String(take));
     if (action) p.set('action', action);
     if (path.trim()) p.set('path', path.trim());
-    if (userId.trim()) p.set('userId', userId.trim());
+    if (userQuery.trim()) p.set('user', userQuery.trim());
     return p.toString();
-  }, [take, action, path, userId]);
+  }, [take, action, path, userQuery]);
 
   const fetchPage = useCallback(
     async (cursor: string | null, append: boolean) => {
@@ -267,7 +267,7 @@ export default function UsageLogsPage({ title }: { title: string }) {
               onClick={() => {
                 setAction('');
                 setPath('');
-                setUserId('');
+                setUserQuery('');
                 setTake(50);
               }}
               className="text-xs font-semibold text-slate-700 hover:text-slate-900"
@@ -278,11 +278,11 @@ export default function UsageLogsPage({ title }: { title: string }) {
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12">
             <div className="md:col-span-8">
-              <label className="block text-xs font-semibold text-slate-700">รหัสผู้ใช้ (กรณีต้องการค้นหาเฉพาะคน)</label>
+              <label className="block text-xs font-semibold text-slate-700">ผู้ใช้ (ชื่อหรืออีเมล)</label>
               <input
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="ว่างไว้เพื่อดูทั้งหมด"
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="เช่น Somchai หรือ somchai@company.com"
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none focus:border-[#004c80]"
               />
             </div>

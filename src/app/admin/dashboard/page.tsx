@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
+import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
 
 interface Booking {
   id: string;
@@ -233,6 +234,8 @@ export default function AdminDashboard() {
               <p className="mt-1 text-xs text-gray-400">In Progress</p>
           </div>
       </div>
+
+      <TravelStatsOverview role="Admin" className="mb-6" />
       
       <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
         <div className="mb-4 flex items-center justify-between">

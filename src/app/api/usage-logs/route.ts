@@ -16,13 +16,22 @@ export async function GET(req: Request) {
   const take = Math.min(Math.max(parseInt(url.searchParams.get('take') ?? '50', 10) || 50, 1), 200);
   const cursor = url.searchParams.get('cursor');
   const action = url.searchParams.get('action') as UsageLogAction | null;
-  const userId = url.searchParams.get('userId');
   const path = url.searchParams.get('path');
+  const userQuery = url.searchParams.get('user');
 
   const where = {
     ...(action ? { action } : {}),
-    ...(userId ? { userId } : {}),
     ...(path ? { path: { contains: path, mode: 'insensitive' as const } } : {}),
+    ...(userQuery
+      ? {
+          user: {
+            OR: [
+              { name: { contains: userQuery, mode: 'insensitive' as const } },
+              { email: { contains: userQuery, mode: 'insensitive' as const } },
+            ],
+          },
+        }
+      : {}),
   };
 
   const logs = await prisma.usageLog.findMany({
