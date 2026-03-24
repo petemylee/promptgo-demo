@@ -8,6 +8,7 @@ interface Vehicle {
   id: string;
   licensePlate: string;
   brand: string | null;
+  color: string | null;
   model: string | null;
   type: string | null;
   capacity: number | null;
@@ -18,15 +19,32 @@ interface Vehicle {
 export default function VehicleManagementPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   const fetchVehicles = async () => {
     setIsLoading(true);
-    const response = await fetch('/api/vehicles');
-    const data = await response.json();
-    setVehicles(data);
-    setIsLoading(false);
+    setError(null);
+    try {
+      const response = await fetch('/api/vehicles');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'ไม่สามารถโหลดข้อมูลรถยนต์ได้');
+      }
+
+      if (!Array.isArray(data)) {
+        throw new Error('รูปแบบข้อมูลรถยนต์ไม่ถูกต้อง');
+      }
+
+      setVehicles(data);
+    } catch (err) {
+      setVehicles([]);
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดข้อมูลรถยนต์');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -35,7 +53,12 @@ export default function VehicleManagementPage() {
 
   const handleDelete = async (vehicleId: string) => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลรถยนต์นี้?')) {
-      await fetch(`/api/vehicles/${vehicleId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/vehicles/${vehicleId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alert(data?.error || 'ไม่สามารถลบข้อมูลรถยนต์ได้');
+        return;
+      }
       fetchVehicles();
     }
   };
@@ -84,12 +107,18 @@ export default function VehicleManagementPage() {
           </button>
         </div>
         <div className="bg-white/90 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
                   <th className="text-left py-2 px-4 text-[#004c80]">License Plate</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">Brand & Model</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">Color</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">Type</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ความจุ (CC)</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">จำนวนที่สามารถโดยสารได้ (คน)</th>
@@ -102,6 +131,7 @@ export default function VehicleManagementPage() {
                   <tr key={vehicle.id} className="border-b hover:bg-[#0076c3]/5">
                     <td className="py-2 px-4 font-mono whitespace-nowrap">{vehicle.licensePlate}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{vehicle.brand} {vehicle.model}</td>
+                    <td className="py-2 px-4 whitespace-nowrap">{vehicle.color || '-'}</td>
                     <td className="py-2 px-4 whitespace-nowrap">{vehicle.type}</td>
                     <td className="py-2 px-4">{vehicle.capacity ?? '-'}</td>
                     <td className="py-2 px-4">{vehicle.passengerCapacity ?? '-'}</td>

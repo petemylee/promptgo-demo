@@ -64,13 +64,14 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { licensePlate, brand, model, type, capacity, passengerCapacity, currentMileage } = body;
+    const { licensePlate, brand, color, model, type, capacity, passengerCapacity, currentMileage } = body;
 
     const updatedVehicle = await prisma.vehicle.update({
       where: { id: vehicleId },
       data: {
         licensePlate,
         brand,
+        color: color !== undefined ? (color?.trim() || null) : undefined,
         model,
         type,
         capacity: capacity ? parseInt(capacity, 10) : undefined,

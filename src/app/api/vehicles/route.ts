@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { licensePlate, brand, model, type, capacity, passengerCapacity, currentMileage } = body;
+    const { licensePlate, brand, color, model, type, capacity, passengerCapacity, currentMileage } = body;
 
     if (!licensePlate) {
       return NextResponse.json({ error: 'License plate is required' }, { status: 400 });
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       data: {
         licensePlate,
         brand,
+        color: color?.trim() || null,
         model,
         type,
         capacity: capacity ? parseInt(capacity, 10) : null,

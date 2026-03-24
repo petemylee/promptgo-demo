@@ -5,6 +5,8 @@ import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { writeUsageLog } from '@/lib/usageLogs';
+import { sendLineMessage } from '@/lib/line';
+import { buildBookingNotification } from '@/lib/lineNotifications';
 
 function actorName(session: any) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -49,7 +51,23 @@ export async function PATCH(
     // ดึงข้อมูล booking พร้อม vehicle
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { vehicle: true },
+      include: {
+        vehicle: true,
+        requester: {
+          select: {
+            lineUserId: true,
+            name: true,
+            position: true,
+            phoneNumber: true,
+          },
+        },
+        driver: {
+          select: {
+            name: true,
+            phoneNumber: true,
+          },
+        },
+      },
     });
 
     if (!booking) {
@@ -111,6 +129,46 @@ export async function PATCH(
       entityId: bookingId,
       message: `คนขับ ${actorName(session)} จบงาน (เลขไมล์สิ้นสุด: ${endMileage})`,
     });
+
+    if (booking.requester?.lineUserId) {
+      const completeMsg = buildBookingNotification('BOOKING_COMPLETED_REQUESTER', {
+        id: booking.id,
+        status: 'COMPLETED',
+        purpose: booking.purpose,
+        endLocation: booking.endLocation,
+        startTime: booking.startTime,
+        endTime: new Date(),
+        passengerCount: booking.passengerCount,
+        requestForSelf: booking.requestForSelf,
+        travelerName: booking.travelerName,
+        travelerPosition: booking.travelerPosition,
+        travelerPhone: booking.travelerPhone,
+        requester: {
+          name: booking.requester.name,
+          position: booking.requester.position,
+          phoneNumber: booking.requester.phoneNumber,
+        },
+        vehicle: booking.vehicle
+          ? {
+              brand: booking.vehicle.brand,
+              model: booking.vehicle.model,
+              color: booking.vehicle.color,
+              licensePlate: booking.vehicle.licensePlate,
+            }
+          : null,
+        driver: booking.driver
+          ? {
+              name: booking.driver.name,
+              phoneNumber: booking.driver.phoneNumber,
+            }
+          : null,
+        distanceTraveledKm: distanceTraveled,
+      });
+
+      sendLineMessage(booking.requester.lineUserId, completeMsg).catch((e) =>
+        console.error('LINE notify requester on complete job:', e)
+      );
+    }
 
     return NextResponse.json({
       ...updatedBooking,

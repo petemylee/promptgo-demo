@@ -142,6 +142,7 @@ model Vehicle {
   id                 String    @id @default(cuid())
   licensePlate       String    @unique
   brand              String?
+  color              String?
   model              String?
   type               String?
   capacity           Int?      // ความจุเครื่องยนต์ (CC)

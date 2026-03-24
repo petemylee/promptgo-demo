@@ -66,6 +66,7 @@ interface Driver {
 
 
 export default function BookingConfirmationPage({ params }: { params: Promise<{ bookingId: string }> }) {
+  type SignatureMode = 'PROFILE' | 'NEW';
   const { bookingId } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
@@ -73,6 +74,9 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>('NEW');
+  const [saveAsMySignature, setSaveAsMySignature] = useState(true);
+  const [mySignatureUrl, setMySignatureUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
@@ -149,6 +153,23 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
     fetchDrivers();
   }, [fetchBooking, fetchVehicles, fetchDrivers]);
 
+  useEffect(() => {
+    const fetchMyProfile = async () => {
+      try {
+        const response = await fetch('/api/users/me');
+        if (!response.ok) return;
+        const me = await response.json();
+        const existingSignature = me.signatureImageUrl || null;
+        setMySignatureUrl(existingSignature);
+        setSignatureMode(existingSignature ? 'PROFILE' : 'NEW');
+      } catch {
+        setMySignatureUrl(null);
+        setSignatureMode('NEW');
+      }
+    };
+    fetchMyProfile();
+  }, []);
+
   const handleSignatureSave = (dataUrl: string) => {
     setSignatureDataUrl(dataUrl);
   };
@@ -163,15 +184,24 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
       setError('กรุณาเลือกคนขับ');
       return;
     }
+    if (signatureMode === 'NEW' && !signatureDataUrl) {
+      setError('กรุณาเซ็นลายเซ็นก่อนยืนยัน');
+      return;
+    }
 
     setIsConfirming(true);
     setError('');
 
     try {
-      // Try to upload signature (optional - continue even if it fails)
+      // Prepare signature according to selected mode
       let signatureImageUrl: string | null = null;
       
-      if (signatureDataUrl) {
+      if (signatureMode === 'PROFILE') {
+        if (!mySignatureUrl) {
+          throw new Error('ไม่พบลายเซ็นของฉันในข้อมูลส่วนตัว');
+        }
+        signatureImageUrl = mySignatureUrl || null;
+      } else if (signatureMode === 'NEW' && signatureDataUrl) {
         try {
           // Convert data URL to blob
           const response = await fetch(signatureDataUrl);
@@ -188,6 +218,9 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
           if (signatureResponse.ok) {
             const signatureData = await signatureResponse.json();
             signatureImageUrl = signatureData.url;
+            if (saveAsMySignature) {
+              setMySignatureUrl(signatureData.url);
+            }
           } else {
             console.warn('Signature upload failed, continuing without signature');
           }
@@ -206,6 +239,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
           status: 'CONFIRMED',
           executiveConfirmerId: session?.user?.id,
           signatureImageUrl: signatureImageUrl,
+          saveExecutiveSignatureToProfile: signatureMode === 'NEW' ? saveAsMySignature : true,
           vehicleId: selectedVehicleId,
           driverId: selectedDriverId,
         }),
@@ -566,35 +600,92 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             {/* Signature Upload */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-[#004c80]">ลายเซ็นผู้ยืนยัน</h3>
-              {signatureDataUrl ? (
-                <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="signatureMode"
+                    checked={signatureMode === 'PROFILE'}
+                    onChange={() => setSignatureMode('PROFILE')}
+                    className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                    disabled={!mySignatureUrl}
+                  />
+                  <span className={`text-sm ${mySignatureUrl ? 'text-gray-700' : 'text-gray-400'}`}>
+                    ใช้ลายเซ็นของฉันจากข้อมูลส่วนตัว {mySignatureUrl ? '' : '(ยังไม่มี)'}
+                  </span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="signatureMode"
+                    checked={signatureMode === 'NEW'}
+                    onChange={() => setSignatureMode('NEW')}
+                    className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                  />
+                  <span className="text-sm text-gray-700">ใช้ลายเซ็นใหม่ครั้งนี้</span>
+                </label>
+              </div>
+
+              {signatureMode === 'PROFILE' && mySignatureUrl && (
+                <div className="space-y-2">
                   <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
-                    <Image 
-                      src={signatureDataUrl} 
-                      alt="Signature Preview" 
+                    <Image
+                      src={mySignatureUrl}
+                      alt="My Signature"
                       width={300}
                       height={150}
                       className="max-h-32 border rounded-lg object-contain"
                     />
                   </div>
-                  <p className="text-sm text-green-600 font-medium">✓ ลายเซ็นพร้อมใช้งาน</p>
-                  <button
-                    type="button"
-                    onClick={() => setSignatureDataUrl(null)}
-                    className="text-xs text-red-600 hover:text-red-700 underline"
-                    disabled={isConfirming}
-                  >
-                    ลบและวาดใหม่
-                  </button>
+                  <p className="text-xs text-green-700">จะใช้ลายเซ็นของฉันจากข้อมูลส่วนตัวอัตโนมัติ</p>
                 </div>
-              ) : (
-                <SignaturePad
-                  onSignatureSave={handleSignatureSave}
-                  onClear={() => setSignatureDataUrl(null)}
-                  disabled={isConfirming}
-                  width={400}
-                  height={200}
-                />
+              )}
+
+              {signatureMode === 'NEW' && (
+                <>
+                  {signatureDataUrl ? (
+                    <div className="space-y-3">
+                      <div className="relative inline-block border-2 border-green-300 rounded-lg p-2 bg-green-50/50">
+                        <Image
+                          src={signatureDataUrl}
+                          alt="Signature Preview"
+                          width={300}
+                          height={150}
+                          className="max-h-32 border rounded-lg object-contain"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-700">
+                        ระบบต้องใช้ลายเซ็นในการยืนยันขั้นสุดท้าย
+                      </p>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={saveAsMySignature}
+                          onChange={(e) => setSaveAsMySignature(e.target.checked)}
+                          className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                          disabled={isConfirming}
+                        />
+                        <span className="text-xs text-gray-700">บันทึกเป็นลายเซ็นของฉันในข้อมูลส่วนตัวด้วย</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setSignatureDataUrl(null)}
+                        className="text-xs text-red-600 hover:text-red-700 underline"
+                        disabled={isConfirming}
+                      >
+                        ลบและวาดใหม่
+                      </button>
+                    </div>
+                  ) : (
+                    <SignaturePad
+                      onSignatureSave={handleSignatureSave}
+                      onClear={() => setSignatureDataUrl(null)}
+                      disabled={isConfirming}
+                      width={400}
+                      height={200}
+                    />
+                  )}
+                </>
               )}
             </div>
 

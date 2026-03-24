@@ -37,6 +37,7 @@ export async function GET() {
           select: {
             licensePlate: true,
             brand: true,
+            color: true,
             model: true,
             type: true,
           },

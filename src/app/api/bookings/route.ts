@@ -5,6 +5,7 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 // ✅ 1. นำเข้าฟังก์ชันส่งไลน์
 import { sendLineMessage } from '@/lib/line';
+import { buildBookingNotification } from '@/lib/lineNotifications';
 
 export async function POST(req: Request) {
   // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
@@ -77,48 +78,74 @@ export async function POST(req: Request) {
     // ==========================================
     try {
       const adminsWithLine = await prisma.user.findMany({
-        where: { role: 'Admin', lineUserId: { not: null } },
+        where: {
+          role: { in: ['Admin', 'Executive'] },
+          lineUserId: { not: null },
+        },
         select: { lineUserId: true },
       });
       const adminLineIds = adminsWithLine.map((u) => u.lineUserId).filter((id): id is string => !!id);
 
-      if (adminLineIds.length > 0) {
-        const startDate = new Date(startTime);
-        const dateStr = startDate.toLocaleDateString('th-TH', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
-        const timeStr = startDate.toLocaleTimeString('th-TH', {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
+      // แจ้งผู้ขอ (requester) ถ้าผูก LINE แล้ว
+      const requester = await prisma.user.findUnique({
+        where: { id: session.user.id as string },
+        select: {
+          lineUserId: true,
+          name: true,
+          position: true,
+          phoneNumber: true,
+        },
+      });
+      const requesterName = requester?.name || session.user.name || null;
+      const requesterPosition = requester?.position || null;
+      const requesterPhone = requester?.phoneNumber || null;
 
-        const message = `📢 มีรายการจองรถใหม่!\n\n` +
-                        `👤 ผู้ขอ: ${session.user.name || 'ไม่ระบุ'}\n` +
-                        `📍 ไปที่: ${endLocation}\n` +
-                        `📅 วันที่: ${dateStr}\n` +
-                        `⏰ เวลา: ${timeStr}\n` +
-                        `📝 เหตุผล: ${purpose}`;
+      if (adminLineIds.length > 0) {
+        const message = buildBookingNotification('BOOKING_CREATED_ADMIN', {
+          id: newBooking.id,
+          status: newBooking.status,
+          purpose: newBooking.purpose,
+          endLocation: newBooking.endLocation,
+          startTime: newBooking.startTime,
+          endTime: newBooking.endTime,
+          passengerCount: newBooking.passengerCount,
+          requestForSelf: newBooking.requestForSelf,
+          travelerName: newBooking.travelerName,
+          travelerPosition: newBooking.travelerPosition,
+          travelerPhone: newBooking.travelerPhone,
+          requester: {
+            name: requesterName,
+            position: requesterPosition,
+            phoneNumber: requesterPhone,
+          },
+          vehicle: null,
+          driver: null,
+        });
 
         await Promise.all(adminLineIds.map((lineUserId) => sendLineMessage(lineUserId, message)));
       }
 
-      // แจ้งผู้ขอ (requester) ถ้าผูก LINE แล้ว
-      const requester = await prisma.user.findUnique({
-        where: { id: session.user.id as string },
-        select: { lineUserId: true },
-      });
       if (requester?.lineUserId) {
-        const startDate = new Date(startTime);
-        const dateStr = startDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-        const timeStr = startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-        const requesterMsg =
-          `✅ สร้างคำขอจองรถสำเร็จ\n\n` +
-          `📍 ไปที่: ${endLocation}\n` +
-          `📅 วันที่: ${dateStr}\n` +
-          `⏰ เวลา: ${timeStr}\n\n` +
-          `กำลังรอการอนุมัติจากแอดมิน`;
+        const requesterMsg = buildBookingNotification('BOOKING_CREATED_REQUESTER', {
+          id: newBooking.id,
+          status: newBooking.status,
+          purpose: newBooking.purpose,
+          endLocation: newBooking.endLocation,
+          startTime: newBooking.startTime,
+          endTime: newBooking.endTime,
+          passengerCount: newBooking.passengerCount,
+          requestForSelf: newBooking.requestForSelf,
+          travelerName: newBooking.travelerName,
+          travelerPosition: newBooking.travelerPosition,
+          travelerPhone: newBooking.travelerPhone,
+          requester: {
+            name: requesterName,
+            position: requesterPosition,
+            phoneNumber: requesterPhone,
+          },
+          vehicle: null,
+          driver: null,
+        });
         sendLineMessage(requester.lineUserId, requesterMsg).catch((e) => console.error('LINE to requester:', e));
       }
     } catch (lineError) {

@@ -26,6 +26,7 @@ type Job = {
   vehicle: {
     licensePlate: string;
     brand: string | null;
+    color: string | null;
     model: string | null;
     type: string | null;
   } | null;
@@ -138,6 +139,7 @@ export default function DriverDashboard() {
                             <div className="text-xs text-gray-500">
                               {job.vehicle.brand} {job.vehicle.model}
                             </div>
+                            <div className="text-xs text-gray-500">สี: {job.vehicle.color || '-'}</div>
                           </div>
                         ) : (
                           '-'

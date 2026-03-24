@@ -5,6 +5,7 @@ import { BookingStatus, TripType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 import { writeUsageLog } from '@/lib/usageLogs';
+import { buildBookingNotification } from '@/lib/lineNotifications';
 
 function actorName(session: any) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -53,6 +54,7 @@ export async function GET(
             id: true,
             licensePlate: true,
             brand: true,
+            color: true,
             model: true,
             vehicleImageUrl: true,
           }
@@ -98,6 +100,7 @@ export async function PATCH(
       status, 
       executiveConfirmerId, 
       signatureImageUrl, 
+      saveExecutiveSignatureToProfile,
       vehicleId, 
       driverId, 
       requesterSignatureUrl,
@@ -228,12 +231,11 @@ export async function PATCH(
       } else {
         return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
       }
-    } else if (session.user.role === 'Admin') {
-      // Admin สามารถอนุมัติเบื้องต้นได้
-      if (status !== 'APPROVED' && status !== 'REJECTED') {
-        return NextResponse.json({ error: 'Invalid status for approval' }, { status: 400 });
-      }
-
+    } else if (
+      (session.user.role === 'Admin' || session.user.role === 'Executive') &&
+      (status === 'APPROVED' || status === 'REJECTED')
+    ) {
+      // Admin และ Executive สามารถอนุมัติเบื้องต้นได้
       // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
       if (status === 'APPROVED' && vehicleId) {
         const vehicle = await prisma.vehicle.findUnique({
@@ -269,7 +271,7 @@ export async function PATCH(
 
       await writeUsageLog({
         action: 'UPDATE',
-        path: '/admin/dashboard',
+        path: session.user.role === 'Executive' ? '/executive/admin-approvals' : '/admin/dashboard',
         userId: session.user.id,
         role: session.user.role as any,
         entityType: 'Booking',
@@ -284,20 +286,105 @@ export async function PATCH(
       if (status === 'APPROVED') {
         const bookingWithRequester = await prisma.booking.findUnique({
           where: { id: bookingId },
-          include: { requester: { select: { lineUserId: true } } },
+          include: {
+            requester: {
+              select: {
+                lineUserId: true,
+                name: true,
+                position: true,
+                phoneNumber: true,
+              },
+            },
+            vehicle: {
+              select: {
+                brand: true,
+                model: true,
+                color: true,
+                licensePlate: true,
+              },
+            },
+            driver: {
+              select: {
+                lineUserId: true,
+                name: true,
+                phoneNumber: true,
+              },
+            },
+          },
         });
         if (bookingWithRequester?.requester?.lineUserId) {
-          const startTime = bookingWithRequester.startTime;
-          const dateStr = startTime
-            ? new Date(startTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-            : '-';
-          const msg =
-            `✅ คำขอจองรถของคุณได้รับการอนุมัติเบื้องต้นแล้ว\n\n` +
-            `📍 ไปที่: ${bookingWithRequester.endLocation || '-'}\n` +
-            `📅 วันที่: ${dateStr}\n\n` +
-            `รอการยืนยันขั้นสุดท้ายจากผู้บริหาร`;
+          const msg = buildBookingNotification('BOOKING_APPROVED', {
+            id: bookingWithRequester.id,
+            status: bookingWithRequester.status,
+            purpose: bookingWithRequester.purpose,
+            endLocation: bookingWithRequester.endLocation,
+            startTime: bookingWithRequester.startTime,
+            endTime: bookingWithRequester.endTime,
+            passengerCount: bookingWithRequester.passengerCount,
+            requestForSelf: bookingWithRequester.requestForSelf,
+            travelerName: bookingWithRequester.travelerName,
+            travelerPosition: bookingWithRequester.travelerPosition,
+            travelerPhone: bookingWithRequester.travelerPhone,
+            requester: {
+              name: bookingWithRequester.requester.name,
+              position: bookingWithRequester.requester.position,
+              phoneNumber: bookingWithRequester.requester.phoneNumber,
+            },
+            vehicle: bookingWithRequester.vehicle
+              ? {
+                  brand: bookingWithRequester.vehicle.brand,
+                  model: bookingWithRequester.vehicle.model,
+                  color: bookingWithRequester.vehicle.color,
+                  licensePlate: bookingWithRequester.vehicle.licensePlate,
+                }
+              : null,
+            driver: bookingWithRequester.driver
+              ? {
+                  name: bookingWithRequester.driver.name,
+                  phoneNumber: bookingWithRequester.driver.phoneNumber,
+                }
+              : null,
+          });
           sendLineMessage(bookingWithRequester.requester.lineUserId, msg).catch((e) =>
             console.error('LINE approved notification:', e)
+          );
+        }
+
+        if (bookingWithRequester?.driver?.lineUserId) {
+          const driverMsg = buildBookingNotification('BOOKING_APPROVED_DRIVER', {
+            id: bookingWithRequester.id,
+            status: bookingWithRequester.status,
+            purpose: bookingWithRequester.purpose,
+            endLocation: bookingWithRequester.endLocation,
+            startTime: bookingWithRequester.startTime,
+            endTime: bookingWithRequester.endTime,
+            passengerCount: bookingWithRequester.passengerCount,
+            requestForSelf: bookingWithRequester.requestForSelf,
+            travelerName: bookingWithRequester.travelerName,
+            travelerPosition: bookingWithRequester.travelerPosition,
+            travelerPhone: bookingWithRequester.travelerPhone,
+            requester: {
+              name: bookingWithRequester.requester.name,
+              position: bookingWithRequester.requester.position,
+              phoneNumber: bookingWithRequester.requester.phoneNumber,
+            },
+            vehicle: bookingWithRequester.vehicle
+              ? {
+                  brand: bookingWithRequester.vehicle.brand,
+                  model: bookingWithRequester.vehicle.model,
+                  color: bookingWithRequester.vehicle.color,
+                  licensePlate: bookingWithRequester.vehicle.licensePlate,
+                }
+              : null,
+            driver: bookingWithRequester.driver
+              ? {
+                  name: bookingWithRequester.driver.name,
+                  phoneNumber: bookingWithRequester.driver.phoneNumber,
+                }
+              : null,
+          });
+          sendLineMessage(bookingWithRequester.driver.lineUserId, driverMsg).catch((e) =>
+            console.error('LINE approved driver assignment notification:', e)
           );
         }
       }
@@ -370,29 +457,110 @@ export async function PATCH(
       // แจ้งเตือน LINE ผู้ขอเมื่อยืนยันขั้นสุดท้าย
       const bookingForNotif = await prisma.booking.findUnique({
         where: { id: bookingId },
-        include: { requester: { select: { lineUserId: true } }, vehicle: { select: { licensePlate: true } }, driver: { select: { name: true } } },
+        include: {
+          requester: {
+            select: {
+              lineUserId: true,
+              name: true,
+              position: true,
+              phoneNumber: true,
+            },
+          },
+          vehicle: {
+            select: {
+              brand: true,
+              model: true,
+              color: true,
+              licensePlate: true,
+            },
+          },
+          driver: {
+            select: {
+              lineUserId: true,
+              name: true,
+              phoneNumber: true,
+            },
+          },
+        },
       });
       if (bookingForNotif?.requester?.lineUserId) {
-        const startTime = bookingForNotif.startTime;
-        const dateStr = startTime
-          ? new Date(startTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-          : '-';
-        const car = bookingForNotif.vehicle?.licensePlate || '-';
-        const driverName = bookingForNotif.driver?.name || '-';
-        const msg =
-          `🎉 คำขอจองรถของคุณได้รับการยืนยันขั้นสุดท้ายแล้ว\n\n` +
-          `📍 ไปที่: ${bookingForNotif.endLocation || '-'}\n` +
-          `📅 วันที่: ${dateStr}\n` +
-          `🚗 รถ: ${car}\n` +
-          `👤 คนขับ: ${driverName}\n\n` +
-          `พร้อมออกเดินทางได้ตามกำหนด`;
+        const msg = buildBookingNotification('BOOKING_CONFIRMED', {
+          id: bookingForNotif.id,
+          status: bookingForNotif.status,
+          purpose: bookingForNotif.purpose,
+          endLocation: bookingForNotif.endLocation,
+          startTime: bookingForNotif.startTime,
+          endTime: bookingForNotif.endTime,
+          passengerCount: bookingForNotif.passengerCount,
+          requestForSelf: bookingForNotif.requestForSelf,
+          travelerName: bookingForNotif.travelerName,
+          travelerPosition: bookingForNotif.travelerPosition,
+          travelerPhone: bookingForNotif.travelerPhone,
+          requester: {
+            name: bookingForNotif.requester.name,
+            position: bookingForNotif.requester.position,
+            phoneNumber: bookingForNotif.requester.phoneNumber,
+          },
+          vehicle: bookingForNotif.vehicle
+            ? {
+                brand: bookingForNotif.vehicle.brand,
+                model: bookingForNotif.vehicle.model,
+                color: bookingForNotif.vehicle.color,
+                licensePlate: bookingForNotif.vehicle.licensePlate,
+              }
+            : null,
+          driver: bookingForNotif.driver
+            ? {
+                name: bookingForNotif.driver.name,
+                phoneNumber: bookingForNotif.driver.phoneNumber,
+              }
+            : null,
+        });
         sendLineMessage(bookingForNotif.requester.lineUserId, msg).catch((e) =>
           console.error('LINE confirmed notification:', e)
         );
       }
 
+      if (bookingForNotif?.driver?.lineUserId) {
+        const driverMsg = buildBookingNotification('BOOKING_CONFIRMED_DRIVER', {
+          id: bookingForNotif.id,
+          status: bookingForNotif.status,
+          purpose: bookingForNotif.purpose,
+          endLocation: bookingForNotif.endLocation,
+          startTime: bookingForNotif.startTime,
+          endTime: bookingForNotif.endTime,
+          passengerCount: bookingForNotif.passengerCount,
+          requestForSelf: bookingForNotif.requestForSelf,
+          travelerName: bookingForNotif.travelerName,
+          travelerPosition: bookingForNotif.travelerPosition,
+          travelerPhone: bookingForNotif.travelerPhone,
+          requester: {
+            name: bookingForNotif.requester.name,
+            position: bookingForNotif.requester.position,
+            phoneNumber: bookingForNotif.requester.phoneNumber,
+          },
+          vehicle: bookingForNotif.vehicle
+            ? {
+                brand: bookingForNotif.vehicle.brand,
+                model: bookingForNotif.vehicle.model,
+                color: bookingForNotif.vehicle.color,
+                licensePlate: bookingForNotif.vehicle.licensePlate,
+              }
+            : null,
+          driver: bookingForNotif.driver
+            ? {
+                name: bookingForNotif.driver.name,
+                phoneNumber: bookingForNotif.driver.phoneNumber,
+              }
+            : null,
+        });
+        sendLineMessage(bookingForNotif.driver.lineUserId, driverMsg).catch((e) =>
+          console.error('LINE driver assignment notification:', e)
+        );
+      }
+
       // อัปเดต signature URL ใน user profile
-      if (signatureImageUrl) {
+      if (signatureImageUrl && saveExecutiveSignatureToProfile !== false) {
         await prisma.user.update({
           where: { id: session.user.id },
           data: {

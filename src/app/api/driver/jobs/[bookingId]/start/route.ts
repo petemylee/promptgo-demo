@@ -5,6 +5,8 @@ import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { writeUsageLog } from '@/lib/usageLogs';
+import { sendLineMessage } from '@/lib/line';
+import { buildBookingNotification } from '@/lib/lineNotifications';
 
 function actorName(session: any) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -37,6 +39,31 @@ export async function PATCH(
     // ดึงข้อมูล booking
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
+      include: {
+        requester: {
+          select: {
+            lineUserId: true,
+            name: true,
+            position: true,
+            phoneNumber: true,
+          },
+        },
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            color: true,
+            licensePlate: true,
+            currentMileage: true,
+          },
+        },
+        driver: {
+          select: {
+            name: true,
+            phoneNumber: true,
+          },
+        },
+      },
     });
 
     if (!booking) {
@@ -58,13 +85,8 @@ export async function PATCH(
 
     // ดึงข้อมูล vehicle เพื่อบันทึกเลขไมล์ก่อนออกเดินทาง
     let startMileage: number | null = null;
-    if (booking.vehicleId) {
-      const vehicle = await prisma.vehicle.findUnique({
-        where: { id: booking.vehicleId },
-      });
-      if (vehicle && vehicle.currentMileage !== null) {
-        startMileage = vehicle.currentMileage;
-      }
+    if (booking.vehicle && booking.vehicle.currentMileage !== null) {
+      startMileage = booking.vehicle.currentMileage;
     }
 
     // อัปเดต booking status เป็น IN_PROGRESS และบันทึกเลขไมล์ก่อนออกเดินทาง
@@ -86,6 +108,45 @@ export async function PATCH(
       entityId: bookingId,
       message: `คนขับ ${actorName(session)} เริ่มงาน (เริ่มเดินทาง)`,
     });
+
+    if (booking.requester?.lineUserId) {
+      const startMsg = buildBookingNotification('BOOKING_STARTED_REQUESTER', {
+        id: booking.id,
+        status: 'IN_PROGRESS',
+        purpose: booking.purpose,
+        endLocation: booking.endLocation,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        passengerCount: booking.passengerCount,
+        requestForSelf: booking.requestForSelf,
+        travelerName: booking.travelerName,
+        travelerPosition: booking.travelerPosition,
+        travelerPhone: booking.travelerPhone,
+        requester: {
+          name: booking.requester.name,
+          position: booking.requester.position,
+          phoneNumber: booking.requester.phoneNumber,
+        },
+        vehicle: booking.vehicle
+          ? {
+              brand: booking.vehicle.brand,
+              model: booking.vehicle.model,
+              color: booking.vehicle.color,
+              licensePlate: booking.vehicle.licensePlate,
+            }
+          : null,
+        driver: booking.driver
+          ? {
+              name: booking.driver.name,
+              phoneNumber: booking.driver.phoneNumber,
+            }
+          : null,
+      });
+
+      sendLineMessage(booking.requester.lineUserId, startMsg).catch((e) =>
+        console.error('LINE notify requester on start job:', e)
+      );
+    }
 
     return NextResponse.json(updatedBooking);
   } catch (error) {

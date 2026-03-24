@@ -26,6 +26,7 @@ type Job = {
   vehicle: {
     licensePlate: string;
     brand: string | null;
+    color: string | null;
     model: string | null;
     type: string | null;
   } | null;
@@ -152,6 +153,7 @@ export default function InProgressJobsPage() {
                                 <p className="text-sm text-gray-600">
                                   {job.vehicle.brand} {job.vehicle.model}
                                 </p>
+                                <p className="text-sm text-gray-600">สี: {job.vehicle.color || '-'}</p>
                               </>
                             ) : (
                               <p className="text-sm text-gray-500">ยังไม่ได้กำหนดรถ</p>

@@ -31,6 +31,7 @@ interface Booking {
   vehicle: {
     licensePlate: string;
     brand: string | null;
+    color: string | null;
     model: string | null;
     type: string | null;
   } | null;
@@ -232,6 +233,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
                   <>
                     <p><span className="font-medium">ทะเบียน:</span> {booking.vehicle.licensePlate}</p>
                     <p><span className="font-medium">ยี่ห้อ/รุ่น:</span> {booking.vehicle.brand} {booking.vehicle.model}</p>
+                    <p><span className="font-medium">สี:</span> {booking.vehicle.color || '-'}</p>
                     <p><span className="font-medium">ประเภท:</span> {booking.vehicle.type || '-'}</p>
                   </>
                 ) : (

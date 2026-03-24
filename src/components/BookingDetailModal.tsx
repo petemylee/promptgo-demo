@@ -38,6 +38,7 @@ interface BookingDetail {
   vehicle: {
     licensePlate: string;
     brand: string | null;
+    color: string | null;
     model: string | null;
   } | null;
   driver: {
@@ -231,6 +232,7 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
                 <p>{booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}</p>
+                <p className="text-sm text-gray-600">สีรถ: {booking.vehicle.color || '-'}</p>
               </div>
             )}
 
