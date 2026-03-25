@@ -22,6 +22,7 @@ function formatThDate(d: Date | null): string {
     dateStyle: 'short',
     timeStyle: 'short',
     hour12: false,
+    timeZone: 'Asia/Bangkok',
   });
 }
 
