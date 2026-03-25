@@ -22,6 +22,8 @@ interface TravelStatsOverviewProps {
   className?: string;
 }
 
+const FEEDBACK_REFRESH_EVENT = 'feedback-stats:refresh';
+
 function getCurrentMonthValue() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -223,6 +225,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
       }
       alert(
         `สร้างข้อมูลตัวอย่างสำเร็จ ${result.created ?? 0} รายการ` +
+          `\nสร้าง feedback ตัวอย่าง ${result.createdFeedbacks ?? 0} รายการ` +
           `\nใช้รถ ${result.usedVehicles ?? 0} คัน | คนขับ ${result.usedDrivers ?? 0} คน` +
           `\nสร้างรถทดสอบเพิ่ม ${result.createdSampleVehicles ?? 0} คัน | คนขับทดสอบเพิ่ม ${result.createdSampleDrivers ?? 0} คน`,
       );
@@ -231,6 +234,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
         const payload: TravelStatsResponse = await statsResponse.json();
         setData(payload);
       }
+      window.dispatchEvent(new Event(FEEDBACK_REFRESH_EVENT));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -267,6 +271,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
         const payload: TravelStatsResponse = await statsResponse.json();
         setData(payload);
       }
+      window.dispatchEvent(new Event(FEEDBACK_REFRESH_EVENT));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

@@ -32,11 +32,22 @@ function pickRandomIndex(length: number) {
   return Math.floor(Math.random() * length);
 }
 
+function pickRandom<T>(items: T[]): T {
+  return items[pickRandomIndex(items.length)];
+}
+
 const SAMPLE_NOTE = 'generated-sample-travel-stats';
 const SAMPLE_PURPOSE = 'ข้อมูลทดสอบสถิติการเดินทาง';
 const SAMPLE_DRIVER_EMAIL_PREFIX = 'sample-travel-driver-';
 const SAMPLE_DRIVER_EMAIL_DOMAIN = 'local.test';
 const SAMPLE_VEHICLE_PLATE_PREFIX = 'TS-TEST-';
+const SAMPLE_FEEDBACK_COMMENTS = [
+  'ขับรถสุภาพและตรงเวลา',
+  'ให้บริการดี พูดจาสุภาพ',
+  'ดูแลผู้โดยสารดีมาก',
+  'เส้นทางเหมาะสม เดินทางราบรื่น',
+  'โดยรวมพึงพอใจในการให้บริการ',
+];
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -56,6 +67,10 @@ export async function POST(req: Request) {
 
     const requestedCount = Number(body.count ?? 20);
     const count = Math.max(1, Math.min(200, Number.isFinite(requestedCount) ? requestedCount : 20));
+    const requestedFeedbackRate = Number(body.feedbackRate ?? 0.8);
+    const feedbackRate = Number.isFinite(requestedFeedbackRate)
+      ? Math.max(0, Math.min(1, requestedFeedbackRate))
+      : 0.8;
 
     const [vehicles, drivers] = await Promise.all([
       prisma.vehicle.findMany({
@@ -113,6 +128,7 @@ export async function POST(req: Request) {
 
     const requesterId = session.user.id;
     let created = 0;
+    let createdFeedbacks = 0;
     const usedVehicleIds = new Set<string>();
     const usedDriverIds = new Set<string>();
 
@@ -147,7 +163,7 @@ export async function POST(req: Request) {
       }
 
       const baseMileage = (vehicle.currentMileage ?? 10000) + i * 7;
-      await prisma.booking.create({
+      const createdBooking = await prisma.booking.create({
         data: {
           purpose: SAMPLE_PURPOSE,
           endLocation: `สถานที่ทดสอบ ${i + 1}`,
@@ -165,7 +181,28 @@ export async function POST(req: Request) {
           executiveConfirmedAt: tripStart,
           additionalNotes: SAMPLE_NOTE,
         },
+        select: {
+          id: true,
+          driverId: true,
+          requesterId: true,
+        },
       });
+
+      if (Math.random() < feedbackRate && createdBooking.driverId) {
+        const weightedRatings = [3, 4, 4, 4, 5, 5, 5];
+        const rating = pickRandom(weightedRatings);
+        await prisma.driverFeedback.create({
+          data: {
+            driverId: createdBooking.driverId,
+            requesterId: createdBooking.requesterId,
+            bookingId: createdBooking.id,
+            rating,
+            comment: pickRandom(SAMPLE_FEEDBACK_COMMENTS),
+          },
+        });
+        createdFeedbacks += 1;
+      }
+
       usedVehicleIds.add(vehicle.id);
       usedDriverIds.add(driver.id);
       created += 1;
@@ -176,6 +213,7 @@ export async function POST(req: Request) {
       month: monthRange.value,
       requested: count,
       created,
+      createdFeedbacks,
       usedVehicles: usedVehicleIds.size,
       usedDrivers: usedDriverIds.size,
       createdSampleDrivers,

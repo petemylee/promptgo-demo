@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -33,42 +33,46 @@ interface FeedbackStatsOverviewProps {
   className?: string;
 }
 
+const FEEDBACK_REFRESH_EVENT = 'feedback-stats:refresh';
+
 export default function FeedbackStatsOverview({ className }: FeedbackStatsOverviewProps) {
   const [feedbacks, setFeedbacks] = useState<DriverFeedbackItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchFeedbacks = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('/api/driver-feedback');
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to fetch feedback statistics');
-        }
-        const data: DriverFeedbackItem[] = await response.json();
-        if (mounted) setFeedbacks(data);
-      } catch (err: unknown) {
-        if (!mounted) return;
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unknown error occurred');
-        }
-      } finally {
-        if (mounted) setIsLoading(false);
+  const fetchFeedbacks = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/driver-feedback');
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to fetch feedback statistics');
       }
-    };
-
-    fetchFeedbacks();
-    return () => {
-      mounted = false;
-    };
+      const data: DriverFeedbackItem[] = await response.json();
+      setFeedbacks(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, [fetchFeedbacks]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchFeedbacks();
+    };
+    window.addEventListener(FEEDBACK_REFRESH_EVENT, handleRefresh);
+    return () => window.removeEventListener(FEEDBACK_REFRESH_EVENT, handleRefresh);
+  }, [fetchFeedbacks]);
 
   const distributionData = useMemo(() => {
     const counts = [1, 2, 3, 4, 5].map((star) => ({
