@@ -130,24 +130,18 @@ function splitLongText(text: string, maxLen: number): string[] {
   return out;
 }
 
-export function buildLineBookingMessages(
-  bookings: BookingRow[],
-  publicBaseUrl: string
-): string[] {
+export function buildLineBookingMessages(bookings: BookingRow[]): string[] {
   const header =
     '📋 รายการจองที่ยังดำเนินการอยู่ (ไม่รวมที่เสร็จสิ้นหรือยกเลิกแล้ว)';
-  const webHint = publicBaseUrl
-    ? `ดูรายละเอียดเพิ่มเติม: ${publicBaseUrl}/requester`
-    : 'ดูรายละเอียดเพิ่มเติมได้ที่เว็บ OFM PROMPTGO หลังล็อกอิน';
 
   if (bookings.length === 0) {
     return [
-      `ไม่มีรายการจองที่ยังดำเนินการอยู่\n(ไม่แสดงการจองที่เสร็จสิ้นหรือยกเลิกแล้ว)\n\n${webHint}`,
+      'ไม่มีรายการจองที่ยังดำเนินการอยู่\n(ไม่แสดงการจองที่เสร็จสิ้นหรือยกเลิกแล้ว)',
     ];
   }
 
   const total = bookings.length;
   const blocks = bookings.map((b, i) => formatOneBooking(b, i + 1, total));
-  const fullText = `${header}\n\n${blocks.join('\n\n')}\n\n${webHint}`;
+  const fullText = `${header}\n\n${blocks.join('\n\n')}`;
   return splitLongText(fullText, MAX_CHARS_PER_MESSAGE);
 }
