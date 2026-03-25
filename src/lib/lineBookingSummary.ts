@@ -18,7 +18,11 @@ const MAX_CHARS_PER_MESSAGE = 4500;
 
 function formatThDate(d: Date | null): string {
   if (!d) return '-';
-  return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+  return d.toLocaleString('th-TH', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    hour12: false,
+  });
 }
 
 type BookingRow = {
@@ -67,7 +71,7 @@ function formatOneBooking(b: BookingRow, index: number, total: number): string {
   const vehicleLines =
     b.vehicle &&
     [
-      '🚗 รถ (ใช้หาเจอกันที่จุดนัด)',
+      '🚗 ข้อมูลรถยนต์',
       b.vehicle.brand ? `ยี่ห้อ: ${b.vehicle.brand}` : null,
       b.vehicle.model ? `รุ่น: ${b.vehicle.model}` : null,
       b.vehicle.color ? `สีรถ: ${b.vehicle.color}` : null,
@@ -81,7 +85,7 @@ function formatOneBooking(b: BookingRow, index: number, total: number): string {
       '👤 คนขับ',
       `ชื่อ: ${b.driver.name || '-'}`,
       b.driver.phoneNumber
-        ? `โทรคนขับ: ${b.driver.phoneNumber}`
+        ? `เบอร์โทรคนขับ: ${b.driver.phoneNumber}`
         : `ติดต่อคนขับ (อีเมล): ${b.driver.email}`,
     ];
 
@@ -91,19 +95,19 @@ function formatOneBooking(b: BookingRow, index: number, total: number): string {
       '📞 ผู้โดยสาร (ผู้ขอใช้รถ — ใช้ให้คนขับติดต่อ/หาคนได้)'
     );
     if (b.requester.name) travelerLines.push(`ชื่อ: ${b.requester.name}`);
-    if (b.requester.phoneNumber) travelerLines.push(`โทร: ${b.requester.phoneNumber}`);
+    if (b.requester.phoneNumber) travelerLines.push(`เบอร์โทร: ${b.requester.phoneNumber}`);
   } else if (!b.requestForSelf && (b.travelerName || b.travelerPhone)) {
     travelerLines.push(
       '🧳 ผู้เดินทาง (กรณีขอแทนผู้อื่น — ให้คนขับใช้ติดต่อ/หาคน)'
     );
     if (b.travelerName) travelerLines.push(`ชื่อผู้โดยสาร: ${b.travelerName}`);
-    if (b.travelerPhone) travelerLines.push(`โทรผู้โดยสาร: ${b.travelerPhone}`);
+    if (b.travelerPhone) travelerLines.push(`เบอร์โทรผู้โดยสาร: ${b.travelerPhone}`);
   }
   const travelerBlock = travelerLines.filter((x): x is string => !!x);
 
   const tip = [
     '',
-    '💡 นัดเจอ: ยืนยันทะเบียน+สีรถ / ชื่อ / โทรก่อนออกเดินทาง ลดการหาผิดคัน',
+    '💡 นัดเจอ: ยืนยันทะเบียน+สีรถ / ชื่อ / เบอร์โทรก่อนออกเดินทาง ลดการหาผิดคัน',
   ];
 
   const parts = [
