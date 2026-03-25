@@ -39,7 +39,10 @@ async function sendRequesterBookingsReply(lineUserId: string, replyToken: string
   }
 
   const bookings = await prisma.booking.findMany({
-    where: { requesterId: user.id },
+    where: {
+      requesterId: user.id,
+      status: { notIn: ['COMPLETED', 'CANCELLED'] },
+    },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -49,14 +52,23 @@ async function sendRequesterBookingsReply(lineUserId: string, replyToken: string
       endTime: true,
       status: true,
       createdAt: true,
+      requestForSelf: true,
+      travelerName: true,
+      travelerPhone: true,
+      passengerCount: true,
+      requester: {
+        select: { name: true, phoneNumber: true },
+      },
       driver: {
-        select: { name: true, email: true },
+        select: { name: true, email: true, phoneNumber: true },
       },
       vehicle: {
         select: {
           licensePlate: true,
           brand: true,
           model: true,
+          color: true,
+          type: true,
         },
       },
     },
@@ -79,7 +91,7 @@ function shouldHandleTrackBookings(event: WebhookEvent): boolean {
 
 /**
  * LINE Messaging API Webhook — รับ postback จาก Rich Menu (`data`: `track_my_bookings`)
- * แล้วตอบรายการจองในฐานะผู้ขอใช้รถ (เหมือนหน้า My Bookings)
+ * แล้วตอบรายการจองในฐานะผู้ขอใช้รถ (ยกเว้นสถานะเสร็จสิ้นและยกเลิก)
  *
  * ตั้งค่าใน LINE Developers: Webhook URL = `https://<โดเมน>/api/line/webhook`
  * Rich Menu ปุ่มนี้ต้องเป็น action แบบ **postback** ไม่ใช่ URI

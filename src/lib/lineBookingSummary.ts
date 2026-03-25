@@ -29,28 +29,96 @@ type BookingRow = {
   endTime: Date | null;
   status: BookingStatus;
   createdAt: Date;
-  driver: { name: string | null; email: string } | null;
+  requestForSelf: boolean;
+  travelerName: string | null;
+  travelerPhone: string | null;
+  passengerCount: number | null;
+  requester: {
+    name: string | null;
+    phoneNumber: string | null;
+  };
+  driver: {
+    name: string | null;
+    email: string;
+    phoneNumber: string | null;
+  } | null;
   vehicle: {
     licensePlate: string;
     brand: string | null;
     model: string | null;
+    color: string | null;
+    type: string | null;
   } | null;
 };
 
 function formatOneBooking(b: BookingRow, index: number, total: number): string {
-  const shortId = b.id.slice(0, 8);
-  const lines = [
-    `— ${index}/${total} · #${shortId} · ${STATUS_TH[b.status]}`,
+  const head = [`— ${index}/${total} · ${STATUS_TH[b.status]}`];
+
+  const trip = [
     b.purpose ? `วัตถุประสงค์: ${b.purpose}` : null,
     b.endLocation ? `ปลายทาง: ${b.endLocation}` : null,
     `เวลาเริ่ม: ${formatThDate(b.startTime)}`,
     b.endTime ? `เวลาสิ้นสุด: ${formatThDate(b.endTime)}` : null,
-    b.driver ? `คนขับ: ${b.driver.name || b.driver.email}` : null,
-    b.vehicle
-      ? `ทะเบียน: ${b.vehicle.licensePlate} (${[b.vehicle.brand, b.vehicle.model].filter(Boolean).join(' ') || '-'})`
+    typeof b.passengerCount === 'number' && b.passengerCount > 0
+      ? `จำนวนผู้โดยสาร: ${b.passengerCount} คน`
       : null,
   ].filter((x): x is string => !!x);
-  return lines.join('\n');
+
+  const vehicleLines =
+    b.vehicle &&
+    [
+      '🚗 รถ (ใช้หาเจอกันที่จุดนัด)',
+      b.vehicle.brand ? `ยี่ห้อ: ${b.vehicle.brand}` : null,
+      b.vehicle.model ? `รุ่น: ${b.vehicle.model}` : null,
+      b.vehicle.color ? `สีรถ: ${b.vehicle.color}` : null,
+      `ทะเบียน: ${b.vehicle.licensePlate}`,
+      b.vehicle.type ? `ประเภท/หมายเหตุรถ: ${b.vehicle.type}` : null,
+    ].filter((x): x is string => !!x);
+
+  const driverLines =
+    b.driver &&
+    [
+      '👤 คนขับ',
+      `ชื่อ: ${b.driver.name || '-'}`,
+      b.driver.phoneNumber
+        ? `โทรคนขับ: ${b.driver.phoneNumber}`
+        : `ติดต่อคนขับ (อีเมล): ${b.driver.email}`,
+    ];
+
+  const travelerLines: string[] = [];
+  if (b.requestForSelf && (b.requester.name || b.requester.phoneNumber)) {
+    travelerLines.push(
+      '📞 ผู้โดยสาร (ผู้ขอใช้รถ — ใช้ให้คนขับติดต่อ/หาคนได้)'
+    );
+    if (b.requester.name) travelerLines.push(`ชื่อ: ${b.requester.name}`);
+    if (b.requester.phoneNumber) travelerLines.push(`โทร: ${b.requester.phoneNumber}`);
+  } else if (!b.requestForSelf && (b.travelerName || b.travelerPhone)) {
+    travelerLines.push(
+      '🧳 ผู้เดินทาง (กรณีขอแทนผู้อื่น — ให้คนขับใช้ติดต่อ/หาคน)'
+    );
+    if (b.travelerName) travelerLines.push(`ชื่อผู้โดยสาร: ${b.travelerName}`);
+    if (b.travelerPhone) travelerLines.push(`โทรผู้โดยสาร: ${b.travelerPhone}`);
+  }
+  const travelerBlock = travelerLines.filter((x): x is string => !!x);
+
+  const tip = [
+    '',
+    '💡 นัดเจอ: ยืนยันทะเบียน+สีรถ / ชื่อ / โทรก่อนออกเดินทาง ลดการหาผิดคัน',
+  ];
+
+  const parts = [
+    ...head,
+    '',
+    ...trip,
+    '',
+    ...(vehicleLines || ['🚗 รถ: (ยังไม่ระบุ — รอแอดมิน/ระบบจัดรถ)']),
+    '',
+    ...(driverLines || ['👤 คนขับ: (ยังไม่ระบุ)']),
+    ...(travelerBlock.length ? ['', ...travelerBlock] : []),
+    ...tip,
+  ];
+
+  return parts.filter((x): x is string => x !== null).join('\n');
 }
 
 function splitLongText(text: string, maxLen: number): string[] {
@@ -66,13 +134,16 @@ export function buildLineBookingMessages(
   bookings: BookingRow[],
   publicBaseUrl: string
 ): string[] {
-  const header = '📋 รายการจองของคุณ (ผู้ขอใช้รถ)';
+  const header =
+    '📋 รายการจองที่ยังดำเนินการอยู่ (ไม่รวมที่เสร็จสิ้นหรือยกเลิกแล้ว)';
   const webHint = publicBaseUrl
     ? `ดูรายละเอียดเพิ่มเติม: ${publicBaseUrl}/requester`
     : 'ดูรายละเอียดเพิ่มเติมได้ที่เว็บ OFM PROMPTGO หลังล็อกอิน';
 
   if (bookings.length === 0) {
-    return [`ยังไม่มีรายการจองในฐานะผู้ขอใช้รถ\n\n${webHint}`];
+    return [
+      `ไม่มีรายการจองที่ยังดำเนินการอยู่\n(ไม่แสดงการจองที่เสร็จสิ้นหรือยกเลิกแล้ว)\n\n${webHint}`,
+    ];
   }
 
   const total = bookings.length;
