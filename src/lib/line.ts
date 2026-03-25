@@ -37,3 +37,37 @@ export const sendLineMessage = async (userId: string, message: string): Promise<
     return false;
   }
 };
+
+const MAX_REPLY_MESSAGES = 5;
+
+/**
+ * ตอบกลับด้วยข้อความหลายบล็อก (reply ได้สูงสุด 5 ข้อความต่อครั้ง — ส่วนที่เกินใช้ push)
+ */
+export async function replyLineTextChain(
+  replyToken: string,
+  lineUserId: string,
+  texts: string[]
+): Promise<boolean> {
+  if (!texts.length) return true;
+  if (!client || !channelAccessToken) {
+    console.warn('⚠️ LINE client not configured.');
+    return false;
+  }
+  const toTextMessages = (chunk: string[]) =>
+    chunk.map((text) => ({ type: 'text' as const, text }));
+
+  try {
+    const first = texts.slice(0, MAX_REPLY_MESSAGES);
+    await client.replyMessage(replyToken, toTextMessages(first));
+    let offset = MAX_REPLY_MESSAGES;
+    while (offset < texts.length) {
+      const batch = texts.slice(offset, offset + MAX_REPLY_MESSAGES);
+      await client.pushMessage(lineUserId, toTextMessages(batch));
+      offset += MAX_REPLY_MESSAGES;
+    }
+    return true;
+  } catch (error) {
+    console.error('❌ Error replyLineTextChain:', error);
+    return false;
+  }
+}
