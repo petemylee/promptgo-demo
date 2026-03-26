@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import BookingDetailModal from '@/components/BookingDetailModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import type {
   ApprovalDashboardData,
@@ -34,6 +35,10 @@ export default function ApproveAndAllocateBookings({
   const [drivers, setDrivers] = useState<ApprovalDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [expandedBookingIds, setExpandedBookingIds] = useState<Set<string>>(() => new Set());
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailBookingId, setSelectedDetailBookingId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -52,6 +57,18 @@ export default function ApproveAndAllocateBookings({
 
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = () => setIsDesktop(mql.matches);
+    onChange();
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    }
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
   }, []);
 
   const fetchVehicles = async () => {
@@ -143,6 +160,20 @@ export default function ApproveAndAllocateBookings({
     }
   };
 
+  const toggleExpanded = (bookingId: string) => {
+    setExpandedBookingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookingId)) next.delete(bookingId);
+      else next.add(bookingId);
+      return next;
+    });
+  };
+
+  const handleViewDetails = (bookingId: string) => {
+    setSelectedDetailBookingId(bookingId);
+    setIsDetailModalOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className={className ?? 'p-4 md:p-8'}>
@@ -151,6 +182,23 @@ export default function ApproveAndAllocateBookings({
     );
   }
   if (error) return <p className={(className ?? 'p-4 md:p-8') + ' text-red-500'}>Error: {error}</p>;
+
+  if (isDetailModalOpen && selectedDetailBookingId && isDesktop) {
+    return (
+      <div className={className ?? 'p-4 md:p-8'}>
+        <BookingDetailModal
+          variant="fullpage"
+          isOpen
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedDetailBookingId(null);
+          }}
+          bookingId={selectedDetailBookingId}
+          onUpdated={fetchDashboardData}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={className ?? 'p-4 md:p-8'}>
@@ -198,9 +246,9 @@ export default function ApproveAndAllocateBookings({
           <table className="min-w-full">
             <thead>
               <tr className="border-b bg-[#004c80]/5">
-                <th className="text-left py-2 px-4 text-[#004c80]">Booking ID</th>
-                <th className="text-left py-2 px-4 text-[#004c80]">ผู้ขอใช้</th>
-                <th className="text-left py-2 px-4 text-[#004c80]">ตำแหน่ง</th>
+                <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">Booking ID</th>
+                <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">ผู้ขอใช้</th>
+                <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">ตำแหน่ง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
@@ -210,38 +258,74 @@ export default function ApproveAndAllocateBookings({
             <tbody>
               {data && data.pendingBookings.length > 0 ? (
                 data.pendingBookings.map((booking) => (
-                  <tr key={booking.id} className="border-b hover:bg-[#0076c3]/5">
-                    <td className="py-2 px-4">{booking.id.substring(0, 8)}...</td>
-                    <td className="py-2 px-4">
-                      {booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}
-                    </td>
-                    <td className="py-2 px-4">
-                      {booking.requestForSelf !== false ? booking.requester.position || '-' : booking.travelerPosition || '-'}
-                    </td>
-                    <td className="py-2 px-4">{booking.endLocation}</td>
-                    <td className="py-2 px-4">
-                      {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
-                    </td>
-                    <td className="py-2 px-4">
-                      {booking.endTime ? new Date(booking.endTime).toLocaleString('th-TH') : '-'}
-                    </td>
-                    <td className="py-2 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleApproveClick(booking.id)}
-                          className="rounded-md bg-white px-3 py-1 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50"
-                        >
-                          อนุมัติ
-                        </button>
-                        <button
-                          onClick={() => handleReject(booking.id)}
-                          className="rounded-md bg-white px-3 py-1 text-red-600 ring-1 ring-red-200 hover:bg-red-50"
-                        >
-                          ปฏิเสธ
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <Fragment key={booking.id}>
+                    <tr className="border-b hover:bg-[#0076c3]/5">
+                      <td className="hidden md:table-cell py-2 px-4">{booking.id.substring(0, 8)}...</td>
+                      <td className="hidden md:table-cell py-2 px-4">
+                        {booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}
+                      </td>
+                      <td className="hidden md:table-cell py-2 px-4">
+                        {booking.requestForSelf !== false ? booking.requester.position || '-' : booking.travelerPosition || '-'}
+                      </td>
+                      <td className="py-2 px-4">{booking.endLocation}</td>
+                      <td className="py-2 px-4">
+                        {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
+                      </td>
+                      <td className="py-2 px-4">
+                        {booking.endTime ? new Date(booking.endTime).toLocaleString('th-TH') : '-'}
+                      </td>
+                      <td className="py-2 px-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => handleViewDetails(booking.id)}
+                            className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
+                          >
+                            ดูรายละเอียด
+                          </button>
+                          <button
+                            onClick={() => handleApproveClick(booking.id)}
+                            className="rounded-md bg-white px-3 py-1 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50"
+                          >
+                            อนุมัติ
+                          </button>
+                          <button
+                            onClick={() => handleReject(booking.id)}
+                            className="rounded-md bg-white px-3 py-1 text-red-600 ring-1 ring-red-200 hover:bg-red-50"
+                          >
+                            ปฏิเสธ
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(booking.id)}
+                            className="md:hidden text-sm text-slate-700 hover:text-slate-900 underline"
+                            aria-expanded={expandedBookingIds.has(booking.id)}
+                          >
+                            {expandedBookingIds.has(booking.id) ? 'ย่อ' : 'เพิ่มเติม'} {expandedBookingIds.has(booking.id) ? '▾' : '▸'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedBookingIds.has(booking.id) && (
+                      <tr className="md:hidden border-b bg-slate-50/60">
+                        <td colSpan={7} className="px-4 py-3">
+                          <div className="grid grid-cols-1 gap-2 text-sm text-slate-900">
+                            <div>
+                              <span className="font-medium text-slate-700">Booking ID:</span>{' '}
+                              <span>{booking.id.substring(0, 8)}...</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-slate-700">ผู้ขอใช้:</span>{' '}
+                              <span>{booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-slate-700">ตำแหน่ง:</span>{' '}
+                              <span>{booking.requestForSelf !== false ? booking.requester.position || '-' : booking.travelerPosition || '-'}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))
               ) : (
                 <tr>
@@ -323,6 +407,18 @@ export default function ApproveAndAllocateBookings({
             </div>
           </div>
         </div>
+      )}
+
+      {selectedDetailBookingId && (
+        <BookingDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedDetailBookingId(null);
+          }}
+          bookingId={selectedDetailBookingId}
+          onUpdated={fetchDashboardData}
+        />
       )}
     </div>
   );
