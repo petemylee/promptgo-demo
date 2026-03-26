@@ -1,7 +1,7 @@
 'use client';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
@@ -190,10 +190,25 @@ export default function MyBookingsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{ bookingId: string; driverId: string; driverName: string | null } | null>(null);
+  const [expandedBookingIds, setExpandedBookingIds] = useState<Set<string>>(() => new Set());
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
   }, [status, router]);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = () => setIsDesktop(mql.matches);
+    onChange();
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    }
+    // Safari fallback
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -235,6 +250,15 @@ export default function MyBookingsPage() {
   const handleViewDetails = (bookingId: string) => {
     setSelectedBookingId(bookingId);
     setIsDetailModalOpen(true);
+  };
+
+  const toggleExpanded = (bookingId: string) => {
+    setExpandedBookingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookingId)) next.delete(bookingId);
+      else next.add(bookingId);
+      return next;
+    });
   };
 
   const handleEdit = (bookingId: string) => {
@@ -285,9 +309,30 @@ export default function MyBookingsPage() {
 
   if (status === 'loading') return <LoadingScreen fullScreen message="กำลังโหลด..." />;
 
+  if (isDetailModalOpen && selectedBookingId && isDesktop) {
+    return (
+      <div className="relative min-h-screen p-4">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
+        <div className="relative z-10 mx-auto w-full max-w-5xl">
+          <BookingDetailModal
+            variant="fullpage"
+            isOpen
+            onClose={() => {
+              setIsDetailModalOpen(false);
+              setSelectedBookingId(null);
+            }}
+            bookingId={selectedBookingId}
+            onUpdated={reloadBookings}
+            onCancelRequest={handleCancel}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (isEditModalOpen && selectedBookingId) {
     return (
-      <div className="relative min-h-screen overflow-hidden p-4">
+      <div className="relative min-h-screen p-4">
         <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
         <div className="relative z-10 mx-auto w-full max-w-5xl">
           <EditBookingModal
@@ -311,7 +356,7 @@ export default function MyBookingsPage() {
 
   if (showCreateForm) {
     return (
-      <div className="relative min-h-screen overflow-hidden p-4">
+      <div className="relative min-h-screen p-4">
         <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
         <div className="relative z-10 mx-auto w-full max-w-5xl">
           <BookingFormModal
@@ -328,7 +373,7 @@ export default function MyBookingsPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden p-4">
+    <div className="relative min-h-screen p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
       <div className="relative z-10 mx-auto w-full max-w-5xl">
         <div className="mb-6 flex flex-col gap-1">
@@ -367,8 +412,8 @@ export default function MyBookingsPage() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
-                  <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
+                  <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
+                  <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
@@ -385,40 +430,68 @@ export default function MyBookingsPage() {
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((b) => (
-                    <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                      <td className="py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
-                      <td className="py-2 px-4">{b.purpose || '-'}</td>
-                      <td className="py-2 px-4">{b.endLocation || '-'}</td>
-                      <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
-                      <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
-                      <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
-                      <td className="py-2 px-4">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleViewDetails(b.id)}
-                            className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
-                          >
-                            ดูรายละเอียด
-                          </button>
-                          {b.status === 'PENDING' && (
+                    <Fragment key={b.id}>
+                      <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
+                        <td className="hidden md:table-cell py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
+                        <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
+                        <td className="py-2 px-4">{b.endLocation || '-'}</td>
+                        <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
+                        <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
+                        <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <button
-                              onClick={() => handleEdit(b.id)}
-                              className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                              onClick={() => handleViewDetails(b.id)}
+                              className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
                             >
-                              แก้ไข
+                              ดูรายละเอียด
                             </button>
-                          )}
-                          {cancellableStatuses.includes(b.status) && (
+                            {b.status === 'PENDING' && (
+                              <button
+                                onClick={() => handleEdit(b.id)}
+                                className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                              >
+                                แก้ไข
+                              </button>
+                            )}
+                            {cancellableStatuses.includes(b.status) && (
+                              <button
+                                onClick={() => handleCancel(b.id)}
+                                className="text-sm text-red-600 hover:text-red-700 underline"
+                              >
+                                ยกเลิกคำขอ
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleCancel(b.id)}
-                              className="text-sm text-red-600 hover:text-red-700 underline"
+                              type="button"
+                              onClick={() => toggleExpanded(b.id)}
+                              className="md:hidden text-sm text-slate-700 hover:text-slate-900 underline"
+                              aria-expanded={expandedBookingIds.has(b.id)}
                             >
-                              ยกเลิกคำขอ
+                              {expandedBookingIds.has(b.id) ? 'ย่อ' : 'เพิ่มเติม'} {expandedBookingIds.has(b.id) ? '▾' : '▸'}
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedBookingIds.has(b.id) && (
+                        <tr className="md:hidden border-b bg-slate-50/60">
+                          <td colSpan={7} className="px-4 py-3">
+                            <div className="grid grid-cols-1 gap-2 text-sm">
+                              <div>
+                                <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
+                                <span className="text-slate-900">{b.purpose || '-'}</span>
+                              </div>
+                              {b.startLocation && (
+                                <div>
+                                  <span className="font-medium text-slate-700">จุดเริ่มต้น:</span>{' '}
+                                  <span className="text-slate-900">{b.startLocation}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))
                 ) : bookings.length === 0 ? (
                   <tr>
@@ -450,8 +523,8 @@ export default function MyBookingsPage() {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b bg-[#004c80]/5">
-                    <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
+                    <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
+                    <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
@@ -462,36 +535,64 @@ export default function MyBookingsPage() {
                 <tbody>
                   {filteredCompleted.length > 0 ? (
                     filteredCompleted.map((b) => (
-                      <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                        <td className="py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
-                        <td className="py-2 px-4">{b.purpose || '-'}</td>
-                        <td className="py-2 px-4">{b.endLocation || '-'}</td>
-                        <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
-                        <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
-                        <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
-                        <td className="py-2 px-4">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <button
-                              onClick={() => handleViewDetails(b.id)}
-                              className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
-                            >
-                              ดูรายละเอียด
-                            </button>
-                            {b.status === 'COMPLETED' && b.driver && !b.driverFeedback && (
+                      <Fragment key={b.id}>
+                        <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
+                          <td className="hidden md:table-cell py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
+                          <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
+                          <td className="py-2 px-4">{b.endLocation || '-'}</td>
+                          <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
+                          <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
+                          <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
+                          <td className="py-2 px-4">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => setFeedbackModal({
-                                  bookingId: b.id,
-                                  driverId: b.driver!.id,
-                                  driverName: b.driver!.name ?? '',
-                                })}
-                                className="text-sm text-amber-700 hover:text-amber-800 underline"
+                                onClick={() => handleViewDetails(b.id)}
+                                className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
                               >
-                                ⭐ ให้ Feedback คนขับ
+                                ดูรายละเอียด
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                              {b.status === 'COMPLETED' && b.driver && !b.driverFeedback && (
+                                <button
+                                  onClick={() => setFeedbackModal({
+                                    bookingId: b.id,
+                                    driverId: b.driver!.id,
+                                    driverName: b.driver!.name ?? '',
+                                  })}
+                                  className="text-sm text-amber-700 hover:text-amber-800 underline"
+                                >
+                                  ⭐ ให้ Feedback คนขับ
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(b.id)}
+                                className="md:hidden text-sm text-slate-700 hover:text-slate-900 underline"
+                                aria-expanded={expandedBookingIds.has(b.id)}
+                              >
+                                {expandedBookingIds.has(b.id) ? 'ย่อ' : 'เพิ่มเติม'} {expandedBookingIds.has(b.id) ? '▾' : '▸'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedBookingIds.has(b.id) && (
+                          <tr className="md:hidden border-b bg-slate-50/60">
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="grid grid-cols-1 gap-2 text-sm">
+                                <div>
+                                  <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
+                                  <span className="text-slate-900">{b.purpose || '-'}</span>
+                                </div>
+                                {b.startLocation && (
+                                  <div>
+                                    <span className="font-medium text-slate-700">จุดเริ่มต้น:</span>{' '}
+                                    <span className="text-slate-900">{b.startLocation}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))
                   ) : (
                     <tr>
