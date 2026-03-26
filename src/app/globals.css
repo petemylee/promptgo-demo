@@ -34,6 +34,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body {
+  height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+}
+
 /* Focus ring สำหรับ accessibility */
 *:focus-visible {
   outline: 2px solid var(--primary-light);
@@ -82,4 +91,18 @@ body {
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:active {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48));
+}
+
+/* Safe-area helpers (iOS home indicator) */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top) + 0px);
+}
+
+/* iOS momentum scrolling for custom scroll containers (use sparingly) */
+.ios-scroll {
+  -webkit-overflow-scrolling: touch;
 }

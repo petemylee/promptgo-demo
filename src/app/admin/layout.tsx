@@ -49,7 +49,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-[#f0f7ff] to-[#e6f3ff] text-slate-800">
+    <div className="flex min-h-[100dvh] overflow-x-hidden bg-gradient-to-br from-slate-50 via-[#f0f7ff] to-[#e6f3ff] text-slate-800">
       <AppSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -60,8 +60,8 @@ export default function AdminLayout({
         }}
         items={adminSidebarItems}
       />
-      <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
-        <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
+      <div className="flex flex-1 flex-col min-w-0">
+        <header className="md:hidden pt-safe bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-50">
           <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
           <button
             type="button"
@@ -75,7 +75,7 @@ export default function AdminLayout({
 
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden" aria-hidden />}
 
-        <main className="flex-1 min-h-0 overflow-y-auto md:mt-0 mt-[57px]">
+        <main className="flex-1 min-w-0 pb-safe">
           <Suspense fallback={null}>
             <LineLinkFeedback />
           </Suspense>
