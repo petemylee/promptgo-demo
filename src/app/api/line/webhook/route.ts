@@ -11,6 +11,7 @@ import {
   LINE_POSTBACK_CONTACT_STAFF,
   LINE_TEXT_CONTACT_STAFF,
 } from '@/lib/lineRichMenuTriggers';
+import { formatBangkokDateTime } from '@/lib/dateTime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -112,10 +113,7 @@ async function notifyAdminsContactStaff(lineUserId: string): Promise<boolean> {
     .map((u) => u.lineUserId)
     .filter((id): id is string => !!id);
 
-  const when = new Date().toLocaleString('th-TH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const when = formatBangkokDateTime(new Date());
 
   const whoLines = user
     ? [

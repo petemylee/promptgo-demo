@@ -1,4 +1,5 @@
 import type { BookingStatus } from '@prisma/client';
+import { formatBangkokDateTime } from '@/lib/dateTime';
 
 /** ใช้เป็น `data` ใน Rich Menu / postback ของปุ่ม "ติดตามสถานะการจอง" */
 export const LINE_POSTBACK_TRACK_MY_BOOKINGS = 'track_my_bookings';
@@ -17,13 +18,7 @@ const STATUS_TH: Record<BookingStatus, string> = {
 const MAX_CHARS_PER_MESSAGE = 4500;
 
 function formatThDate(d: Date | null): string {
-  if (!d) return '-';
-  return d.toLocaleString('th-TH', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-    hour12: false,
-    timeZone: 'Asia/Bangkok',
-  });
+  return formatBangkokDateTime(d);
 }
 
 type BookingRow = {

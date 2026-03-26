@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import SignaturePad from './SignaturePad';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
+import { parseBangkokDateTimeLocal, toBangkokDateTimeLocalInput } from '@/lib/dateTime';
 
 type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
 
@@ -45,6 +46,24 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
 
+  const validateDateTimesLive = (nextStart: string, nextEnd: string) => {
+    if (!nextStart || !nextEnd) {
+      setError('');
+      return;
+    }
+    const parsedStart = parseBangkokDateTimeLocal(nextStart);
+    const parsedEnd = parseBangkokDateTimeLocal(nextEnd);
+    if (!parsedStart || !parsedEnd) {
+      setError('รูปแบบวันเวลาไม่ถูกต้อง');
+      return;
+    }
+    if (parsedEnd.getTime() < parsedStart.getTime()) {
+      setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
+      return;
+    }
+    setError('');
+  };
+
   const fetchBookingData = useCallback(async () => {
     setIsLoadingData(true);
     try {
@@ -64,8 +83,8 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setDestination(data.endLocation || '');
       setPurpose(data.purpose || '');
       setAdditionalNotes(data.additionalNotes || '');
-      setStartTime(data.startTime ? new Date(data.startTime).toISOString().slice(0, 16) : '');
-      setEndTime(data.endTime ? new Date(data.endTime).toISOString().slice(0, 16) : '');
+      setStartTime(toBangkokDateTimeLocalInput(data.startTime));
+      setEndTime(toBangkokDateTimeLocalInput(data.endTime));
       setPassengerCount(data.passengerCount?.toString() || '');
       setTripType(data.tripType || '');
       setSignatureDataUrl(data.requesterSignatureUrl);
@@ -134,6 +153,16 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const parsedStartTime = parseBangkokDateTimeLocal(startTime);
+    const parsedEndTime = parseBangkokDateTimeLocal(endTime);
+    if (!parsedStartTime || !parsedEndTime) {
+      setError('รูปแบบวันเวลาไม่ถูกต้อง');
+      return;
+    }
+    if (parsedEndTime.getTime() < parsedStartTime.getTime()) {
+      setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
+      return;
+    }
     setIsLoading(true);
     setIsUploadingSignature(false);
     setIsUploadingPassengerPhoto(false);
@@ -209,8 +238,8 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
           endLocation: destination,
           purpose,
           additionalNotes: additionalNotes?.trim() || null,
-          startTime: startTime ? new Date(startTime).toISOString() : null,
-          endTime: endTime ? new Date(endTime).toISOString() : null,
+          startTime: parsedStartTime,
+          endTime: parsedEndTime,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
           requesterSignatureUrl,
@@ -273,7 +302,11 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 <input 
                   type="datetime-local" 
                   value={startTime} 
-                  onChange={(e) => setStartTime(e.target.value)} 
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setStartTime(next);
+                    validateDateTimesLive(next, endTime);
+                  }} 
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
                   required 
                 />
@@ -283,7 +316,12 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 <input 
                   type="datetime-local" 
                   value={endTime} 
-                  onChange={(e) => setEndTime(e.target.value)} 
+                  min={startTime || undefined}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setEndTime(next);
+                    validateDateTimesLive(startTime, next);
+                  }} 
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
                   required 
                 />

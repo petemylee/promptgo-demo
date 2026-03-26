@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import { BookingStatus, TripType } from '@prisma/client';
+import { BookingStatus, TripType, type Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 import { writeUsageLog } from '@/lib/usageLogs';
 import { buildBookingNotification } from '@/lib/lineNotifications';
+import { parseMaybeDateInput } from '@/lib/dateTime';
 
-function actorName(session: any) {
+function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
 }
 
@@ -117,7 +119,7 @@ export async function PATCH(
     // ดึง booking เพื่อตรวจสอบสิทธิ์
     const bookingForAuth = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { requesterId: true, status: true },
+      select: { requesterId: true, status: true, startTime: true, endTime: true },
     });
     if (!bookingForAuth) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
@@ -147,7 +149,7 @@ export async function PATCH(
           action: 'UPDATE',
           path: '/my-bookings',
           userId: session.user.id,
-          role: session.user.role as any,
+          role: session.user.role as Role,
           entityType: 'Booking',
           entityId: bookingId,
           message: `ผู้ใช้ ${actorName(session)} ยกเลิกคำขอจองรถ`,
@@ -181,8 +183,28 @@ export async function PATCH(
         if (endLocation !== undefined) updateData.endLocation = endLocation;
         if (purpose !== undefined) updateData.purpose = purpose;
         if (additionalNotes !== undefined) updateData.additionalNotes = additionalNotes?.trim() || null;
-        if (startTime !== undefined) updateData.startTime = startTime ? new Date(startTime) : null;
-        if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
+        if (startTime !== undefined) {
+          if (!startTime) {
+            updateData.startTime = null;
+          } else {
+            const parsedStartTime = parseMaybeDateInput(startTime);
+            if (!parsedStartTime) {
+              return NextResponse.json({ error: 'Invalid startTime format' }, { status: 400 });
+            }
+            updateData.startTime = parsedStartTime;
+          }
+        }
+        if (endTime !== undefined) {
+          if (!endTime) {
+            updateData.endTime = null;
+          } else {
+            const parsedEndTime = parseMaybeDateInput(endTime);
+            if (!parsedEndTime) {
+              return NextResponse.json({ error: 'Invalid endTime format' }, { status: 400 });
+            }
+            updateData.endTime = parsedEndTime;
+          }
+        }
         if (passengerCount !== undefined) {
           updateData.passengerCount = typeof passengerCount === 'number' 
             ? passengerCount 
@@ -191,6 +213,15 @@ export async function PATCH(
         if (tripType !== undefined) updateData.tripType = tripType || null;
         if (passengerImageUrl !== undefined) updateData.passengerImageUrl = passengerImageUrl || null;
         if (requesterSignatureUrl !== undefined) updateData.requesterSignatureUrl = requesterSignatureUrl || null;
+
+        const effectiveStartTime = updateData.startTime !== undefined ? updateData.startTime : bookingForAuth.startTime;
+        const effectiveEndTime = updateData.endTime !== undefined ? updateData.endTime : bookingForAuth.endTime;
+        if (effectiveStartTime && effectiveEndTime && effectiveEndTime.getTime() < effectiveStartTime.getTime()) {
+          return NextResponse.json(
+            { error: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น' },
+            { status: 400 }
+          );
+        }
 
         const updatedBooking = await prisma.booking.update({
           where: { id: bookingId },
@@ -201,7 +232,7 @@ export async function PATCH(
           action: 'UPDATE',
           path: '/my-bookings',
           userId: session.user.id,
-          role: session.user.role as any,
+          role: session.user.role as Role,
           entityType: 'Booking',
           entityId: bookingId,
           message: `ผู้ใช้ ${actorName(session)} แก้ไขรายละเอียดคำขอจองรถ`,
@@ -221,7 +252,7 @@ export async function PATCH(
           action: 'UPDATE',
           path: '/my-bookings',
           userId: session.user.id,
-          role: session.user.role as any,
+          role: session.user.role as Role,
           entityType: 'Booking',
           entityId: bookingId,
           message: `ผู้ใช้ ${actorName(session)} อัปเดตลายเซ็นผู้ขอใช้รถ`,
@@ -273,7 +304,7 @@ export async function PATCH(
         action: 'UPDATE',
         path: session.user.role === 'Executive' ? '/executive/admin-approvals' : '/admin/dashboard',
         userId: session.user.id,
-        role: session.user.role as any,
+        role: session.user.role as Role,
         entityType: 'Booking',
         entityId: bookingId,
         message:
@@ -619,7 +650,7 @@ export async function DELETE(
         action: 'DELETE',
         path: '/my-bookings',
         userId: session.user.id,
-        role: session.user.role as any,
+        role: session.user.role as Role,
         entityType: 'Booking',
         entityId: bookingId,
         message: `ผู้ใช้ ${actorName(session)} ลบคำขอจองรถ (สถานะ PENDING)`,

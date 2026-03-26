@@ -1,4 +1,5 @@
 import { BookingStatus } from '@prisma/client';
+import { formatBangkokDateYYYYMMDD, formatBangkokTimeHM } from '@/lib/dateTime';
 
 type Nullable<T> = T | null | undefined;
 
@@ -35,24 +36,11 @@ export type BookingLineData = {
 export type BookingNotificationEvent = 'BOOKING_CREATED_ADMIN' | 'BOOKING_CREATED_REQUESTER' | 'BOOKING_APPROVED' | 'BOOKING_CONFIRMED' | 'BOOKING_APPROVED_DRIVER' | 'BOOKING_CONFIRMED_DRIVER' | 'BOOKING_STARTED_REQUESTER' | 'BOOKING_COMPLETED_REQUESTER';
 
 function formatDateYYYYMMDD(dateInput?: Nullable<Date | string>) {
-  if (!dateInput) return '-';
-  const date = new Date(dateInput);
-  if (Number.isNaN(date.getTime())) return '-';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatBangkokDateYYYYMMDD(dateInput);
 }
 
 function formatTimeHM(dateInput?: Nullable<Date | string>) {
-  if (!dateInput) return '-';
-  const date = new Date(dateInput);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return formatBangkokTimeHM(dateInput);
 }
 
 function valueOrDash(value?: Nullable<string | number>) {

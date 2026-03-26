@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
+import { parseBangkokDateTimeLocal } from '@/lib/dateTime';
 
 type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
 
@@ -39,6 +40,24 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [isSavingProfileSignature, setIsSavingProfileSignature] = useState(false);
+
+  const validateDateTimesLive = (nextStart: string, nextEnd: string) => {
+    if (!nextStart || !nextEnd) {
+      setError('');
+      return;
+    }
+    const parsedStart = parseBangkokDateTimeLocal(nextStart);
+    const parsedEnd = parseBangkokDateTimeLocal(nextEnd);
+    if (!parsedStart || !parsedEnd) {
+      setError('รูปแบบวันเวลาไม่ถูกต้อง');
+      return;
+    }
+    if (parsedEnd.getTime() < parsedStart.getTime()) {
+      setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
+      return;
+    }
+    setError('');
+  };
 
   useEffect(() => {
     const shouldFetch = variant === 'fullpage' || (variant === 'modal' && isOpen);
@@ -112,33 +131,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
     setUserProfile((prev) => prev ? ({ ...prev, signatureImageUrl: profileSignatureUrl }) : prev);
   };
 
-  const saveSignatureToProfile = async (): Promise<void> => {
-    if (!signatureDataUrl) return;
-    setIsSavingProfileSignature(true);
-    try {
-      const signatureBlobResponse = await fetch(signatureDataUrl);
-      const blob = await signatureBlobResponse.blob();
-      const signatureFormData = new FormData();
-      signatureFormData.append('signature', blob, 'signature.png');
-
-      const uploadResponse = await fetch('/api/upload/requester-signature', {
-        method: 'POST',
-        body: signatureFormData,
-      });
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'ไม่สามารถอัปโหลดลายเซ็นได้');
-      }
-      const uploadData = await uploadResponse.json();
-      const profileSignatureUrl = uploadData.url as string;
-      await updateProfileSignatureUrl(profileSignatureUrl);
-      setSignatureDataUrl(null);
-      setSignatureMode('PROFILE');
-    } finally {
-      setIsSavingProfileSignature(false);
-    }
-  };
-
   const handlePassengerPhotoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -175,6 +167,16 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
     setError('');
     if (!requestForSelf && (!travelerName?.trim() || !travelerPosition?.trim() || !travelerPhone?.trim())) {
       setError('กรุณากรอกข้อมูลผู้เดินทางให้ครบถ้วน');
+      return;
+    }
+    const parsedStartTime = parseBangkokDateTimeLocal(startTime);
+    const parsedEndTime = parseBangkokDateTimeLocal(endTime);
+    if (!parsedStartTime || !parsedEndTime) {
+      setError('รูปแบบวันเวลาไม่ถูกต้อง');
+      return;
+    }
+    if (parsedEndTime.getTime() < parsedStartTime.getTime()) {
+      setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
       return;
     }
     setIsLoading(true);
@@ -262,8 +264,8 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
         body: JSON.stringify({
           endLocation: destination,
           purpose,
-          startTime: startTime ? new Date(startTime) : null,
-          endTime: endTime ? new Date(endTime) : null,
+          startTime: parsedStartTime,
+          endTime: parsedEndTime,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
           expresswayOption: expresswayOption || null,
@@ -386,11 +388,32 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วันเวลาออกเดินทาง*</label>
-            <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+            <input
+              type="datetime-local"
+              value={startTime}
+              onChange={(e) => {
+                const next = e.target.value;
+                setStartTime(next);
+                validateDateTimesLive(next, endTime);
+              }}
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+              required
+            />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">วันที่สิ้นสุด*</label>
-            <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
+            <input
+              type="datetime-local"
+              value={endTime}
+              min={startTime || undefined}
+              onChange={(e) => {
+                const next = e.target.value;
+                setEndTime(next);
+                validateDateTimesLive(startTime, next);
+              }}
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+              required
+            />
           </div>
           <div>
             <div className="space-y-2">
@@ -579,7 +602,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
                       <span className="text-xs text-gray-700">บันทึกลายเซ็นนี้เป็นลายเซ็นหลักในข้อมูลส่วนตัวด้วย</span>
                     </label>
                     <p className="text-[11px] text-gray-500">
-                      ระบบจะบันทึกเข้าข้อมูลส่วนตัวตอนกด "สร้างคำขอ" หากติ๊กตัวเลือกนี้ไว้
+                      ระบบจะบันทึกเข้าข้อมูลส่วนตัวตอนกด &quot;สร้างคำขอ&quot; หากติ๊กตัวเลือกนี้ไว้
                     </p>
                   </div>
                 ) : (
@@ -595,7 +618,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
 
             {!userProfile?.signatureImageUrl && signatureMode !== 'NEW' && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                บัญชีนี้ยังไม่มีลายเซ็นในข้อมูลส่วนตัว สามารถเลือก "ใช้ลายเซ็นใหม่เฉพาะคำขอนี้" แล้วกดบันทึกเป็นลายเซ็นส่วนตัวได้
+                บัญชีนี้ยังไม่มีลายเซ็นในข้อมูลส่วนตัว สามารถเลือก &quot;ใช้ลายเซ็นใหม่เฉพาะคำขอนี้&quot; แล้วกดบันทึกเป็นลายเซ็นส่วนตัวได้
               </div>
             )}
           </div>

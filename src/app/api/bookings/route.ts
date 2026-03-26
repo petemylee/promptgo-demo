@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 // ✅ 1. นำเข้าฟังก์ชันส่งไลน์
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
+import { parseMaybeDateInput } from '@/lib/dateTime';
 
 export async function POST(req: Request) {
   // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
@@ -51,11 +52,20 @@ export async function POST(req: Request) {
     }
 
     // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
+    const parsedStartTime = parseMaybeDateInput(startTime);
+    const parsedEndTime = parseMaybeDateInput(endTime);
+    if (!parsedStartTime || !parsedEndTime) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+    }
+    if (parsedEndTime.getTime() < parsedStartTime.getTime()) {
+      return NextResponse.json({ error: 'End time must be greater than or equal to start time' }, { status: 400 });
+    }
+
     const createData = {
       endLocation,
       purpose,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: parsedStartTime,
+      endTime: parsedEndTime,
       passengerCount: passengerCountNum,
       tripType: tripType || null,
       expresswayOption: expresswayOption || null,

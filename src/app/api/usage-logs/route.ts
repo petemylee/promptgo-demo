@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: any = null;
+  let body: unknown = null;
   try {
     body = await req.json();
   } catch {
@@ -83,17 +83,18 @@ export async function POST(req: Request) {
   }
 
   const role = session.user.role as Role | undefined;
-  const action = (body?.action as UsageLogAction | undefined) ?? 'PAGE_VIEW';
-  const path = typeof body?.path === 'string' ? body.path : new URL(req.url).pathname;
+  const bodyRecord = typeof body === 'object' && body !== null ? body as Record<string, unknown> : null;
+  const action = (bodyRecord?.action as UsageLogAction | undefined) ?? 'PAGE_VIEW';
+  const path = typeof bodyRecord?.path === 'string' ? bodyRecord.path : new URL(req.url).pathname;
 
   await writeUsageLog({
     action,
     path,
     userId: session.user.id,
     role: role ?? null,
-    entityType: typeof body?.entityType === 'string' ? body.entityType : null,
-    entityId: typeof body?.entityId === 'string' ? body.entityId : null,
-    message: typeof body?.message === 'string' ? body.message : null,
+    entityType: typeof bodyRecord?.entityType === 'string' ? bodyRecord.entityType : null,
+    entityId: typeof bodyRecord?.entityId === 'string' ? bodyRecord.entityId : null,
+    message: typeof bodyRecord?.message === 'string' ? bodyRecord.message : null,
   });
 
   return NextResponse.json({ ok: true });

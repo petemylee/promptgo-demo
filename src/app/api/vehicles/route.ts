@@ -2,10 +2,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
+import { type Role } from '@prisma/client';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { writeUsageLog } from '@/lib/usageLogs';
 
-function actorName(session: any) {
+function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
 }
 
@@ -60,7 +62,7 @@ export async function POST(req: Request) {
       action: 'CREATE',
       path: '/admin/vehicles',
       userId: session.user.id,
-      role: session.user.role as any,
+      role: session.user.role as Role,
       entityType: 'Vehicle',
       entityId: newVehicle.id,
       message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} เพิ่มรถยนต์ ${newVehicle.licensePlate}`,

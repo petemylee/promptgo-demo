@@ -1,6 +1,7 @@
 // src/app/api/driver/jobs/[bookingId]/end/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
@@ -8,7 +9,7 @@ import { writeUsageLog } from '@/lib/usageLogs';
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 
-function actorName(session: any) {
+function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
 }
 
@@ -101,11 +102,12 @@ export async function PATCH(
       : null;
 
     // อัปเดต booking status เป็น COMPLETED และบันทึกเลขไมล์หลังเดินทาง
+    const completedAt = new Date();
     const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: 'COMPLETED' as BookingStatus,
-        endTime: new Date(),
+        endTime: completedAt,
         endMileage: endMileage,
       },
     });
@@ -137,7 +139,7 @@ export async function PATCH(
         purpose: booking.purpose,
         endLocation: booking.endLocation,
         startTime: booking.startTime,
-        endTime: new Date(),
+        endTime: completedAt,
         passengerCount: booking.passengerCount,
         requestForSelf: booking.requestForSelf,
         travelerName: booking.travelerName,

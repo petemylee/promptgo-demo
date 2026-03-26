@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
+import { type Role } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { writeUsageLog } from '@/lib/usageLogs';
 
-function actorName(session: any) {
+function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
 }
 
@@ -70,7 +72,7 @@ export async function DELETE(
       action: 'DELETE',
       path: '/admin/users',
       userId: session.user.id,
-      role: session.user.role as any,
+      role: session.user.role as Role,
       entityType: 'User',
       entityId: deleted.id,
       message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} ลบผู้ใช้ ${target}`,
@@ -83,8 +85,12 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting user:', error);
     // Prisma foreign key constraint error (e.g., related records exist)
-    const e = error as any;
-    if (e?.code === 'P2003') {
+    const isFkError =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2003';
+    if (isFkError) {
       return NextResponse.json(
         {
           error:
@@ -144,7 +150,7 @@ export async function PATCH(
         action: 'UPDATE',
         path: '/admin/users',
         userId: session.user.id,
-        role: session.user.role as any,
+        role: session.user.role as Role,
         entityType: 'User',
         entityId: updatedUser.id,
         message: statusChange
@@ -185,7 +191,7 @@ export async function PATCH(
         action: 'UPDATE',
         path: '/profile',
         userId: session.user.id,
-        role: session.user.role as any,
+        role: session.user.role as Role,
         entityType: 'User',
         entityId: updatedUser.id,
         message: 'แก้ไขโปรไฟล์ของตนเอง',

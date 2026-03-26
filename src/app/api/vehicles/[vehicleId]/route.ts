@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
+import { type Role } from '@prisma/client';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { writeUsageLog } from '@/lib/usageLogs';
 
-function actorName(session: any) {
+function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
 }
 
@@ -31,7 +33,7 @@ export async function DELETE(
       action: 'DELETE',
       path: '/admin/vehicles',
       userId: session.user.id,
-      role: session.user.role as any,
+      role: session.user.role as Role,
       entityType: 'Vehicle',
       entityId: deleted.id,
       message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} ลบรถยนต์ ${deleted.licensePlate}`,
@@ -85,7 +87,7 @@ export async function PATCH(
       action: 'UPDATE',
       path: '/admin/vehicles',
       userId: session.user.id,
-      role: session.user.role as any,
+      role: session.user.role as Role,
       entityType: 'Vehicle',
       entityId: updatedVehicle.id,
       message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} แก้ไขรถยนต์ ${updatedVehicle.licensePlate}`,

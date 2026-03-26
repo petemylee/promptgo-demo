@@ -225,7 +225,7 @@ export default function UsageLogsPage({ title }: { title: string }) {
               <label className="block text-xs font-semibold text-slate-700">ประเภทกิจกรรม</label>
               <select
                 value={action}
-                onChange={(e) => setAction(e.target.value as any)}
+                onChange={(e) => setAction(e.target.value as UsageLogAction | '')}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none focus:border-[#004c80]"
               >
                 <option value="">ทั้งหมด</option>

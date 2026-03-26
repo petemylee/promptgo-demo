@@ -255,7 +255,7 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
                   />
                 )}
                 <p className="mt-2 text-xs text-gray-500">
-                  เซ็นแล้วกด "บันทึกลายเซ็น" จากนั้นกด "บันทึกการแก้ไข" เพื่อบันทึกเข้าบัญชี
+                  เซ็นแล้วกด &quot;บันทึกลายเซ็น&quot; จากนั้นกด &quot;บันทึกการแก้ไข&quot; เพื่อบันทึกเข้าบัญชี
                 </p>
               </div>
 
