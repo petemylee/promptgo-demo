@@ -51,7 +51,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
         }}
         items={executiveSidebarItems}
       />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 md:ml-64">
         <header className="md:hidden pt-safe bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-50">
           <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
           <button

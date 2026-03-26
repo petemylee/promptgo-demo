@@ -43,7 +43,7 @@ export default function AppSidebar({
     <div
       className={`fixed top-0 bottom-0 left-0 z-30 w-64 text-white transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
-      } transition-transform duration-300 ease-out md:sticky md:top-0 md:h-screen md:flex-shrink-0 md:translate-x-0`}
+      } transition-transform duration-300 ease-out md:h-[100dvh] md:translate-x-0`}
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-[#004c80] via-[#0066ad] to-[#0076c3]" />

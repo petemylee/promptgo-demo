@@ -13,6 +13,15 @@ export const adminSidebarItems: SidebarItem[] = [
     ),
   },
   {
+    href: '/admin/admin-approvals',
+    label: 'อนุมัติและจัดสรรรถยนต์',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+        <path d="M12 1.5l8.5 4.5V12c0 5.02-3.2 9.52-8.5 10.5C6.7 21.52 3.5 17.02 3.5 12V6L12 1.5zm0 6.25a1 1 0 0 0-1 1V12c0 .27.11.52.29.71l2 2a1 1 0 1 0 1.42-1.42L13 11.59V8.75a1 1 0 0 0-1-1z" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/users',
     label: 'ผู้ใช้',
     icon: (
