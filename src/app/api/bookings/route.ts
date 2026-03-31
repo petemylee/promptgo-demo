@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput } from '@/lib/dateTime';
+import { createNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
@@ -82,6 +83,44 @@ export async function POST(req: Request) {
     const newBooking = await prisma.booking.create({
       data: createData,
     });
+
+    // ==========================================
+    // ✅ In-app notifications: Admin/Executive + Requester
+    // ==========================================
+    try {
+      const recipients = await prisma.user.findMany({
+        where: { role: { in: ['Admin', 'Executive'] } },
+        select: { id: true },
+      });
+
+      const requesterId = session.user.id;
+      const bookingId = newBooking.id;
+
+      await createNotifications([
+        ...recipients.map((u) => ({
+          userId: u.id,
+          type: 'BOOKING_CREATED',
+          title: 'มีคำขอจองรถใหม่',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+          href: '/admin/admin-approvals',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'INFO' as const,
+        })),
+        {
+          userId: requesterId,
+          type: 'BOOKING_CREATED',
+          title: 'สร้างคำขอจองรถสำเร็จ',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}… (รอการพิจารณา)`,
+          href: '/requester',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'SUCCESS' as const,
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to create in-app notifications:', err);
+    }
 
     // ==========================================
     // ✅ 5. แจ้งเตือน LINE ไปยังทุก Admin ที่ผูก LINE แล้ว (จาก DB)
@@ -231,7 +270,7 @@ export async function GET(req: Request) {
               }
             }
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
         });
         return NextResponse.json(bookings);
       }
@@ -248,7 +287,7 @@ export async function GET(req: Request) {
             } 
           } 
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
       });
 
       const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
@@ -312,7 +351,7 @@ export async function GET(req: Request) {
               }
             }
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
         });
         return NextResponse.json(bookings);
       } else {
@@ -351,7 +390,7 @@ export async function GET(req: Request) {
               }
             }
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
         });
         return NextResponse.json(bookings);
       }
@@ -401,7 +440,7 @@ export async function GET(req: Request) {
               }
             }
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
         });
         return NextResponse.json(bookings);
       }
@@ -418,7 +457,7 @@ export async function GET(req: Request) {
             } 
           } 
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
       });
 
       const pendingCount = await prisma.booking.count({ where: { status: 'PENDING' } });
@@ -469,7 +508,7 @@ export async function GET(req: Request) {
             }
           }
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
       });
       return NextResponse.json(bookings);
     }

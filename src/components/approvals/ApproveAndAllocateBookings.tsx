@@ -39,6 +39,10 @@ export default function ApproveAndAllocateBookings({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailBookingId, setSelectedDetailBookingId] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectBookingId, setRejectBookingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -142,21 +146,40 @@ export default function ApproveAndAllocateBookings({
     }
   };
 
-  const handleReject = async (bookingId: string) => {
+  const handleRejectClick = (bookingId: string) => {
+    setRejectBookingId(bookingId);
+    setRejectionReason('');
+    setShowRejectModal(true);
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectBookingId) return;
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      alert('กรุณาระบุเหตุผลในการปฏิเสธ');
+      return;
+    }
+
+    setIsRejecting(true);
     try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
+      const response = await fetch(`/api/bookings/${rejectBookingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'REJECTED' }),
+        body: JSON.stringify({ status: 'REJECTED', rejectionReason: reason }),
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(errorData?.error || 'Failed to update status');
       }
+      setShowRejectModal(false);
+      setRejectBookingId(null);
+      setRejectionReason('');
       fetchDashboardData();
     } catch (err: unknown) {
       if (err instanceof Error) alert(`Error: ${err.message}`);
       else alert('An unknown error occurred');
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -199,6 +222,14 @@ export default function ApproveAndAllocateBookings({
       </div>
     );
   }
+
+  const pendingBookings = [...(data?.pendingBookings ?? [])].sort((a, b) => {
+    const aTime = a.startTime ?? a.createdAt;
+    const bTime = b.startTime ?? b.createdAt;
+    const diff = new Date(bTime).getTime() - new Date(aTime).getTime();
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   return (
     <div className={className ?? 'p-4 md:p-8'}>
@@ -256,8 +287,8 @@ export default function ApproveAndAllocateBookings({
               </tr>
             </thead>
             <tbody>
-              {data && data.pendingBookings.length > 0 ? (
-                data.pendingBookings.map((booking) => (
+              {pendingBookings.length > 0 ? (
+                pendingBookings.map((booking) => (
                   <Fragment key={booking.id}>
                     <tr className="border-b hover:bg-[#0076c3]/5">
                       <td className="hidden md:table-cell py-2 px-4">{booking.id.substring(0, 8)}...</td>
@@ -289,7 +320,7 @@ export default function ApproveAndAllocateBookings({
                             อนุมัติ
                           </button>
                           <button
-                            onClick={() => handleReject(booking.id)}
+                            onClick={() => handleRejectClick(booking.id)}
                             className="rounded-md bg-white px-3 py-1 text-red-600 ring-1 ring-red-200 hover:bg-red-50"
                           >
                             ปฏิเสธ
@@ -403,6 +434,49 @@ export default function ApproveAndAllocateBookings({
                 className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors"
               >
                 อนุมัติ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 overflow-y-auto">
+          <div className="w-full max-w-md max-h-[90vh] my-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <h2 className="text-xl font-semibold text-[#004c80]">ระบุเหตุผลในการปฏิเสธ</h2>
+              <p className="mt-1 text-sm text-gray-600">เหตุผลนี้จะแสดงให้ผู้ขอทราบ</p>
+            </div>
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">เหตุผล</label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-red-500/30"
+                placeholder="เช่น ข้อมูลไม่ครบ, วันเวลาซ้ำ, ไม่มีรถว่าง, ขอแก้ไขรายละเอียดแล้วส่งใหม่..."
+              />
+              <p className="text-xs text-gray-500">แนะนำ: ระบุแบบสั้น กระชับ และ actionable</p>
+            </div>
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex gap-3 justify-end flex-shrink-0">
+              <button
+                onClick={() => {
+                  if (isRejecting) return;
+                  setShowRejectModal(false);
+                  setRejectBookingId(null);
+                  setRejectionReason('');
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isRejecting}
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleRejectConfirm}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                disabled={isRejecting || rejectionReason.trim().length === 0}
+              >
+                {isRejecting ? 'กำลังปฏิเสธ...' : 'ยืนยันปฏิเสธ'}
               </button>
             </div>
           </div>

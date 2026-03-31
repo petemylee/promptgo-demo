@@ -50,6 +50,13 @@ enum UsageLogAction {
   OTHER
 }
 
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
 model User {
   id                String    @id @default(cuid())
   name              String?
@@ -74,6 +81,30 @@ model User {
   driverFeedbackGivenAsRequester DriverFeedback[] @relation("RequesterDriverFeedback")
   driverFeedbackReceived DriverFeedback[] @relation("DriverFeedbackReceived")
   usageLogs              UsageLog[]
+  notifications          Notification[]
+}
+
+model Notification {
+  id         String               @id @default(cuid())
+  createdAt  DateTime             @default(now())
+  readAt     DateTime?
+  archivedAt DateTime?
+
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type       String
+  title      String
+  message    String?
+  href       String?
+
+  entityType String?
+  entityId   String?
+  severity   NotificationSeverity @default(INFO)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
 }
 
 model UsageLog {
@@ -165,6 +196,8 @@ model Booking {
   tripType            TripType?
   expresswayOption    ExpresswayOption? // ขึ้นทางด่วน/ไม่ขึ้นทางด่วน (ใช้เลือก template ในอนาคต)
   status              BookingStatus  @default(PENDING)
+  rejectionReason     String?        // เหตุผลการปฏิเสธ (เมื่อ status = REJECTED)
+  rejectedAt          DateTime?      // วันที่/เวลาที่ปฏิเสธ
   generatedFormUrl    String?
   requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ
   passengerImageUrl   String?        // รูปภาพผู้โดยสาร

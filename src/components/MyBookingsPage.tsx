@@ -16,6 +16,8 @@ type Booking = {
   startTime: string | null;
   endTime: string | null;
   status: 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'REJECTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'MERGED';
+  rejectionReason?: string | null;
+  rejectedAt?: string | null;
   createdAt: string;
   driver: {
     id: string;
@@ -184,6 +186,7 @@ export default function MyBookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -213,10 +216,16 @@ export default function MyBookingsPage() {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
+      setLoadError(null);
       const res = await fetch('/api/my/bookings');
-      if (res.ok) {
-        setBookings(await res.json());
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        setBookings([]);
+        setLoadError(err?.error || 'ไม่สามารถโหลดรายการได้');
+        setIsLoading(false);
+        return;
       }
+      setBookings(await res.json());
       setIsLoading(false);
     };
     if (status === 'authenticated') load();
@@ -292,9 +301,14 @@ export default function MyBookingsPage() {
 
   const reloadBookings = async () => {
     const res = await fetch('/api/my/bookings');
-    if (res.ok) {
-      setBookings(await res.json());
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      setBookings([]);
+      setLoadError(err?.error || 'ไม่สามารถโหลดรายการได้');
+      return;
     }
+    setLoadError(null);
+    setBookings(await res.json());
   };
 
   const filteredCompleted = useMemo(() => {
@@ -408,6 +422,11 @@ export default function MyBookingsPage() {
         )}
 
         <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
+          {loadError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {loadError}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>

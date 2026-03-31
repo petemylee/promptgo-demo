@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { writeUsageLog } from '@/lib/usageLogs';
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
+import { createNotifications } from '@/lib/notifications';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -110,6 +111,24 @@ export async function PATCH(
       entityId: bookingId,
       message: `คนขับ ${actorName(session)} เริ่มงาน (เริ่มเดินทาง)`,
     });
+
+    // In-app: แจ้ง requester ว่าคนขับเริ่มงานแล้ว
+    try {
+      await createNotifications([
+        {
+          userId: booking.requesterId,
+          type: 'BOOKING_STARTED',
+          title: 'คนขับเริ่มเดินทางแล้ว',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+          href: '/requester',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'INFO' as const,
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to create start notifications:', err);
+    }
 
     if (booking.requester?.lineUserId) {
       const startMsg = buildBookingNotification('BOOKING_STARTED_REQUESTER', {

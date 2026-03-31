@@ -25,6 +25,8 @@ interface BookingDetail {
   passengerCount: number | null;
   tripType: string | null;
   status: string;
+  rejectionReason?: string | null;
+  rejectedAt?: string | null;
   requesterSignatureUrl: string | null;
   passengerImageUrl: string | null;
   requestForSelf?: boolean | null;
@@ -248,6 +250,19 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
             <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
               <h3 className="font-semibold text-[#004c80] mb-2">สถานะ</h3>
               <p>{booking.status}</p>
+              {booking.status === 'REJECTED' && (booking.rejectionReason || booking.rejectedAt) && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm font-medium text-red-800">เหตุผลในการปฏิเสธ</p>
+                  <p className="mt-1 text-sm text-red-700 whitespace-pre-wrap">
+                    {booking.rejectionReason || '-'}
+                  </p>
+                  {booking.rejectedAt && (
+                    <p className="mt-2 text-xs text-red-700/80">
+                      อัปเดตเมื่อ: {formatDate(booking.rejectedAt)}
+                    </p>
+                  )}
+                </div>
+              )}
               {booking.adminApprover && (
                 <p className="text-sm text-slate-600 mt-1">อนุมัติโดย: {booking.adminApprover.name}</p>
               )}

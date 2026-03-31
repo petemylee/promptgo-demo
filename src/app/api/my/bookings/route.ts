@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const bookings = await prisma.booking.findMany({
       where: { requesterId: session.user.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
       select: {
         id: true,
         purpose: true,
@@ -20,6 +20,8 @@ export async function GET() {
         startTime: true,
         endTime: true,
         status: true,
+        rejectionReason: true,
+        rejectedAt: true,
         createdAt: true,
         driver: {
           select: {
@@ -54,7 +56,8 @@ export async function GET() {
     }));
 
     return NextResponse.json(bookingsWithStartLocation);
-  } catch {
+  } catch (err) {
+    console.error('GET /api/my/bookings error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -8,6 +8,7 @@ import { sendLineMessage } from '@/lib/line';
 import { writeUsageLog } from '@/lib/usageLogs';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput } from '@/lib/dateTime';
+import { createNotifications } from '@/lib/notifications';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -30,6 +31,7 @@ export async function GET(
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
+        // expose rejectionReason to requester/admin UIs (non-sensitive)
         requester: {
           select: {
             name: true,
@@ -105,6 +107,7 @@ export async function PATCH(
       saveExecutiveSignatureToProfile,
       vehicleId, 
       driverId, 
+      rejectionReason,
       requesterSignatureUrl,
       endLocation,
       purpose,
@@ -154,6 +157,42 @@ export async function PATCH(
           entityId: bookingId,
           message: `ผู้ใช้ ${actorName(session)} ยกเลิกคำขอจองรถ`,
         });
+
+        // In-app: แจ้ง Admin/Executive + Driver (ถ้ามี) ว่าถูกยกเลิก
+        try {
+          const recipients = await prisma.user.findMany({
+            where: { role: { in: ['Admin', 'Executive'] } },
+            select: { id: true },
+          });
+          await createNotifications([
+            ...recipients.map((u) => ({
+              userId: u.id,
+              type: 'BOOKING_CANCELLED',
+              title: 'คำขอถูกยกเลิก',
+              message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+              href: '/admin/history',
+              entityType: 'Booking',
+              entityId: bookingId,
+              severity: 'WARNING' as const,
+            })),
+            ...(updatedBooking.driverId
+              ? [
+                  {
+                    userId: updatedBooking.driverId,
+                    type: 'BOOKING_CANCELLED',
+                    title: 'งานถูกยกเลิก',
+                    message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+                    href: `/driver`,
+                    entityType: 'Booking',
+                    entityId: bookingId,
+                    severity: 'WARNING' as const,
+                  },
+                ]
+              : []),
+          ]);
+        } catch (err) {
+          console.error('Failed to create cancellation notifications:', err);
+        }
         return NextResponse.json(updatedBooking);
       }
 
@@ -238,6 +277,28 @@ export async function PATCH(
           message: `ผู้ใช้ ${actorName(session)} แก้ไขรายละเอียดคำขอจองรถ`,
         });
 
+        // In-app: แจ้ง Admin/Executive ว่ามีการแก้ไขคำขอ (เฉพาะ PENDING)
+        try {
+          const recipients = await prisma.user.findMany({
+            where: { role: { in: ['Admin', 'Executive'] } },
+            select: { id: true },
+          });
+          await createNotifications(
+            recipients.map((u) => ({
+              userId: u.id,
+              type: 'BOOKING_UPDATED',
+              title: 'มีการแก้ไขคำขอจองรถ',
+              message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+              href: '/admin/admin-approvals',
+              entityType: 'Booking',
+              entityId: bookingId,
+              severity: 'INFO' as const,
+            }))
+          );
+        } catch (err) {
+          console.error('Failed to create update notifications:', err);
+        }
+
         return NextResponse.json(updatedBooking);
       } else if (requesterSignatureUrl !== undefined) {
         // อัปเดตเฉพาะลายเซ็น (สามารถทำได้ทุกสถานะ)
@@ -267,6 +328,13 @@ export async function PATCH(
       (status === 'APPROVED' || status === 'REJECTED')
     ) {
       // Admin และ Executive สามารถอนุมัติเบื้องต้นได้
+      if (status === 'REJECTED') {
+        const reason = typeof rejectionReason === 'string' ? rejectionReason.trim() : '';
+        if (!reason) {
+          return NextResponse.json({ error: 'กรุณาระบุเหตุผลในการปฏิเสธ' }, { status: 400 });
+        }
+      }
+
       // ตรวจสอบว่า vehicleId มีอยู่จริง (ถ้ามีการส่งมา)
       if (status === 'APPROVED' && vehicleId) {
         const vehicle = await prisma.vehicle.findUnique({
@@ -295,6 +363,15 @@ export async function PATCH(
         data: {
           status: status as BookingStatus,
           adminApproverId: session.user.id,
+          ...(status === 'REJECTED'
+            ? {
+                rejectionReason: (rejectionReason as string).trim(),
+                rejectedAt: new Date(),
+              }
+            : {
+                rejectionReason: null,
+                rejectedAt: null,
+              }),
           ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
           ...(status === 'APPROVED' && driverId ? { driverId } : {}),
         },
@@ -312,6 +389,69 @@ export async function PATCH(
             ? `ผู้มีสิทธิ์ ${actorName(session)} อนุมัติคำขอ และจัดสรรรถ/คนขับ (เบื้องต้น)`
             : `ผู้มีสิทธิ์ ${actorName(session)} ปฏิเสธคำขอจองรถ`,
       });
+
+      // In-app: แจ้ง Requester/Driver/Executive (รอยืนยัน) ตามสถานะ
+      try {
+        if (status === 'APPROVED') {
+          const recipientsExec = await prisma.user.findMany({
+            where: { role: 'Executive' },
+            select: { id: true },
+          });
+
+          await createNotifications([
+            {
+              userId: updatedBooking.requesterId,
+              type: 'BOOKING_APPROVED',
+              title: 'คำขอของคุณได้รับการอนุมัติเบื้องต้น',
+              message: `เลขที่การจอง: ${bookingId.slice(0, 8)}… (รอยืนยันขั้นสุดท้าย)`,
+              href: '/requester',
+              entityType: 'Booking',
+              entityId: bookingId,
+              severity: 'SUCCESS' as const,
+            },
+            ...(updatedBooking.driverId
+              ? [
+                  {
+                    userId: updatedBooking.driverId,
+                    type: 'JOB_ASSIGNED_PRELIM',
+                    title: 'ได้รับมอบหมายงานเบื้องต้น',
+                    message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+                    href: '/driver',
+                    entityType: 'Booking',
+                    entityId: bookingId,
+                    severity: 'INFO' as const,
+                  },
+                ]
+              : []),
+            ...recipientsExec.map((u) => ({
+              userId: u.id,
+              type: 'BOOKING_NEEDS_CONFIRMATION',
+              title: 'มีรายการรอยืนยัน',
+              message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+              href: '/executive/approvals',
+              entityType: 'Booking',
+              entityId: bookingId,
+              severity: 'INFO' as const,
+            })),
+          ]);
+        } else if (status === 'REJECTED') {
+          const reason = typeof rejectionReason === 'string' ? rejectionReason.trim() : '';
+          await createNotifications([
+            {
+              userId: updatedBooking.requesterId,
+              type: 'BOOKING_REJECTED',
+              title: 'คำขอของคุณถูกปฏิเสธ',
+              message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…${reason ? `\nเหตุผล: ${reason}` : ''}`,
+              href: '/requester',
+              entityType: 'Booking',
+              entityId: bookingId,
+              severity: 'ERROR' as const,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to create approval/rejection notifications:', err);
+      }
 
       // แจ้งเตือน LINE ผู้ขอเมื่ออนุมัติเบื้องต้น
       if (status === 'APPROVED') {
@@ -484,6 +624,40 @@ export async function PATCH(
         entityId: bookingId,
         message: `ผู้บริหาร ${actorName(session)} ยืนยันคำขอขั้นสุดท้าย และจัดสรรรถ/คนขับ`,
       });
+
+      // In-app: แจ้ง Requester + Driver ว่ายืนยันแล้ว
+      try {
+        await createNotifications(
+          [
+          {
+            userId: updatedBooking.requesterId,
+            type: 'BOOKING_CONFIRMED',
+            title: 'การจองรถได้รับการยืนยันขั้นสุดท้าย',
+            message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+            href: '/requester',
+            entityType: 'Booking',
+            entityId: bookingId,
+            severity: 'SUCCESS' as const,
+          },
+          ...(updatedBooking.driverId
+            ? [
+                {
+                  userId: updatedBooking.driverId,
+                  type: 'JOB_ASSIGNED_FINAL',
+                  title: 'ได้รับมอบหมายงานขั้นสุดท้าย',
+                  message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+                  href: '/driver',
+                  entityType: 'Booking',
+                  entityId: bookingId,
+                  severity: 'SUCCESS' as const,
+                },
+              ]
+            : []),
+        ]
+        );
+      } catch (err) {
+        console.error('Failed to create confirmation notifications:', err);
+      }
 
       // แจ้งเตือน LINE ผู้ขอเมื่อยืนยันขั้นสุดท้าย
       const bookingForNotif = await prisma.booking.findUnique({

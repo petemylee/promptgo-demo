@@ -68,6 +68,14 @@ export default function ExecutiveApprovalsPage() {
     );
   });
 
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    const aTime = a.startTime ?? a.createdAt;
+    const bTime = b.startTime ?? b.createdAt;
+    const diff = new Date(bTime).getTime() - new Date(aTime).getTime();
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('th-TH', {
       year: 'numeric',
@@ -119,9 +127,9 @@ export default function ExecutiveApprovalsPage() {
 
       {/* Bookings List */}
       <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-        {filteredBookings.length > 0 ? (
+        {sortedBookings.length > 0 ? (
           <div className="space-y-4">
-            {filteredBookings.map((booking) => (
+            {sortedBookings.map((booking) => (
               <div key={booking.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Booking Info */}

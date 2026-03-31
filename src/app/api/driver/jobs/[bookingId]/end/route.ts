@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { writeUsageLog } from '@/lib/usageLogs';
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
+import { createNotifications } from '@/lib/notifications';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -131,6 +132,24 @@ export async function PATCH(
       entityId: bookingId,
       message: `คนขับ ${actorName(session)} จบงาน (เลขไมล์สิ้นสุด: ${endMileage})`,
     });
+
+    // In-app: แจ้ง requester ว่างานเสร็จสิ้นแล้ว (และชวนให้ประเมิน)
+    try {
+      await createNotifications([
+        {
+          userId: booking.requesterId,
+          type: 'BOOKING_COMPLETED',
+          title: 'การเดินทางเสร็จสิ้นแล้ว',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+          href: '/requester',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'SUCCESS' as const,
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to create completion notifications:', err);
+    }
 
     if (booking.requester?.lineUserId) {
       const completeMsg = buildBookingNotification('BOOKING_COMPLETED_REQUESTER', {
