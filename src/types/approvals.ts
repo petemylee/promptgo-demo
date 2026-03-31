@@ -14,6 +14,7 @@ export interface ApprovalBooking {
   additionalNotes?: string | null;
   passengerCount: number | null;
   tripType: string | null;
+  createdAt: string;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
