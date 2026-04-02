@@ -102,6 +102,17 @@ body {
   padding-top: calc(env(safe-area-inset-top) + 0px);
 }
 
+/*
+ * ชดเชยความสูงแถบบนมือถือ (fixed) — ต้องสอดคล้องกับ header: pt-safe + py-3 + แถวปุ่ม/ชื่อ ~2.75rem + border
+ * ใช้แทน sticky เพราะ ancestor มี overflow-x-hidden ทำให้ sticky ติดกับ viewport ไม่ได้ในหลายเบราว์เซอร์
+ * ใส่เฉพาะจอ < md (768px) — ถ้าไม่ wrap media จะชนะ md:pt-0 จาก Tailwind แล้วเกิดช่องว่างบนจอคอม
+ */
+@media (max-width: 767px) {
+  .pt-mobile-app-header {
+    padding-top: calc(env(safe-area-inset-top) + 4.35rem);
+  }
+}
+
 /* iOS momentum scrolling for custom scroll containers (use sparingly) */
 .ios-scroll {
   -webkit-overflow-scrolling: touch;

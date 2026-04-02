@@ -24,6 +24,9 @@ interface TravelStatsOverviewProps {
 
 const FEEDBACK_REFRESH_EVENT = 'feedback-stats:refresh';
 
+/** Numeric height avoids Recharts v3 first-paint warning (internal size starts as -1,-1 with height="100%"). */
+const CHART_HEIGHT_PX = 288;
+
 function getCurrentMonthValue() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -398,8 +401,8 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
                     </button>
                   </div>
                 </div>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <LineChart data={tripTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" tick={{ fontSize: 12 }} />
@@ -422,8 +425,8 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
 
               <div className="rounded-xl bg-slate-50 p-4 xl:col-span-2">
                 <h3 className="mb-3 font-semibold text-[#004c80]">ระยะทางรวม vs เวลาเดินทางรวม (ย้อนหลัง 6 เดือน)</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <ComposedChart data={data.distanceVsDurationByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" tick={{ fontSize: 12 }} />
@@ -449,8 +452,8 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
 
               <div className="rounded-xl bg-slate-50 p-4">
                 <h3 className="mb-3 font-semibold text-[#004c80]">ระยะทางที่ใช้ไปในรถยนต์แต่ละคัน</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <BarChart data={vehicleKmChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="licensePlate" tick={{ fontSize: 12 }} />
@@ -465,8 +468,8 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
 
               <div className="rounded-xl bg-slate-50 p-4">
                 <h3 className="mb-3 font-semibold text-[#004c80]">จำนวนงานของคนขับ</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <BarChart data={driverJobsChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="driverName" tick={{ fontSize: 12 }} />

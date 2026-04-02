@@ -35,6 +35,9 @@ interface FeedbackStatsOverviewProps {
 
 const FEEDBACK_REFRESH_EVENT = 'feedback-stats:refresh';
 
+/** Numeric height avoids Recharts v3 first-paint warning (internal size starts as -1,-1 with height="100%"). */
+const CHART_HEIGHT_PX = 288;
+
 export default function FeedbackStatsOverview({ className }: FeedbackStatsOverviewProps) {
   const [feedbacks, setFeedbacks] = useState<DriverFeedbackItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,8 +175,8 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
               <div className="rounded-xl bg-slate-50 p-4 xl:col-span-1">
                 <h3 className="mb-3 font-semibold text-[#004c80]">สัดส่วนคะแนน 1-5 ดาว</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <BarChart data={distributionData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="ratingLabel" tick={{ fontSize: 12 }} />
@@ -188,8 +191,8 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
 
               <div className="rounded-xl bg-slate-50 p-4 xl:col-span-1">
                 <h3 className="mb-3 font-semibold text-[#004c80]">Top คนขับคะแนนเฉลี่ยสูงสุด</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <BarChart data={topDrivers} margin={{ top: 8, right: 12, left: 0, bottom: 36 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="driverName" interval={0} angle={-20} textAnchor="end" height={55} tick={{ fontSize: 11 }} />
@@ -204,8 +207,8 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
 
               <div className="rounded-xl bg-slate-50 p-4 xl:col-span-1">
                 <h3 className="mb-3 font-semibold text-[#004c80]">Bottom คนขับคะแนนเฉลี่ยต่ำสุด</h3>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="w-full min-w-0" style={{ height: CHART_HEIGHT_PX }}>
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX} minWidth={0}>
                     <BarChart data={bottomDrivers} margin={{ top: 8, right: 12, left: 0, bottom: 36 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="driverName" interval={0} angle={-20} textAnchor="end" height={55} tick={{ fontSize: 11 }} />

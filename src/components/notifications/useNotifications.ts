@@ -99,6 +99,12 @@ export function useNotifications(): UseNotificationsState {
       });
       es.addEventListener('error', () => {
         sseConnectedRef.current = false;
+        // ปิด EventSource — ไม่งั้น browser จะ reconnect รัวๆ แล้วแต่ละครั้งยิง Prisma ที่ stream
+        try {
+          es?.close();
+        } catch {
+          /* ignore */
+        }
         startPollingFallback();
       });
       es.addEventListener('unread_count', (e) => {

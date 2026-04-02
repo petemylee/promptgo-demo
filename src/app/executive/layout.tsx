@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import AppSidebar from '@/components/layout/AppSidebar';
 import { executiveSidebarItems } from '@/config/sidebar/executive';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { NotificationsProvider } from '@/components/notifications/NotificationsContext';
 
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -53,7 +54,8 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
         items={executiveSidebarItems}
       />
       <div className="flex flex-1 flex-col min-w-0 md:ml-64">
-        <header className="md:hidden pt-safe bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-50">
+        <NotificationsProvider>
+        <header className="md:hidden fixed top-0 left-0 right-0 z-50 pt-safe bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm px-4 py-3 flex justify-between items-center">
           <h1 className="text-lg font-bold text-slate-800">OFM PROMPTGO</h1>
           <div className="flex items-center gap-2">
             <NotificationBell />
@@ -70,7 +72,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden transition-opacity" aria-hidden />}
 
-        <main className="flex-1 min-w-0 pb-safe">
+        <main className="flex-1 min-w-0 pb-safe pt-mobile-app-header">
           <div className="hidden md:flex justify-end px-6 pt-5">
             <NotificationBell />
           </div>
@@ -87,6 +89,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
             children
           )}
         </main>
+        </NotificationsProvider>
       </div>
     </div>
   );

@@ -1,27 +1,49 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useNotifications } from '@/components/notifications/useNotifications';
+import { useSession } from 'next-auth/react';
+import { useNotificationsContext } from '@/components/notifications/NotificationsContext';
+
+function roleHomePath(role?: string | null) {
+  if (role === 'Admin') return '/admin/dashboard';
+  if (role === 'Executive') return '/executive';
+  if (role === 'Driver') return '/driver';
+  return '/requester';
+}
 
 export default function NotificationsCenter() {
   const router = useRouter();
-  const { items, isLoading, loadMore, nextCursor, markAllRead, markRead } = useNotifications();
+  const { data: session } = useSession();
+  const { items, isLoading, loadMore, nextCursor, markRead } = useNotificationsContext();
+  const homeHref = roleHomePath(session?.user?.role ?? null);
+
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(homeHref);
+    }
+  };
 
   return (
     <div className="p-4 md:p-8">
       <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            aria-label="ย้อนกลับ"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            ย้อนกลับ
+          </button>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl md:text-3xl font-bold text-[#004c80]">การแจ้งเตือน</h1>
             <p className="text-sm text-slate-600">รายการแจ้งเตือนภายในระบบ</p>
           </div>
-          <button
-            type="button"
-            onClick={() => markAllRead().catch(() => {})}
-            className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-          >
-            อ่านทั้งหมด
-          </button>
         </div>
 
         <div className="rounded-2xl bg-white/90 shadow ring-1 ring-black/5 overflow-hidden">
