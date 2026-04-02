@@ -113,11 +113,6 @@ function formatOneBooking(b: BookingRow, index: number, total: number): string {
   }
   const travelerBlock = travelerLines.filter((x): x is string => !!x);
 
-  const tip = [
-    '',
-    '💡 นัดเจอ: ยืนยันทะเบียน+สีรถ / ชื่อ / เบอร์โทรก่อนออกเดินทาง ลดการหาผิดคัน',
-  ];
-
   const parts = [
     ...head,
     '',
@@ -127,7 +122,6 @@ function formatOneBooking(b: BookingRow, index: number, total: number): string {
     '',
     ...(driverLines || ['👤 คนขับ: (ยังไม่ระบุ)']),
     ...(travelerBlock.length ? ['', ...travelerBlock] : []),
-    ...tip,
   ];
 
   return parts.filter((x): x is string => x !== null).join('\n');
