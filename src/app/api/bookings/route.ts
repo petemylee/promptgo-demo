@@ -8,6 +8,7 @@ import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput } from '@/lib/dateTime';
 import { createNotifications } from '@/lib/notifications';
+import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 
 export async function POST(req: Request) {
   // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
 
       const requesterId = session.user.id;
       const bookingId = newBooking.id;
+      const selfInboxHref = inboxHrefForUserRole(session.user.role);
 
       await createNotifications([
         ...recipients.map((u) => ({
@@ -112,7 +114,7 @@ export async function POST(req: Request) {
           type: 'BOOKING_CREATED',
           title: 'สร้างคำขอจองรถสำเร็จ',
           message: `เลขที่การจอง: ${bookingId.slice(0, 8)}… (รอการพิจารณา)`,
-          href: '/requester',
+          href: selfInboxHref,
           entityType: 'Booking',
           entityId: bookingId,
           severity: 'SUCCESS' as const,

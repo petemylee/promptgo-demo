@@ -9,6 +9,7 @@ import { writeUsageLog } from '@/lib/usageLogs';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput } from '@/lib/dateTime';
 import { createNotifications } from '@/lib/notifications';
+import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -375,6 +376,9 @@ export async function PATCH(
           ...(status === 'APPROVED' && vehicleId ? { vehicleId } : {}),
           ...(status === 'APPROVED' && driverId ? { driverId } : {}),
         },
+        include: {
+          requester: { select: { role: true } },
+        },
       });
 
       await writeUsageLog({
@@ -390,6 +394,8 @@ export async function PATCH(
             : `ผู้มีสิทธิ์ ${actorName(session)} ปฏิเสธคำขอจองรถ`,
       });
 
+      const requesterInboxHref = inboxHrefForUserRole(updatedBooking.requester.role);
+
       // In-app: แจ้ง Requester/Driver/Executive (รอยืนยัน) ตามสถานะ
       try {
         if (status === 'APPROVED') {
@@ -404,7 +410,7 @@ export async function PATCH(
               type: 'BOOKING_APPROVED',
               title: 'คำขอของคุณได้รับการอนุมัติเบื้องต้น',
               message: `เลขที่การจอง: ${bookingId.slice(0, 8)}… (รอยืนยันขั้นสุดท้าย)`,
-              href: '/requester',
+              href: requesterInboxHref,
               entityType: 'Booking',
               entityId: bookingId,
               severity: 'SUCCESS' as const,
@@ -440,9 +446,9 @@ export async function PATCH(
             {
               userId: updatedBooking.requesterId,
               type: 'BOOKING_REJECTED',
-              title: 'คำขอของคุณถูกปฏิเสธ',
+              title: 'คำขอของคุณถูกปฏิเสธจากผู้อนุมัติ',
               message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…${reason ? `\nเหตุผล: ${reason}` : ''}`,
-              href: '/requester',
+              href: requesterInboxHref,
               entityType: 'Booking',
               entityId: bookingId,
               severity: 'ERROR' as const,
@@ -613,6 +619,9 @@ export async function PATCH(
       const updatedBooking = await prisma.booking.update({
         where: { id: bookingId },
         data: updateData,
+        include: {
+          requester: { select: { role: true } },
+        },
       });
 
       await writeUsageLog({
@@ -625,6 +634,8 @@ export async function PATCH(
         message: `ผู้บริหาร ${actorName(session)} ยืนยันคำขอขั้นสุดท้าย และจัดสรรรถ/คนขับ`,
       });
 
+      const requesterInboxHrefExec = inboxHrefForUserRole(updatedBooking.requester.role);
+
       // In-app: แจ้ง Requester + Driver ว่ายืนยันแล้ว
       try {
         await createNotifications(
@@ -634,7 +645,7 @@ export async function PATCH(
             type: 'BOOKING_CONFIRMED',
             title: 'การจองรถได้รับการยืนยันขั้นสุดท้าย',
             message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
-            href: '/requester',
+            href: requesterInboxHrefExec,
             entityType: 'Booking',
             entityId: bookingId,
             severity: 'SUCCESS' as const,

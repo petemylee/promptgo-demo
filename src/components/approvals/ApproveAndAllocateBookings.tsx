@@ -456,7 +456,6 @@ export default function ApproveAndAllocateBookings({
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-red-500/30"
                 placeholder="เช่น ข้อมูลไม่ครบ, วันเวลาซ้ำ, ไม่มีรถว่าง, ขอแก้ไขรายละเอียดแล้วส่งใหม่..."
               />
-              <p className="text-xs text-gray-500">แนะนำ: ระบุแบบสั้น กระชับ และ actionable</p>
             </div>
             <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex gap-3 justify-end flex-shrink-0">
               <button

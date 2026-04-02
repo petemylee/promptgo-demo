@@ -9,6 +9,7 @@ import { writeUsageLog } from '@/lib/usageLogs';
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { createNotifications } from '@/lib/notifications';
+import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -44,6 +45,7 @@ export async function PATCH(
       include: {
         requester: {
           select: {
+            role: true,
             lineUserId: true,
             name: true,
             position: true,
@@ -120,7 +122,7 @@ export async function PATCH(
           type: 'BOOKING_STARTED',
           title: 'คนขับเริ่มเดินทางแล้ว',
           message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
-          href: '/requester',
+          href: inboxHrefForUserRole(booking.requester.role),
           entityType: 'Booking',
           entityId: bookingId,
           severity: 'INFO' as const,
