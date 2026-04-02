@@ -51,6 +51,18 @@ type BookingRow = {
   } | null;
 };
 
+const SECTIONS: {
+  title: string;
+  statuses: BookingStatus[];
+}[] = [
+  { title: '■ รอจัดอนุมัติ', statuses: ['PENDING'] },
+  {
+    title: '■ รอยืนยัน',
+    statuses: ['APPROVED', 'CONFIRMED', 'MERGED'],
+  },
+  { title: '■ คนขับเริ่มงานแล้ว', statuses: ['IN_PROGRESS'] },
+];
+
 function formatOneBooking(b: BookingRow, index: number, total: number): string {
   const head = [`— ${index}/${total} · ${STATUS_TH[b.status]}`];
 
@@ -130,18 +142,35 @@ function splitLongText(text: string, maxLen: number): string[] {
   return out;
 }
 
+function sortByCreatedDesc(a: BookingRow, b: BookingRow): number {
+  return b.createdAt.getTime() - a.createdAt.getTime();
+}
+
 export function buildLineBookingMessages(bookings: BookingRow[]): string[] {
   const header =
-    '📋 รายการจองที่ยังดำเนินการอยู่ (ไม่รวมที่เสร็จสิ้นหรือยกเลิกแล้ว)';
+    '📋 รายการจองที่ยังดำเนินการอยู่ (ไม่รวมที่ยกเลิก ปฏิเสธ หรือเสร็จสิ้นแล้ว)';
 
   if (bookings.length === 0) {
     return [
-      'ไม่มีรายการจองที่ยังดำเนินการอยู่\n(ไม่แสดงการจองที่เสร็จสิ้นหรือยกเลิกแล้ว)',
+      'ไม่มีรายการจองที่ยังดำเนินการอยู่\n(ไม่แสดงการจองที่ยกเลิก ปฏิเสธ หรือเสร็จสิ้นแล้ว)',
     ];
   }
 
-  const total = bookings.length;
-  const blocks = bookings.map((b, i) => formatOneBooking(b, i + 1, total));
-  const fullText = `${header}\n\n${blocks.join('\n\n')}`;
+  const sectionBlocks: string[] = [];
+  for (const section of SECTIONS) {
+    const rows = bookings
+      .filter((b) => section.statuses.includes(b.status))
+      .sort(sortByCreatedDesc);
+    if (rows.length === 0) continue;
+    sectionBlocks.push(section.title);
+    sectionBlocks.push('');
+    rows.forEach((b, i) => {
+      sectionBlocks.push(formatOneBooking(b, i + 1, rows.length));
+      sectionBlocks.push('');
+    });
+  }
+
+  const body = sectionBlocks.join('\n').trimEnd();
+  const fullText = `${header}\n\n${body}`;
   return splitLongText(fullText, MAX_CHARS_PER_MESSAGE);
 }

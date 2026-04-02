@@ -38,7 +38,7 @@ async function sendRequesterBookingsReply(lineUserId: string, replyToken: string
   const bookings = await prisma.booking.findMany({
     where: {
       requesterId: user.id,
-      status: { notIn: ['COMPLETED', 'CANCELLED'] },
+      status: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED'] },
     },
     orderBy: { createdAt: 'desc' },
     select: {
