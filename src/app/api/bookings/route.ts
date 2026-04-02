@@ -17,6 +17,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // สร้างคำขอจองได้เฉพาะ role ผู้ขอใช้รถ (Requester) เท่านั้น
+  if (session.user.role !== 'Requester') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();

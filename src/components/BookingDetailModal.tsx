@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
-
-const CANCELLABLE_STATUSES = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
+import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 interface BookingDetailModalProps {
   isOpen: boolean;
@@ -12,6 +11,7 @@ interface BookingDetailModalProps {
   bookingId: string;
   onUpdated: () => void;
   onCancelRequest?: (bookingId: string) => void;
+  onEditRequest?: (bookingId: string) => void;
   variant?: 'overlay' | 'fullpage';
 }
 
@@ -58,7 +58,7 @@ interface BookingDetail {
   } | null;
 }
 
-export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdated, onCancelRequest, variant = 'overlay' }: BookingDetailModalProps) {
+export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdated, onCancelRequest, onEditRequest, variant = 'overlay' }: BookingDetailModalProps) {
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -271,16 +271,28 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
               )}
             </div>
 
-            {/* ยกเลิกคำขอ - สำหรับผู้ขอใช้รถ */}
-            {onCancelRequest && CANCELLABLE_STATUSES.includes(booking.status) && (
-              <div className="pt-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => onCancelRequest(bookingId)}
-                  className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                >
-                  ยกเลิกคำขอ
-                </button>
+            {/* แก้ไข / ยกเลิก — สำหรับผู้ขอใช้รถ */}
+            {((onEditRequest && requesterMayEditBookingDetails(booking.status)) ||
+              (onCancelRequest && requesterMayCancelBooking(booking.status))) && (
+              <div className="pt-2 border-t border-gray-200 flex flex-wrap gap-2">
+                {onEditRequest && requesterMayEditBookingDetails(booking.status) && (
+                  <button
+                    type="button"
+                    onClick={() => onEditRequest(bookingId)}
+                    className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+                  >
+                    แก้ไขรายละเอียด
+                  </button>
+                )}
+                {onCancelRequest && requesterMayCancelBooking(booking.status) && (
+                  <button
+                    type="button"
+                    onClick={() => onCancelRequest(bookingId)}
+                    className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                  >
+                    ยกเลิกคำขอ
+                  </button>
+                )}
               </div>
             )}
 

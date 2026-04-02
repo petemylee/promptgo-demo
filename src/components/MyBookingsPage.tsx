@@ -7,6 +7,7 @@ import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
 import DriverFeedbackModal from '@/components/DriverFeedbackModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 type Booking = {
   id: string;
@@ -53,7 +54,15 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
-const InProgressBookingCard = ({ booking, onCancel }: { booking: Booking; onCancel: (id: string) => void }) => {
+const InProgressBookingCard = ({
+  booking,
+  onCancel,
+  onEdit,
+}: {
+  booking: Booking;
+  onCancel: (id: string) => void;
+  onEdit: (id: string) => void;
+}) => {
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const getMapUrl = () => {
@@ -166,7 +175,14 @@ const InProgressBookingCard = ({ booking, onCancel }: { booking: Booking; onCanc
               </p>
             )}
           </div>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onEdit(booking.id)}
+              className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+            >
+              แก้ไขรายละเอียด
+            </button>
             <button
               type="button"
               onClick={() => onCancel(booking.id)}
@@ -275,7 +291,6 @@ export default function MyBookingsPage() {
     setIsEditModalOpen(true);
   };
 
-  const cancellableStatuses: Booking['status'][] = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
   const handleCancel = async (bookingId: string) => {
     if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอนี้?')) {
       return;
@@ -338,6 +353,10 @@ export default function MyBookingsPage() {
             bookingId={selectedBookingId}
             onUpdated={reloadBookings}
             onCancelRequest={handleCancel}
+            onEditRequest={(id) => {
+              setIsDetailModalOpen(false);
+              handleEdit(id);
+            }}
           />
         </div>
       </div>
@@ -415,7 +434,7 @@ export default function MyBookingsPage() {
             <h2 className="text-xl font-bold text-[#004c80] mb-4">งานที่กำลังดำเนินการ</h2>
             <div className="space-y-6">
               {inProgressBookings.map((booking) => (
-                <InProgressBookingCard key={booking.id} booking={booking} onCancel={handleCancel} />
+                <InProgressBookingCard key={booking.id} booking={booking} onCancel={handleCancel} onEdit={handleEdit} />
               ))}
             </div>
           </div>
@@ -465,7 +484,7 @@ export default function MyBookingsPage() {
                             >
                               ดูรายละเอียด
                             </button>
-                            {b.status === 'PENDING' && (
+                            {requesterMayEditBookingDetails(b.status) && (
                               <button
                                 onClick={() => handleEdit(b.id)}
                                 className="text-sm text-emerald-600 hover:text-emerald-700 underline"
@@ -473,7 +492,7 @@ export default function MyBookingsPage() {
                                 แก้ไข
                               </button>
                             )}
-                            {cancellableStatuses.includes(b.status) && (
+                            {requesterMayCancelBooking(b.status) && (
                               <button
                                 onClick={() => handleCancel(b.id)}
                                 className="text-sm text-red-600 hover:text-red-700 underline"
@@ -636,6 +655,10 @@ export default function MyBookingsPage() {
             bookingId={selectedBookingId}
             onUpdated={reloadBookings}
             onCancelRequest={handleCancel}
+            onEditRequest={(id) => {
+              setIsDetailModalOpen(false);
+              handleEdit(id);
+            }}
           />
         )}
         {feedbackModal && (

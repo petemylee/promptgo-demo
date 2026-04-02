@@ -10,6 +10,7 @@ import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput } from '@/lib/dateTime';
 import { createNotifications } from '@/lib/notifications';
 import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
+import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 function actorName(session: Session | null) {
   return session?.user?.name || session?.user?.email || session?.user?.id || 'ไม่ทราบชื่อ';
@@ -135,10 +136,9 @@ export async function PATCH(
     const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
 
     if (isRequesterOfBooking && !isAdminApprovalRequest) {
-      // ผู้ขอใช้รถสามารถยกเลิกคำขอได้ตลอดเวลา (ยกเว้นสถานะที่จบแล้ว)
-      const cancellableStatuses: BookingStatus[] = ['PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS'];
+      // ผู้ขอใช้รถสามารถยกเลิกคำขอได้ตลอดช่วงที่ยังดำเนินการ
       if (status === 'CANCELLED') {
-        if (!cancellableStatuses.includes(bookingForAuth.status)) {
+        if (!requesterMayCancelBooking(bookingForAuth.status)) {
           return NextResponse.json(
             { error: 'ไม่สามารถยกเลิกคำขอที่อยู่ในสถานะนี้ได้' },
             { status: 400 }
@@ -201,10 +201,9 @@ export async function PATCH(
       if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
           passengerImageUrl !== undefined || additionalNotes !== undefined) {
-        // ตรวจสอบว่า status เป็น PENDING เท่านั้น
-        if (bookingForAuth.status !== 'PENDING') {
-          return NextResponse.json({ 
-            error: 'สามารถแก้ไขได้เฉพาะคำขอที่อยู่ในสถานะ PENDING เท่านั้น' 
+        if (!requesterMayEditBookingDetails(bookingForAuth.status)) {
+          return NextResponse.json({
+            error: 'ไม่สามารถแก้ไขคำขอที่อยู่ในสถานะนี้ได้ (แก้ไขได้เฉพาะคำขอที่ยังดำเนินการอยู่)',
           }, { status: 400 });
         }
 
@@ -278,14 +277,14 @@ export async function PATCH(
           message: `ผู้ใช้ ${actorName(session)} แก้ไขรายละเอียดคำขอจองรถ`,
         });
 
-        // In-app: แจ้ง Admin/Executive ว่ามีการแก้ไขคำขอ (เฉพาะ PENDING)
+        // In-app: แจ้ง Admin/Executive และคนขับ (ถ้ามี)
         try {
           const recipients = await prisma.user.findMany({
             where: { role: { in: ['Admin', 'Executive'] } },
             select: { id: true },
           });
-          await createNotifications(
-            recipients.map((u) => ({
+          await createNotifications([
+            ...recipients.map((u) => ({
               userId: u.id,
               type: 'BOOKING_UPDATED',
               title: 'มีการแก้ไขคำขอจองรถ',
@@ -294,8 +293,22 @@ export async function PATCH(
               entityType: 'Booking',
               entityId: bookingId,
               severity: 'INFO' as const,
-            }))
-          );
+            })),
+            ...(updatedBooking.driverId
+              ? [
+                  {
+                    userId: updatedBooking.driverId,
+                    type: 'BOOKING_UPDATED',
+                    title: 'มีการแก้ไขรายละเอียดงาน',
+                    message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+                    href: '/driver',
+                    entityType: 'Booking',
+                    entityId: bookingId,
+                    severity: 'INFO' as const,
+                  },
+                ]
+              : []),
+          ]);
         } catch (err) {
           console.error('Failed to create update notifications:', err);
         }

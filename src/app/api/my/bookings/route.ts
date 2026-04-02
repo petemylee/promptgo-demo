@@ -9,6 +9,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // My Bookings ใช้สำหรับ role ผู้ขอใช้รถ (Requester) เท่านั้น
+  if (session.user.role !== 'Requester') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const bookings = await prisma.booking.findMany({
       where: { requesterId: session.user.id },
@@ -28,7 +33,7 @@ export async function GET() {
             id: true,
             name: true,
             email: true,
-          }
+          },
         },
         vehicle: {
           select: {
@@ -37,20 +42,20 @@ export async function GET() {
             brand: true,
             model: true,
             type: true,
-          }
+          },
         },
         driverFeedback: {
           select: {
             id: true,
             rating: true,
             comment: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     // Map bookings to include startLocation as null (since it's not in schema)
-    const bookingsWithStartLocation = bookings.map(booking => ({
+    const bookingsWithStartLocation = bookings.map((booking) => ({
       ...booking,
       startLocation: null, // startLocation was removed from schema
     }));
@@ -61,5 +66,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-
 

@@ -4,6 +4,7 @@ import SignaturePad from './SignaturePad';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
 import { parseBangkokDateTimeLocal, toBangkokDateTimeLocalInput } from '@/lib/dateTime';
+import { requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
 
@@ -45,6 +46,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
   const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
   const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [postPendingEditNotice, setPostPendingEditNotice] = useState(false);
 
   const validateDateTimesLive = (nextStart: string, nextEnd: string) => {
     if (!nextStart || !nextEnd) {
@@ -73,13 +75,14 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       }
       const data: BookingData = await response.json();
       
-      // Check if booking can be edited (only PENDING status)
-      if (data.status !== 'PENDING') {
-        setError('สามารถแก้ไขได้เฉพาะคำขอที่อยู่ในสถานะ PENDING เท่านั้น');
+      if (!requesterMayEditBookingDetails(data.status)) {
+        setPostPendingEditNotice(false);
+        setError('ไม่สามารถแก้ไขคำขอที่อยู่ในสถานะนี้ได้');
         setIsLoadingData(false);
         return;
       }
 
+      setPostPendingEditNotice(data.status !== 'PENDING');
       setDestination(data.endLocation || '');
       setPurpose(data.purpose || '');
       setAdditionalNotes(data.additionalNotes || '');
@@ -90,6 +93,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setSignatureDataUrl(data.requesterSignatureUrl);
       setPassengerPhotoPreview(data.passengerImageUrl);
     } catch (err) {
+      setPostPendingEditNotice(false);
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {
       setIsLoadingData(false);
@@ -112,6 +116,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setSignatureDataUrl(null);
       setPassengerPhotoFile(null);
       setPassengerPhotoPreview(null);
+      setPostPendingEditNotice(false);
     }
   }, [isOpen, bookingId, fetchBookingData]);
 
@@ -288,6 +293,11 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className={`px-8 py-6 overflow-y-auto space-y-4 flex-1 ${variant === 'fullpage' ? '' : ''}`}>
+              {postPendingEditNotice && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  คำขอนี้อนุมัติหรือดำเนินการแล้ว — หลังบันทึก ระบบจะแจ้งให้ผู้ดูแลและคนขับ (ถ้ามี) ทราบถึงการแก้ไข โดยไม่ต้องอนุมัติใหม่
+                </div>
+              )}
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
                 <input 
