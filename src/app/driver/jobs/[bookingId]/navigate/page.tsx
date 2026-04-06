@@ -39,8 +39,6 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
   const [isLoading, setIsLoading] = useState(true);
   const [isEnding, setIsEnding] = useState(false);
   const [error, setError] = useState('');
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationError, setLocationError] = useState('');
   const [endMileage, setEndMileage] = useState<string>('');
 
   const fetchBooking = useCallback(async () => {
@@ -62,26 +60,6 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
   useEffect(() => {
     fetchBooking();
   }, [fetchBooking]);
-
-  // Get current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationError('ไม่สามารถเข้าถึงตำแหน่งปัจจุบันได้');
-        }
-      );
-    } else {
-      setLocationError('เบราว์เซอร์ไม่รองรับการเข้าถึงตำแหน่ง');
-    }
-  }, []);
 
   const handleEndJob = async () => {
     if (!booking) return;
@@ -195,11 +173,6 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
     );
   }
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const mapUrl = currentLocation
-    ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${currentLocation.lat},${currentLocation.lng}&zoom=15`
-    : null;
-
   return (
     <div className="p-4 md:p-8">
       {/* Header */}
@@ -214,80 +187,10 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
           กลับ
         </button>
         <h1 className="text-3xl font-bold text-[#004c80] mb-2">การนำทาง</h1>
-        <p className="text-gray-600">ติดตามตำแหน่งและสิ้นสุดงานเมื่อถึงปลายทาง</p>
+        <p className="text-gray-600">สิ้นสุดงานเมื่อถึงปลายทาง</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Map Section */}
-        <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-          <h2 className="text-xl font-semibold text-[#004c80] mb-6">แผนที่</h2>
-          
-          <div className="space-y-4">
-            {/* Current Location */}
-            {currentLocation ? (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-green-700">
-                  <span className="font-medium">ตำแหน่งปัจจุบัน:</span> {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <p className="text-sm text-yellow-700">
-                  {locationError || 'กำลังโหลดตำแหน่ง...'}
-                </p>
-              </div>
-            )}
-
-            {/* Google Maps Embed */}
-            {googleMapsApiKey && currentLocation ? (
-              <div className="w-full h-96 rounded-lg overflow-hidden">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  src={mapUrl || undefined}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
-            ) : (
-              <div className="w-full h-96 rounded-lg bg-gray-100 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-300 text-gray-600 grid place-items-center">
-                    🗺️
-                  </div>
-                  <p className="text-gray-600">
-                    {!googleMapsApiKey
-                      ? 'กรุณาตั้งค่า NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ใน environment variables'
-                      : 'กำลังโหลดแผนที่...'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Route Info */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
-              <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
-              {booking.purpose && (
-                <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
-              )}
-            </div>
-
-            {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
-            {booking.additionalNotes && (
-              <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-                <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                  <span className="text-amber-600" aria-hidden>📌</span>
-                  หมายเหตุเพิ่มเติม
-                </h3>
-                <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-8">
         {/* Job Info & End Job */}
         <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
           <h2 className="text-xl font-semibold text-[#004c80] mb-6">รายละเอียดงาน</h2>
@@ -295,6 +198,24 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
           <div className="space-y-6">
             {/* Job Details */}
             <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
+                <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
+                {booking.purpose && (
+                  <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
+                )}
+              </div>
+
+              {booking.additionalNotes && (
+                <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                    <span className="text-amber-600" aria-hidden>📌</span>
+                    หมายเหตุเพิ่มเติม
+                  </h3>
+                  <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
+                </div>
+              )}
+
               <div>
                 <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
                 <div className="bg-gray-50 p-3 rounded-lg">

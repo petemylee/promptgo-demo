@@ -23,7 +23,7 @@ type Booking = {
   driver: {
     id: string;
     name: string | null;
-    email: string;
+    email?: string | null;
   } | null;
   vehicle: {
     id: string;
@@ -37,6 +37,85 @@ type Booking = {
     rating: number;
     comment: string | null;
   } | null;
+};
+
+type SessionRole = 'Requester' | 'Admin' | 'Executive' | 'Driver' | string;
+
+const BOOKING_STATUSES = new Set<Booking['status']>([
+  'PENDING',
+  'APPROVED',
+  'CONFIRMED',
+  'REJECTED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'MERGED',
+]);
+
+const asRecord = (v: unknown): Record<string, unknown> | null => {
+  if (typeof v !== 'object' || v === null) return null;
+  return v as Record<string, unknown>;
+};
+
+const asNullableString = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+
+const asIsoOrNull = (v: unknown): string | null => {
+  if (typeof v === 'string' || v instanceof Date) {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
+};
+
+const normalizeBooking = (b: unknown): Booking | null => {
+  const obj = asRecord(b);
+  if (!obj) return null;
+
+  const id = asNullableString(obj.id);
+  if (!id) return null;
+
+  const statusRaw = asNullableString(obj.status);
+  const status: Booking['status'] = statusRaw && BOOKING_STATUSES.has(statusRaw as Booking['status']) ? (statusRaw as Booking['status']) : 'PENDING';
+
+  const driverObj = asRecord(obj.driver);
+  const vehicleObj = asRecord(obj.vehicle);
+  const feedbackObj = asRecord(obj.driverFeedback);
+
+  return {
+    id,
+    purpose: asNullableString(obj.purpose),
+    startLocation: asNullableString(obj.startLocation),
+    endLocation: asNullableString(obj.endLocation),
+    startTime: asIsoOrNull(obj.startTime),
+    endTime: asIsoOrNull(obj.endTime),
+    status,
+    rejectionReason: asNullableString(obj.rejectionReason),
+    rejectedAt: asIsoOrNull(obj.rejectedAt),
+    createdAt: asIsoOrNull(obj.createdAt) ?? new Date().toISOString(),
+    driver: driverObj
+      ? {
+          id: asNullableString(driverObj.id) ?? '',
+          name: asNullableString(driverObj.name),
+          email: asNullableString(driverObj.email),
+        }
+      : null,
+    vehicle: vehicleObj
+      ? {
+          id: asNullableString(vehicleObj.id) ?? '',
+          licensePlate: asNullableString(vehicleObj.licensePlate) ?? '',
+          brand: asNullableString(vehicleObj.brand),
+          model: asNullableString(vehicleObj.model),
+          type: asNullableString(vehicleObj.type),
+        }
+      : null,
+    driverFeedback: feedbackObj
+      ? {
+          id: asNullableString(feedbackObj.id) ?? '',
+          rating: typeof feedbackObj.rating === 'number' ? feedbackObj.rating : Number(feedbackObj.rating),
+          comment: asNullableString(feedbackObj.comment),
+        }
+      : null,
+  };
 };
 
 const StatusBadge = ({ status }: { status: Booking['status'] }) => {
@@ -63,26 +142,6 @@ const InProgressBookingCard = ({
   onCancel: (id: string) => void;
   onEdit: (id: string) => void;
 }) => {
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-  const getMapUrl = () => {
-    if (!booking.endLocation) return null;
-
-    if (googleMapsApiKey) {
-      if (booking.startLocation) {
-        const origin = encodeURIComponent(booking.startLocation);
-        const destination = encodeURIComponent(booking.endLocation);
-        return `https://www.google.com/maps/embed/v1/directions?key=${googleMapsApiKey}&origin=${origin}&destination=${destination}&zoom=12`;
-      } else {
-        const destination = encodeURIComponent(booking.endLocation);
-        return `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${destination}&zoom=12`;
-      }
-    }
-    return null;
-  };
-
-  const mapUrl = getMapUrl();
-
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
       <div className="flex items-start justify-between mb-4">
@@ -95,102 +154,66 @@ const InProgressBookingCard = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h4 className="font-semibold text-[#004c80]">แผนที่เส้นทาง</h4>
-          {mapUrl ? (
-            <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
-              <iframe
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                src={mapUrl}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-          ) : (
-            <div className="w-full h-80 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200">
-              <div className="text-center">
-                <div className="mx-auto mb-4 h-12 w-12 rounded-2xl bg-slate-200 text-slate-500 grid place-items-center text-2xl">
-                  🗺️
-                </div>
-                <p className="text-slate-600 text-sm">
-                  {!googleMapsApiKey
-                    ? 'กรุณาตั้งค่า NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
-                    : !booking.endLocation
-                    ? 'ข้อมูลตำแหน่งปลายทางไม่ครบถ้วน'
-                    : 'ไม่สามารถแสดงแผนที่ได้'}
-                </p>
-              </div>
-            </div>
+      <div className="space-y-4">
+        <h4 className="font-semibold text-[#004c80]">รายละเอียด</h4>
+        <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-2">
+          {booking.startLocation && (
+            <p className="text-sm">
+              <span className="font-medium text-gray-700">จุดเริ่มต้น:</span>{' '}
+              <span className="text-gray-900">{booking.startLocation}</span>
+            </p>
+          )}
+          <p className="text-sm">
+            <span className="font-medium text-gray-700">ปลายทาง:</span>{' '}
+            <span className="text-gray-900">{booking.endLocation || '-'}</span>
+          </p>
+        </div>
+        {booking.driver && (
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <h5 className="font-medium text-gray-700 mb-2">คนขับ</h5>
+            <p className="text-sm text-gray-900">{booking.driver.name || booking.driver.email || '-'}</p>
+            {!!booking.driver.email && <p className="text-xs text-gray-500">{booking.driver.email}</p>}
+          </div>
+        )}
+        {booking.vehicle && (
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <h5 className="font-medium text-gray-700 mb-2">ยานพาหนะ</h5>
+            <p className="text-sm font-semibold text-gray-900">{booking.vehicle.licensePlate}</p>
+            <p className="text-xs text-gray-600">
+              {booking.vehicle.brand} {booking.vehicle.model}
+              {booking.vehicle.type && ` (${booking.vehicle.type})`}
+            </p>
+          </div>
+        )}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-1">
+          <p className="text-sm">
+            <span className="font-medium text-gray-700">เวลาเริ่ม:</span>{' '}
+            <span className="text-gray-900">
+              {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
+            </span>
+          </p>
+          {booking.endTime && (
+            <p className="text-sm">
+              <span className="font-medium text-gray-700">เวลาสิ้นสุด:</span>{' '}
+              <span className="text-gray-900">{new Date(booking.endTime).toLocaleString('th-TH')}</span>
+            </p>
           )}
         </div>
-
-        <div className="space-y-4">
-          <h4 className="font-semibold text-[#004c80]">รายละเอียด</h4>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-2">
-            {booking.startLocation && (
-              <p className="text-sm">
-                <span className="font-medium text-gray-700">จุดเริ่มต้น:</span>{' '}
-                <span className="text-gray-900">{booking.startLocation}</span>
-              </p>
-            )}
-            <p className="text-sm">
-              <span className="font-medium text-gray-700">ปลายทาง:</span>{' '}
-              <span className="text-gray-900">{booking.endLocation || '-'}</span>
-            </p>
-          </div>
-          {booking.driver && (
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h5 className="font-medium text-gray-700 mb-2">คนขับ</h5>
-              <p className="text-sm text-gray-900">{booking.driver.name || booking.driver.email}</p>
-              <p className="text-xs text-gray-500">{booking.driver.email}</p>
-            </div>
-          )}
-          {booking.vehicle && (
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h5 className="font-medium text-gray-700 mb-2">ยานพาหนะ</h5>
-              <p className="text-sm font-semibold text-gray-900">{booking.vehicle.licensePlate}</p>
-              <p className="text-xs text-gray-600">
-                {booking.vehicle.brand} {booking.vehicle.model}
-                {booking.vehicle.type && ` (${booking.vehicle.type})`}
-              </p>
-            </div>
-          )}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-1">
-            <p className="text-sm">
-              <span className="font-medium text-gray-700">เวลาเริ่ม:</span>{' '}
-              <span className="text-gray-900">
-                {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
-              </span>
-            </p>
-            {booking.endTime && (
-              <p className="text-sm">
-                <span className="font-medium text-gray-700">เวลาสิ้นสุด:</span>{' '}
-                <span className="text-gray-900">
-                  {new Date(booking.endTime).toLocaleString('th-TH')}
-                </span>
-              </p>
-            )}
-          </div>
-          <div className="pt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => onEdit(booking.id)}
-              className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
-            >
-              แก้ไขรายละเอียด
-            </button>
-            <button
-              type="button"
-              onClick={() => onCancel(booking.id)}
-              className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
-            >
-              ยกเลิกคำขอ
-            </button>
-          </div>
+        <div className="pt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(booking.id)}
+            className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+          >
+            แก้ไขรายละเอียด
+          </button>
+          <button
+            type="button"
+            onClick={() => onCancel(booking.id)}
+            className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+          >
+            ยกเลิกคำขอ
+          </button>
         </div>
       </div>
     </div>
@@ -198,7 +221,7 @@ const InProgressBookingCard = ({
 };
 
 export default function MyBookingsPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,7 +256,10 @@ export default function MyBookingsPage() {
     const load = async () => {
       setIsLoading(true);
       setLoadError(null);
-      const res = await fetch('/api/my/bookings');
+      const role: SessionRole | undefined = session?.user?.role as SessionRole | undefined;
+      const endpoint = role === 'Admin' || role === 'Executive' ? '/api/bookings?all=true' : '/api/my/bookings';
+
+      const res = await fetch(endpoint);
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         setBookings([]);
@@ -241,11 +267,21 @@ export default function MyBookingsPage() {
         setIsLoading(false);
         return;
       }
-      setBookings(await res.json());
+      const data = await res.json();
+      const normalized: Booking[] = Array.isArray(data)
+        ? data.map(normalizeBooking).filter((x): x is Booking => x !== null)
+        : [];
+
+      setBookings(
+        normalized.map((b) => ({
+          ...b,
+          startLocation: b.startLocation ?? null,
+        }))
+      );
       setIsLoading(false);
     };
     if (status === 'authenticated') load();
-  }, [status]);
+  }, [status, session]);
 
   useEffect(() => {
     const handleOpenModal = () => setShowCreateForm(true);
@@ -315,7 +351,10 @@ export default function MyBookingsPage() {
   };
 
   const reloadBookings = async () => {
-    const res = await fetch('/api/my/bookings');
+    const role: SessionRole | undefined = session?.user?.role as SessionRole | undefined;
+    const endpoint = role === 'Admin' || role === 'Executive' ? '/api/bookings?all=true' : '/api/my/bookings';
+
+    const res = await fetch(endpoint);
     if (!res.ok) {
       const err = await res.json().catch(() => null);
       setBookings([]);
@@ -323,7 +362,17 @@ export default function MyBookingsPage() {
       return;
     }
     setLoadError(null);
-    setBookings(await res.json());
+    const data = await res.json();
+    const normalized: Booking[] = Array.isArray(data)
+      ? data.map(normalizeBooking).filter((x): x is Booking => x !== null)
+      : [];
+
+    setBookings(
+      normalized.map((b) => ({
+        ...b,
+        startLocation: b.startLocation ?? null,
+      }))
+    );
   };
 
   const filteredCompleted = useMemo(() => {

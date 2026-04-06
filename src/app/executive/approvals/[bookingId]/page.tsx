@@ -412,30 +412,6 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p><span className="font-medium">ไป:</span> {booking.endLocation}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
-                {booking.endLocation && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium text-gray-700 mb-2">แผนที่:</p>
-                    <div className="w-full h-48 rounded-lg overflow-hidden border border-gray-300">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0 }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&q=${encodeURIComponent(booking.endLocation)}`}
-                      />
-                    </div>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.endLocation)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-[#0076c3] hover:underline mt-2 inline-block"
-                    >
-                      เปิดใน Google Maps
-                    </a>
-                  </div>
-                )}
               </div>
             </div>
 
