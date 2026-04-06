@@ -21,6 +21,7 @@ export async function GET() {
       select: {
         id: true,
         purpose: true,
+        startLocation: true,
         endLocation: true,
         startTime: true,
         endTime: true,
@@ -33,6 +34,7 @@ export async function GET() {
             id: true,
             name: true,
             email: true,
+            profileImageUrl: true,
           },
         },
         vehicle: {
@@ -42,6 +44,7 @@ export async function GET() {
             brand: true,
             model: true,
             type: true,
+            vehicleImageUrl: true,
           },
         },
         driverFeedback: {
@@ -53,14 +56,7 @@ export async function GET() {
         },
       },
     });
-
-    // Map bookings to include startLocation as null (since it's not in schema)
-    const bookingsWithStartLocation = bookings.map((booking) => ({
-      ...booking,
-      startLocation: null, // startLocation was removed from schema
-    }));
-
-    return NextResponse.json(bookingsWithStartLocation);
+    return NextResponse.json(bookings);
   } catch (err) {
     console.error('GET /api/my/bookings error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

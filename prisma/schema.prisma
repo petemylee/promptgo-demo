@@ -30,7 +30,6 @@ enum BookingStatus {
 
 enum TripType {
   ONE_WAY
-  PICK_UP
   ROUND_TRIP
 }
 
@@ -189,6 +188,7 @@ model Vehicle {
 model Booking {
   id                  String         @id @default(cuid())
   purpose             String?
+  startLocation       String?
   endLocation         String?
   startTime           DateTime?
   endTime             DateTime?

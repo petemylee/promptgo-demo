@@ -14,6 +14,7 @@ interface Vehicle {
   capacity: number | null;
   passengerCapacity: number | null;
   currentMileage: number | null;
+  vehicleImageUrl?: string | null;
 }
 
 export default function VehicleManagementPage() {

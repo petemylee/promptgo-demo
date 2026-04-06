@@ -18,6 +18,7 @@ interface BookingDetailModalProps {
 interface BookingDetail {
   id: string;
   purpose: string | null;
+  startLocation: string | null;
   endLocation: string | null;
   additionalNotes: string | null;
   startTime: string | null;
@@ -44,11 +45,13 @@ interface BookingDetail {
     brand: string | null;
     color: string | null;
     model: string | null;
+    vehicleImageUrl?: string | null;
   } | null;
   driver: {
     name: string | null;
     email: string;
     phoneNumber: string | null;
+    profileImageUrl?: string | null;
   } | null;
   adminApprover: {
     name: string | null;
@@ -194,13 +197,13 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
             {/* Trip Details */}
             <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
               <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
+              <p><span className="font-medium">ต้นทาง:</span> {booking.startLocation || '-'}</p>
               <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
               <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>
               {booking.tripType && (
                 <p><span className="font-medium">ประเภทการเดินทาง:</span> {
-                  booking.tripType === 'ONE_WAY' ? 'ส่งอย่างเดียว' :
-                  booking.tripType === 'PICK_UP' ? 'รับอย่างเดียว' :
-                  booking.tripType === 'ROUND_TRIP' ? 'ไป-กลับ/รอรับ' :
+                  booking.tripType === 'ONE_WAY' || booking.tripType === 'PICK_UP' ? 'ส่ง' :
+                  booking.tripType === 'ROUND_TRIP' ? 'ส่ง/รับกลับ' :
                   booking.tripType
                 }</p>
               )}
@@ -231,6 +234,19 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
             {booking.vehicle && (
               <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
                 <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
+                {booking.vehicle.vehicleImageUrl && (
+                  <div className="mb-3">
+                    <Image
+                      src={booking.vehicle.vehicleImageUrl}
+                      alt="Vehicle Photo"
+                      width={320}
+                      height={200}
+                      sizes="(max-width: 640px) 100vw, 320px"
+                      className="rounded-lg object-cover ring-1 ring-black/10"
+                      style={{ width: '100%', height: 'auto' }}
+                    />
+                  </div>
+                )}
                 <p>{booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}</p>
                 <p className="text-sm text-slate-600">สีรถ: {booking.vehicle.color || '-'}</p>
               </div>
@@ -239,6 +255,17 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
             {booking.driver && (
               <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
                 <h3 className="font-semibold text-[#004c80] mb-2">คนขับ</h3>
+                {booking.driver.profileImageUrl && (
+                  <div className="mb-3">
+                    <Image
+                      src={booking.driver.profileImageUrl}
+                      alt="Driver Photo"
+                      width={160}
+                      height={160}
+                      className="rounded-lg object-cover ring-1 ring-black/10"
+                    />
+                  </div>
+                )}
                 <p>{booking.driver.name || booking.driver.email}</p>
                 {booking.driver.phoneNumber && (
                   <p className="text-sm text-slate-600">โทร: {booking.driver.phoneNumber}</p>

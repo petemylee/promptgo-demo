@@ -25,10 +25,10 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl, additionalNotes } = body;
+    const { startLocation, endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl, additionalNotes } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
-    if (!endLocation || !purpose || !startTime || !endTime) {
+    if (!startLocation || !endLocation || !purpose || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -39,8 +39,10 @@ export async function POST(req: Request) {
     }
 
     // ตรวจสอบ tripType
-    const validTripTypes = ['ONE_WAY', 'PICK_UP', 'ROUND_TRIP'];
-    if (tripType && !validTripTypes.includes(tripType)) {
+    const validTripTypes = ['ONE_WAY', 'ROUND_TRIP'];
+    let normalizedTripType = tripType || null;
+    if (normalizedTripType === 'PICK_UP') normalizedTripType = 'ONE_WAY';
+    if (normalizedTripType && !validTripTypes.includes(normalizedTripType)) {
       return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
     }
 
@@ -69,12 +71,13 @@ export async function POST(req: Request) {
     }
 
     const createData = {
+      startLocation,
       endLocation,
       purpose,
       startTime: parsedStartTime,
       endTime: parsedEndTime,
       passengerCount: passengerCountNum,
-      tripType: tripType || null,
+      tripType: normalizedTripType,
       expresswayOption: expresswayOption || null,
       requestForSelf: isForSelf,
       travelerName: isForSelf ? null : (travelerName?.trim() || null),
@@ -256,16 +259,20 @@ export async function GET(req: Request) {
             },
             vehicle: {
               select: {
+                id: true,
                 licensePlate: true,
                 brand: true,
                 model: true,
                 type: true,
+                vehicleImageUrl: true,
               }
             },
             driver: {
               select: {
                 id: true,
                 name: true,
+                email: true,
+                profileImageUrl: true,
               }
             },
             driverFeedback: {

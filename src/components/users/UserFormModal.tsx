@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { ROLES, type Role } from '@/types/roles';
 
 interface User {
@@ -9,6 +10,7 @@ interface User {
   role: Role;
   position?: string | null;
   phoneNumber?: string | null;
+  profileImageUrl?: string | null;
 }
 
 interface UserFormModalProps {
@@ -28,6 +30,9 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedDriverPhoto, setSelectedDriverPhoto] = useState<File | null>(null);
+  const [driverPhotoPreviewUrl, setDriverPhotoPreviewUrl] = useState<string | null>(null);
+  const [existingDriverPhotoUrl, setExistingDriverPhotoUrl] = useState<string | null>(null);
   
   const isEditMode = !!initialData;
 
@@ -39,6 +44,9 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setPosition(initialData.position || '');
       setPhoneNumber(initialData.phoneNumber || '');
       setPassword('');
+      setExistingDriverPhotoUrl(initialData.profileImageUrl ?? null);
+      setSelectedDriverPhoto(null);
+      setDriverPhotoPreviewUrl(null);
     } else {
       setName('');
       setEmail('');
@@ -46,8 +54,18 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setRole('Requester');
       setPosition('');
       setPhoneNumber('');
+      setExistingDriverPhotoUrl(null);
+      setSelectedDriverPhoto(null);
+      setDriverPhotoPreviewUrl(null);
     }
   }, [initialData, isEditMode]);
+
+  useEffect(() => {
+    if (!selectedDriverPhoto) return;
+    const url = URL.createObjectURL(selectedDriverPhoto);
+    setDriverPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedDriverPhoto]);
 
   if (variant === 'modal' && !isOpen) return null;
   if (variant === 'fullpage' && !isOpen) return null;
@@ -105,6 +123,27 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} user.`);
+      }
+
+      const savedUser = await response.json().catch(() => null);
+      const userId: string | null = (isEditMode ? initialData?.id : savedUser?.id) ?? null;
+
+      const shouldUploadDriverPhoto = role === 'Driver' && !!selectedDriverPhoto;
+      if (shouldUploadDriverPhoto) {
+        if (!userId) {
+          throw new Error('ไม่พบ userId สำหรับอัปโหลดรูปคนขับ');
+        }
+        const formData = new FormData();
+        formData.append('photo', selectedDriverPhoto as File);
+        formData.append('userId', userId);
+        const uploadRes = await fetch('/api/upload/driver-photo', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const uploadData = await uploadRes.json().catch(() => ({}));
+          throw new Error(uploadData?.error || `Failed to upload driver photo (HTTP ${uploadRes.status})`);
+        }
       }
       
       onUserUpdated();
@@ -180,6 +219,32 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
             ))}
           </select>
         </div>
+
+        {role === 'Driver' && (
+          <div className="mb-6">
+            <label className="block mb-2 text-sm font-medium text-gray-700">รูปคนขับ</label>
+            <div className="flex flex-col gap-3">
+              {(driverPhotoPreviewUrl || existingDriverPhotoUrl) && (
+                <div className="w-full">
+                  <Image
+                    src={driverPhotoPreviewUrl || existingDriverPhotoUrl || ''}
+                    alt="Driver"
+                    width={320}
+                    height={320}
+                    className="h-32 w-32 rounded-xl ring-1 ring-black/10 object-cover"
+                  />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedDriverPhoto(e.target.files?.[0] ?? null)}
+                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60 bg-white"
+              />
+              <p className="text-xs text-gray-500">รองรับไฟล์รูปภาพ ขนาดไม่เกิน 5MB</p>
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-red-500 text-center mb-2">{error}</p>}
       </div>

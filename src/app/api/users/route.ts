@@ -47,6 +47,7 @@ export async function GET() {
         role: true,
         position: true,
         phoneNumber: true,
+        profileImageUrl: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

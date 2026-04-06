@@ -30,6 +30,24 @@ export async function GET(
   }
 
   try {
+    const bookingForAuth = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { requesterId: true, driverId: true },
+    });
+
+    if (!bookingForAuth) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    const role = session.user.role;
+    const isAdminOrExec = role === 'Admin' || role === 'Executive';
+    const isRequester = role === 'Requester' && bookingForAuth.requesterId === session.user.id;
+    const isDriver = role === 'Driver' && bookingForAuth.driverId === session.user.id;
+
+    if (!isAdminOrExec && !isRequester && !isDriver) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -111,6 +129,7 @@ export async function PATCH(
       driverId, 
       rejectionReason,
       requesterSignatureUrl,
+      startLocation,
       endLocation,
       purpose,
       startTime,
@@ -198,7 +217,7 @@ export async function PATCH(
       }
 
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
-      if (endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
+      if (startLocation !== undefined || endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
           passengerImageUrl !== undefined || additionalNotes !== undefined) {
         if (!requesterMayEditBookingDetails(bookingForAuth.status)) {
@@ -209,6 +228,7 @@ export async function PATCH(
 
         // อัปเดตข้อมูลการจอง
         const updateData: {
+          startLocation?: string;
           endLocation?: string;
           purpose?: string;
           startTime?: Date | null;
@@ -219,6 +239,7 @@ export async function PATCH(
           requesterSignatureUrl?: string | null;
           additionalNotes?: string | null;
         } = {};
+        if (startLocation !== undefined) updateData.startLocation = startLocation;
         if (endLocation !== undefined) updateData.endLocation = endLocation;
         if (purpose !== undefined) updateData.purpose = purpose;
         if (additionalNotes !== undefined) updateData.additionalNotes = additionalNotes?.trim() || null;
@@ -249,7 +270,14 @@ export async function PATCH(
             ? passengerCount 
             : passengerCount ? parseInt(passengerCount.toString(), 10) : null;
         }
-        if (tripType !== undefined) updateData.tripType = tripType || null;
+        if (tripType !== undefined) {
+          let normalizedTrip = tripType || null;
+          if (normalizedTrip === 'PICK_UP') normalizedTrip = 'ONE_WAY';
+          if (normalizedTrip && normalizedTrip !== 'ONE_WAY' && normalizedTrip !== 'ROUND_TRIP') {
+            return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
+          }
+          updateData.tripType = normalizedTrip;
+        }
         if (passengerImageUrl !== undefined) updateData.passengerImageUrl = passengerImageUrl || null;
         if (requesterSignatureUrl !== undefined) updateData.requesterSignatureUrl = requesterSignatureUrl || null;
 

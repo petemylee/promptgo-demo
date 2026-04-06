@@ -22,6 +22,8 @@ export async function GET() {
         name: true,
         email: true,
         position: true,
+        phoneNumber: true,
+        profileImageUrl: true,
       },
       orderBy: { name: 'asc' },
     });

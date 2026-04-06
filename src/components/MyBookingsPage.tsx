@@ -2,6 +2,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import EditBookingModal from '@/components/EditBookingModal';
@@ -24,6 +25,7 @@ type Booking = {
     id: string;
     name: string | null;
     email?: string | null;
+    profileImageUrl?: string | null;
   } | null;
   vehicle: {
     id: string;
@@ -31,6 +33,7 @@ type Booking = {
     brand: string | null;
     model: string | null;
     type: string | null;
+    vehicleImageUrl?: string | null;
   } | null;
   driverFeedback?: {
     id: string;
@@ -97,6 +100,7 @@ const normalizeBooking = (b: unknown): Booking | null => {
           id: asNullableString(driverObj.id) ?? '',
           name: asNullableString(driverObj.name),
           email: asNullableString(driverObj.email),
+          profileImageUrl: asNullableString(driverObj.profileImageUrl),
         }
       : null,
     vehicle: vehicleObj
@@ -106,6 +110,7 @@ const normalizeBooking = (b: unknown): Booking | null => {
           brand: asNullableString(vehicleObj.brand),
           model: asNullableString(vehicleObj.model),
           type: asNullableString(vehicleObj.type),
+          vehicleImageUrl: asNullableString(vehicleObj.vehicleImageUrl),
         }
       : null,
     driverFeedback: feedbackObj
@@ -137,14 +142,16 @@ const InProgressBookingCard = ({
   booking,
   onCancel,
   onEdit,
+  onOpenImage,
 }: {
   booking: Booking;
   onCancel: (id: string) => void;
   onEdit: (id: string) => void;
+  onOpenImage: (src: string, alt: string) => void;
 }) => {
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-semibold text-[#004c80]">Booking #{booking.id.substring(0, 8)}</h3>
@@ -171,6 +178,24 @@ const InProgressBookingCard = ({
         {booking.driver && (
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h5 className="font-medium text-gray-700 mb-2">คนขับ</h5>
+            {booking.driver.profileImageUrl && (
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenImage(booking.driver!.profileImageUrl!, 'Driver Photo')}
+                  className="inline-flex rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  aria-label="ขยายรูปคนขับ"
+                >
+                  <Image
+                    src={booking.driver.profileImageUrl}
+                    alt="Driver Photo"
+                    width={80}
+                    height={80}
+                    className="rounded-xl object-cover ring-1 ring-black/10"
+                  />
+                </button>
+              </div>
+            )}
             <p className="text-sm text-gray-900">{booking.driver.name || booking.driver.email || '-'}</p>
             {!!booking.driver.email && <p className="text-xs text-gray-500">{booking.driver.email}</p>}
           </div>
@@ -178,6 +203,25 @@ const InProgressBookingCard = ({
         {booking.vehicle && (
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h5 className="font-medium text-gray-700 mb-2">ยานพาหนะ</h5>
+            {booking.vehicle.vehicleImageUrl && (
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenImage(booking.vehicle!.vehicleImageUrl!, 'Vehicle Photo')}
+                  className="inline-flex rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  aria-label="ขยายรูปรถ"
+                >
+                  <Image
+                    src={booking.vehicle.vehicleImageUrl}
+                    alt="Vehicle Photo"
+                    width={120}
+                    height={80}
+                    style={{ width: 'auto', height: 'auto' }}
+                    className="rounded-xl object-cover ring-1 ring-black/10"
+                  />
+                </button>
+              </div>
+            )}
             <p className="text-sm font-semibold text-gray-900">{booking.vehicle.licensePlate}</p>
             <p className="text-xs text-gray-600">
               {booking.vehicle.brand} {booking.vehicle.model}
@@ -234,6 +278,29 @@ export default function MyBookingsPage() {
   const [feedbackModal, setFeedbackModal] = useState<{ bookingId: string; driverId: string; driverName: string | null } | null>(null);
   const [expandedBookingIds, setExpandedBookingIds] = useState<Set<string>>(() => new Set());
   const [isDesktop, setIsDesktop] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [lightboxAlt, setLightboxAlt] = useState<string>('Image');
+
+  const openLightbox = (src: string, alt: string) => {
+    setLightboxSrc(src);
+    setLightboxAlt(alt);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxSrc(null);
+  };
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [lightboxOpen]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -480,10 +547,16 @@ export default function MyBookingsPage() {
 
         {!isLoading && inProgressBookings.length > 0 && (
           <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
-            <h2 className="text-xl font-bold text-[#004c80] mb-4">งานที่กำลังดำเนินการ</h2>
+            <h2 className="text-xl font-bold text-[#004c80] mb-4">รายการที่กำลังเดินทาง</h2>
             <div className="space-y-6">
               {inProgressBookings.map((booking) => (
-                <InProgressBookingCard key={booking.id} booking={booking} onCancel={handleCancel} onEdit={handleEdit} />
+                <InProgressBookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onCancel={handleCancel}
+                  onEdit={handleEdit}
+                  onOpenImage={openLightbox}
+                />
               ))}
             </div>
           </div>
@@ -720,6 +793,37 @@ export default function MyBookingsPage() {
           />
         )}
       </div>
+
+      {lightboxOpen && lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/70 p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="แสดงรูปขนาดใหญ่"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-[90vw]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeLightbox}
+              className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-white text-slate-700 shadow ring-1 ring-black/10 hover:bg-slate-50"
+              aria-label="ปิด"
+            >
+              ✕
+            </button>
+            <Image
+              src={lightboxSrc}
+              alt={lightboxAlt}
+              width={1200}
+              height={900}
+              className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain bg-white"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

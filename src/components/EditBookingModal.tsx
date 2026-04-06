@@ -6,7 +6,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { parseBangkokDateTimeLocal, toBangkokDateTimeLocalInput } from '@/lib/dateTime';
 import { requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
-type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
+type TripType = 'ONE_WAY' | 'ROUND_TRIP';
 
 interface EditBookingModalProps {
   isOpen?: boolean;
@@ -18,6 +18,7 @@ interface EditBookingModalProps {
 
 interface BookingData {
   id: string;
+  startLocation: string | null;
   endLocation: string | null;
   purpose: string | null;
   additionalNotes: string | null;
@@ -31,6 +32,7 @@ interface BookingData {
 }
 
 export default function EditBookingModal({ isOpen = true, onClose, bookingId, onUpdated, variant = 'modal' }: EditBookingModalProps) {
+  const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -83,13 +85,15 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       }
 
       setPostPendingEditNotice(data.status !== 'PENDING');
+      setStartLocation(data.startLocation || '');
       setDestination(data.endLocation || '');
       setPurpose(data.purpose || '');
       setAdditionalNotes(data.additionalNotes || '');
       setStartTime(toBangkokDateTimeLocalInput(data.startTime));
       setEndTime(toBangkokDateTimeLocalInput(data.endTime));
       setPassengerCount(data.passengerCount?.toString() || '');
-      setTripType(data.tripType || '');
+      const rawTrip = String(data.tripType ?? '');
+      setTripType(rawTrip === 'PICK_UP' ? 'ONE_WAY' : (rawTrip as TripType | ''));
       setSignatureDataUrl(data.requesterSignatureUrl);
       setPassengerPhotoPreview(data.passengerImageUrl);
     } catch (err) {
@@ -105,6 +109,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       fetchBookingData();
     } else {
       // Reset form when modal closes
+      setStartLocation('');
       setDestination('');
       setPurpose('');
       setAdditionalNotes('');
@@ -240,6 +245,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          startLocation,
           endLocation: destination,
           purpose,
           additionalNotes: additionalNotes?.trim() || null,
@@ -298,6 +304,15 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                   คำขอนี้อนุมัติหรือดำเนินการแล้ว — หลังบันทึก ระบบจะแจ้งให้ผู้ดูแลและคนขับ (ถ้ามี) ทราบถึงการแก้ไข โดยไม่ต้องอนุมัติใหม่
                 </div>
               )}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ต้นทาง*</label>
+                <input
+                  value={startLocation}
+                  onChange={(e) => setStartLocation(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  required
+                />
+              </div>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
                 <input 
@@ -369,19 +384,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                       className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                       required
                     />
-                    <span className="text-sm text-gray-700">ส่งอย่างเดียว</span>
-                  </label>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="tripType"
-                      value="PICK_UP"
-                      checked={tripType === 'PICK_UP'}
-                      onChange={(e) => setTripType(e.target.value as TripType)}
-                      className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
-                      required
-                    />
-                    <span className="text-sm text-gray-700">รับอย่างเดียว</span>
+                    <span className="text-sm text-gray-700">ส่ง</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -393,7 +396,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                       className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                       required
                     />
-                    <span className="text-sm text-gray-700">ไป-กลับ/รอรับ</span>
+                    <span className="text-sm text-gray-700">ส่ง/รับกลับ</span>
                   </label>
                 </div>
               </div>

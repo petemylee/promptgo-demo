@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface Vehicle {
   id: string;
@@ -11,6 +12,7 @@ interface Vehicle {
   capacity: number | null;
   passengerCapacity: number | null;
   currentMileage: number | null;
+  vehicleImageUrl?: string | null;
 }
 
 interface VehicleFormModalProps {
@@ -32,6 +34,9 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
   const [currentMileage, setCurrentMileage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   
   const isEditMode = !!initialData;
 
@@ -45,6 +50,9 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setCapacity(initialData.capacity?.toString() || '');
       setPassengerCapacity(initialData.passengerCapacity?.toString() || '');
       setCurrentMileage(initialData.currentMileage?.toString() || '');
+      setExistingImageUrl(initialData.vehicleImageUrl ?? null);
+      setSelectedImageFile(null);
+      setImagePreviewUrl(null);
     } else {
       setLicensePlate('');
       setBrand('');
@@ -54,8 +62,18 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       setCapacity('');
       setPassengerCapacity('');
       setCurrentMileage('');
+      setExistingImageUrl(null);
+      setSelectedImageFile(null);
+      setImagePreviewUrl(null);
     }
   }, [initialData, isEditMode]);
+
+  useEffect(() => {
+    if (!selectedImageFile) return;
+    const url = URL.createObjectURL(selectedImageFile);
+    setImagePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedImageFile]);
 
   if (variant === 'modal' && !isOpen) return null;
   if (variant === 'fullpage' && !isOpen) return null;
@@ -89,6 +107,27 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} vehicle.`);
+      }
+
+      const savedVehicle = await response.json().catch(() => null);
+      const vehicleId: string | null =
+        (isEditMode ? initialData?.id : savedVehicle?.id) ?? null;
+
+      if (selectedImageFile) {
+        if (!vehicleId) {
+          throw new Error('ไม่พบ vehicleId สำหรับอัปโหลดรูป');
+        }
+        const formData = new FormData();
+        formData.append('photo', selectedImageFile);
+        formData.append('vehicleId', vehicleId);
+        const uploadRes = await fetch('/api/upload/vehicle-image', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const uploadData = await uploadRes.json().catch(() => ({}));
+          throw new Error(uploadData?.error || `Failed to upload vehicle image (HTTP ${uploadRes.status})`);
+        }
       }
       
       onVehicleUpdated();
@@ -163,6 +202,31 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
         <div className="mb-6">
           <label className="block mb-2 text-sm font-medium text-gray-700">เลขไมล์ปัจจุบัน (กม.)</label>
           <input type="number" step="1" min="0" value={currentMileage} onChange={(e) => setCurrentMileage(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="เช่น 50000" />
+        </div>
+
+        <div className="mb-6">
+          <label className="block mb-2 text-sm font-medium text-gray-700">รูปภาพรถยนต์</label>
+          <div className="flex flex-col gap-3">
+            {(imagePreviewUrl || existingImageUrl) && (
+              <div className="w-full">
+                <Image
+                  src={imagePreviewUrl || existingImageUrl || ''}
+                  alt="Vehicle"
+                  width={640}
+                  height={360}
+                  className="w-full h-auto max-w-sm rounded-xl ring-1 ring-black/10 object-cover"
+                  priority={variant === 'fullpage'}
+                />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setSelectedImageFile(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60 bg-white"
+            />
+            <p className="text-xs text-gray-500">รองรับไฟล์รูปภาพ ขนาดไม่เกิน 5MB</p>
+          </div>
         </div>
 
         {error && <p className="text-red-500 text-center mb-2">{error}</p>}

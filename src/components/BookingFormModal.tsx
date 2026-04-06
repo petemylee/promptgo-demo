@@ -4,7 +4,7 @@ import Image from 'next/image';
 import SignaturePad from './SignaturePad';
 import { parseBangkokDateTimeLocal } from '@/lib/dateTime';
 
-type TripType = 'ONE_WAY' | 'PICK_UP' | 'ROUND_TRIP';
+type TripType = 'ONE_WAY' | 'ROUND_TRIP';
 
 type ExpresswayOption = 'EXPRESSWAY' | 'NO_EXPRESSWAY';
 
@@ -15,8 +15,11 @@ interface BookingFormModalProps {
   variant?: 'modal' | 'fullpage';
 }
 
+const DEFAULT_START_LOCATION = 'กระทรวงการคลัง';
+
 export default function BookingFormModal({ isOpen = true, onClose, onCreated, variant = 'modal' }: BookingFormModalProps) {
   type SignatureMode = 'PROFILE' | 'NEW' | 'NONE';
+  const [startLocation, setStartLocation] = useState(DEFAULT_START_LOCATION);
   const [destination, setDestination] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -82,6 +85,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
 
   useEffect(() => {
     if (variant === 'modal' && !isOpen) {
+      setStartLocation(DEFAULT_START_LOCATION);
       setDestination('');
       setPurpose('');
       setStartTime('');
@@ -262,6 +266,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          startLocation,
           endLocation: destination,
           purpose,
           startTime: parsedStartTime,
@@ -363,6 +368,15 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             </div>
           )}
           <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ต้นทาง*</label>
+            <input
+              value={startLocation}
+              onChange={(e) => setStartLocation(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+              required
+            />
+          </div>
+          <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
             <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
@@ -416,6 +430,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             />
           </div>
           <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">ประเภทการเดินทาง*</label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -427,19 +442,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
                   className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                   required
                 />
-                <span className="text-sm text-gray-700">ส่งอย่างเดียว</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="tripType"
-                  value="PICK_UP"
-                  checked={tripType === 'PICK_UP'}
-                  onChange={(e) => setTripType(e.target.value as TripType)}
-                  className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
-                  required
-                />
-                <span className="text-sm text-gray-700">รับอย่างเดียว</span>
+                <span className="text-sm text-gray-700">ส่ง</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -451,7 +454,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
                   className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
                   required
                 />
-                <span className="text-sm text-gray-700">ไป-กลับ/รอรับ</span>
+                <span className="text-sm text-gray-700">ส่ง/รับกลับ</span>
               </label>
             </div>
           </div>

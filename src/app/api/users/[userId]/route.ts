@@ -121,7 +121,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { name, email, role, position, phoneNumber, isActive, signatureImageUrl } = body;
+    const { name, email, role, position, phoneNumber, isActive, signatureImageUrl, profileImageUrl } = body;
 
     // ตรวจสอบสิทธิ์: Admin แก้ไขได้ทุกคน (รวม role), ผู้ใช้ทุก role แก้ไขข้อมูลตัวเองได้ (ไม่รวม role)
     const isEditingSelf = session.user.id === userId;
@@ -138,6 +138,7 @@ export async function PATCH(
           role,
           position: position.trim(),
           phoneNumber: phoneNumber?.trim() || null,
+          profileImageUrl: profileImageUrl !== undefined ? (profileImageUrl?.trim() || null) : undefined,
           ...(typeof isActive === 'boolean' ? { isActive } : {}),
         },
       });

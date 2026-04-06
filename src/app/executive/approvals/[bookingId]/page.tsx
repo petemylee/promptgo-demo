@@ -467,7 +467,11 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                             alt="Vehicle Photo"
                             width={200}
                             height={150}
+                            sizes="(max-width: 640px) 100vw, 200px"
+                            loading="eager"
                             className="rounded-lg object-cover mt-2"
+                            style={{ width: 'auto', height: 'auto' }}
+                            priority
                           />
                         </div>
                       )}
@@ -483,7 +487,11 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                                 alt="Vehicle Photo"
                                 width={200}
                                 height={150}
+                                sizes="(max-width: 640px) 100vw, 200px"
+                                loading="eager"
                                 className="rounded-lg object-cover"
+                                style={{ width: 'auto', height: 'auto' }}
+                                priority
                               />
                             </div>
                           )}
