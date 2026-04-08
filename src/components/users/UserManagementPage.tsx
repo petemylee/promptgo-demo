@@ -1,8 +1,48 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { ROLES, type Role } from '@/types/roles';
+
+function cellValueToPlain(value: ExcelJS.CellValue): unknown {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value instanceof Date) return value;
+  if (typeof value === 'object') {
+    const o = value as unknown as Record<string, unknown>;
+    if ('result' in o && o.result !== undefined && o.result !== null) return o.result;
+    if (Array.isArray(o.richText)) {
+      return (o.richText as { text: string }[]).map((t) => t.text).join('');
+    }
+    if (typeof o.text === 'string') return o.text;
+  }
+  return String(value);
+}
+
+/** แปลงชีตแรกเป็นเมทริกซ์แบบเดียวกับ XLSX.utils.sheet_to_json(..., { header: 1, defval: '' }) */
+function worksheetToMatrix(worksheet: ExcelJS.Worksheet): unknown[][] {
+  const lastRowNum = worksheet.lastRow?.number ?? 0;
+  if (lastRowNum === 0) return [];
+
+  let maxCol = 0;
+  worksheet.eachRow((row) => {
+    row.eachCell({ includeEmpty: true }, (_cell, colNumber) => {
+      if (colNumber > maxCol) maxCol = colNumber;
+    });
+  });
+  if (maxCol === 0) return [];
+
+  const matrix: unknown[][] = [];
+  for (let r = 1; r <= lastRowNum; r++) {
+    const row = worksheet.getRow(r);
+    const arr: unknown[] = Array(maxCol).fill('');
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      arr[colNumber - 1] = cellValueToPlain(cell.value);
+    });
+    matrix.push(arr);
+  }
+  return matrix;
+}
 import UserFormModal from '@/components/users/UserFormModal';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -186,17 +226,15 @@ export default function UserManagementPage() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+      const firstSheet = workbook.worksheets[0];
       if (!firstSheet) {
         setImportError('ไม่พบข้อมูลในไฟล์ Excel');
         return;
       }
-      const rows = XLSX.utils.sheet_to_json<unknown[]>(firstSheet, {
-        header: 1,
-        defval: '',
-      });
-      const parsedRows = parseExcelRows(rows as unknown[][]);
+      const rows = worksheetToMatrix(firstSheet);
+      const parsedRows = parseExcelRows(rows);
       if (parsedRows.length === 0) {
         setImportError('ไม่พบข้อมูลที่นำเข้าได้ในไฟล์');
       }
