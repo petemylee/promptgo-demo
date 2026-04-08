@@ -288,13 +288,13 @@ export async function PATCH(
         }
         if (effectiveStartTime && isBeforeBangkokStartOfToday(effectiveStartTime)) {
           return NextResponse.json(
-            { error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' },
+            { error: 'ไม่สามารถเลือกวันที่ย้อนหลังได้' },
             { status: 400 }
           );
         }
         if (effectiveEndTime && isBeforeBangkokStartOfToday(effectiveEndTime)) {
           return NextResponse.json(
-            { error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' },
+            { error: 'ไม่สามารถเลือกวันที่ย้อนหลังได้' },
             { status: 400 }
           );
         }

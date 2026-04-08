@@ -63,7 +63,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       return;
     }
     if (isBeforeBangkokStartOfToday(parsedStart) || isBeforeBangkokStartOfToday(parsedEnd)) {
-      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
+      setError('ไม่สามารถเลือกวันที่ย้อนหลังได้');
       return;
     }
     if (parsedEnd.getTime() < parsedStart.getTime()) {
@@ -153,7 +153,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       return;
     }
     if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
-      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
+      setError('ไม่สามารถเลือกวันที่ย้อนหลังได้');
       return;
     }
     setIsLoading(true);

@@ -40,7 +40,7 @@ export default function DriverFeedbackPage() {
           setFeedbacks(data);
         }
       } catch (error) {
-        console.error('Error fetching feedback:', error);
+        console.error('เกิดข้อผิดพลาดระหว่างดึงข้อมูลข้อเสนอแนะ:', error);
         setFeedbacks([]);
       } finally {
         setIsLoading(false);
@@ -58,14 +58,14 @@ export default function DriverFeedbackPage() {
       minute: '2-digit',
     });
 
-  if (status === 'loading') return <div className="p-6">Loading...</div>;
+  if (status === 'loading') return <div className="p-6">กำลังโหลด...</div>;
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
       <div className="relative z-10 mx-auto w-full max-w-4xl">
         <div className="mb-6 flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-[#004c80]">Feedback ของฉัน</h1>
+          <h1 className="text-2xl font-bold text-[#004c80]">ข้อเสนอแนะของฉัน</h1>
           <p className="text-gray-700">ข้อเสนอแนะจากผู้ขอใช้รถที่มอบให้คุณ</p>
         </div>
 
@@ -94,7 +94,7 @@ export default function DriverFeedbackPage() {
                       <p className="mt-2 text-xs text-gray-500">{formatDate(fb.createdAt)}</p>
                     </div>
                     <div className="text-sm text-gray-600 shrink-0">
-                      <p><span className="font-medium">การจอง:</span> {fb.booking.purpose || fb.booking.endLocation || fb.booking.id.substring(0, 8)}</p>
+                      <p><span className="font-medium">การจอง:</span> {fb.booking.purpose || fb.booking.endLocation || '-'}</p>
                       {fb.booking.startTime && (
                         <p className="text-xs text-gray-500">{formatDate(fb.booking.startTime)}</p>
                       )}
@@ -108,8 +108,8 @@ export default function DriverFeedbackPage() {
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-amber-100 text-amber-600 grid place-items-center text-3xl">
                 ⭐
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">ยังไม่มี Feedback</h3>
-              <p className="text-gray-500 mt-1">Feedback จากผู้ขอใช้รถจะแสดงที่นี่เมื่อมีการให้คะแนน</p>
+              <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีข้อเสนอแนะ</h3>
+              <p className="text-gray-500 mt-1">ข้อเสนอแนะจากผู้ขอใช้รถจะแสดงที่นี่เมื่อมีการให้คะแนน</p>
             </div>
           )}
         </div>

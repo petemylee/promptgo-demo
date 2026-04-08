@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useNotificationsContext } from '@/components/notifications/NotificationsContext';
@@ -14,8 +15,12 @@ function roleHomePath(role?: string | null) {
 export default function NotificationsCenter() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { items, isLoading, loadMore, nextCursor, markRead } = useNotificationsContext();
+  const { items, isLoading, loadMore, nextCursor, markRead, refresh } = useNotificationsContext();
   const homeHref = roleHomePath(session?.user?.role ?? null);
+
+  useEffect(() => {
+    refresh().catch(() => {});
+  }, [refresh]);
 
   const goBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {

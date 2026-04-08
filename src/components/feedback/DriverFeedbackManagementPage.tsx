@@ -46,7 +46,7 @@ export default function DriverFeedbackManagementPage() {
         const response = await fetch('/api/driver-feedback');
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to fetch feedbacks');
+          throw new Error(body.error || 'ไม่สามารถดึงข้อมูลข้อเสนอแนะได้');
         }
         const data: DriverFeedbackItem[] = await response.json();
         if (mounted) setFeedbacks(data);
@@ -55,7 +55,7 @@ export default function DriverFeedbackManagementPage() {
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('An unknown error occurred');
+          setError('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
         }
       } finally {
         if (mounted) setIsLoading(false);
@@ -117,7 +117,7 @@ export default function DriverFeedbackManagementPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="mb-6 flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-[#004c80]">Feedback คนขับทั้งหมด</h1>
+          <h1 className="text-2xl font-bold text-[#004c80]">ข้อเสนอแนะคนขับทั้งหมด</h1>
           <p className="text-gray-700">ภาพรวมข้อเสนอแนะและคะแนนจากผู้ขอใช้รถ</p>
         </div>
 
@@ -140,7 +140,7 @@ export default function DriverFeedbackManagementPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหา: คนขับ ผู้ให้ feedback ความเห็น หรือปลายทาง"
+              placeholder="ค้นหา: คนขับ ผู้ให้ข้อเสนอแนะ ความเห็น หรือปลายทาง"
               className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
@@ -153,7 +153,7 @@ export default function DriverFeedbackManagementPage() {
 
         <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
           {isLoading ? (
-            <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล feedback...</div>
+            <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูลข้อเสนอแนะ...</div>
           ) : error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
               เกิดข้อผิดพลาด: {error}
@@ -164,10 +164,10 @@ export default function DriverFeedbackManagementPage() {
                 ⭐
               </div>
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                {feedbacks.length === 0 ? 'ยังไม่มี feedback คนขับ' : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
+                {feedbacks.length === 0 ? 'ยังไม่มีข้อเสนอแนะคนขับ' : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
               </h3>
               <p className="text-gray-500">
-                {feedbacks.length === 0 ? 'feedback จะปรากฏที่หน้านี้เมื่อมีการให้คะแนนแล้ว' : 'ลองเปลี่ยนคนขับหรือคำค้นหา'}
+                {feedbacks.length === 0 ? 'ข้อเสนอแนะจะปรากฏที่หน้านี้เมื่อมีการให้คะแนนแล้ว' : 'ลองเปลี่ยนคนขับหรือคำค้นหา'}
               </p>
             </div>
           ) : (
@@ -192,7 +192,7 @@ export default function DriverFeedbackManagementPage() {
                         วัตถุประสงค์: <span className="font-medium text-slate-800">{item.booking?.purpose || '-'}</span>
                       </p>
                       <p className="text-sm text-gray-500">
-                        วันที่ให้ feedback: <span className="font-medium text-slate-800">{formatDate(item.createdAt)}</span>
+                        วันที่ให้ข้อเสนอแนะ: <span className="font-medium text-slate-800">{formatDate(item.createdAt)}</span>
                       </p>
                     </div>
                     <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">

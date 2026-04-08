@@ -210,11 +210,11 @@ export default function ExecutiveHistoryPage() {
                         </p>
                       </div>
                     )}
-                    {/* Feedback จากผู้ขอใช้รถให้คนขับ (Admin, Executive, Driver เห็นได้) */}
+                    {/* ข้อเสนอแนะจากผู้ขอใช้รถให้คนขับ (Admin, Executive, Driver เห็นได้) */}
                     {booking.driverFeedback && (
                       <div className="mt-4 p-3 bg-amber-50 rounded-lg">
                         <p className="text-sm text-amber-800">
-                          <span className="font-medium">Feedback คนขับ:</span> {'⭐'.repeat(booking.driverFeedback.rating)} ({booking.driverFeedback.rating}/5)
+                          <span className="font-medium">ข้อเสนอแนะคนขับ:</span> {'⭐'.repeat(booking.driverFeedback.rating)} ({booking.driverFeedback.rating}/5)
                           {booking.driverFeedback.requester?.name && ` โดย ${booking.driverFeedback.requester.name}`}
                         </p>
                         {booking.driverFeedback.comment && (

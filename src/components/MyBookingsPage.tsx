@@ -126,14 +126,14 @@ const normalizeBooking = (b: unknown): Booking | null => {
 
 const StatusBadge = ({ status }: { status: Booking['status'] }) => {
   const map: Record<Booking['status'], { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'Confirmed' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
-    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'In Progress' },
-    COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Completed' },
-    CANCELLED: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Cancelled' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Merged' },
+    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
+    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
+    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
+    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
+    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังเดินทาง' },
+    COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'เสร็จสิ้น' },
+    CANCELLED: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'ยกเลิก' },
+    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
   };
   const p = map[status];
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
@@ -155,7 +155,7 @@ const InProgressBookingCard = ({
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-[#004c80]">Booking #{booking.id.substring(0, 8)}</h3>
+            <h3 className="text-lg font-semibold text-[#004c80]">การจอง</h3>
             <StatusBadge status={booking.status} />
           </div>
           <p className="text-slate-600">{booking.purpose || '-'}</p>
@@ -183,13 +183,13 @@ const InProgressBookingCard = ({
               <div className="mb-2">
                 <button
                   type="button"
-                  onClick={() => onOpenImage(booking.driver!.profileImageUrl!, 'Driver Photo')}
+                  onClick={() => onOpenImage(booking.driver!.profileImageUrl!, 'รูปคนขับ')}
                   className="inline-flex rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0076c3]/60"
                   aria-label="ขยายรูปคนขับ"
                 >
                   <Image
                     src={booking.driver.profileImageUrl}
-                    alt="Driver Photo"
+                    alt="รูปคนขับ"
                     width={80}
                     height={80}
                     className="rounded-xl object-cover ring-1 ring-black/10"
@@ -208,13 +208,13 @@ const InProgressBookingCard = ({
               <div className="mb-2">
                 <button
                   type="button"
-                  onClick={() => onOpenImage(booking.vehicle!.vehicleImageUrl!, 'Vehicle Photo')}
+                  onClick={() => onOpenImage(booking.vehicle!.vehicleImageUrl!, 'รูปรถ')}
                   className="inline-flex rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0076c3]/60"
                   aria-label="ขยายรูปรถ"
                 >
                   <Image
                     src={booking.vehicle.vehicleImageUrl}
-                    alt="Vehicle Photo"
+                    alt="รูปรถ"
                     width={120}
                     height={80}
                     style={{ width: 'auto', height: 'auto' }}
@@ -282,7 +282,7 @@ export default function MyBookingsPage() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [lightboxAlt, setLightboxAlt] = useState<string>('Image');
+  const [lightboxAlt, setLightboxAlt] = useState<string>('รูปภาพ');
 
   const openLightbox = (src: string, alt: string) => {
     setLightboxSrc(src);
@@ -588,19 +588,18 @@ export default function MyBookingsPage() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
-                  <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
                   <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-12">
+                    <td colSpan={6} className="py-12">
                       <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
                     </td>
                   </tr>
@@ -608,7 +607,6 @@ export default function MyBookingsPage() {
                   filtered.map((b) => (
                     <Fragment key={b.id}>
                       <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                        <td className="hidden md:table-cell py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
                         <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
                         <td className="py-2 px-4">{b.endLocation || '-'}</td>
                         <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
@@ -651,7 +649,7 @@ export default function MyBookingsPage() {
                       </tr>
                       {expandedBookingIds.has(b.id) && (
                         <tr className="md:hidden border-b bg-slate-50/60">
-                          <td colSpan={7} className="px-4 py-3">
+                          <td colSpan={6} className="px-4 py-3">
                             <div className="grid grid-cols-1 gap-2 text-sm">
                               <div>
                                 <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
@@ -671,7 +669,7 @@ export default function MyBookingsPage() {
                   ))
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10">
+                    <td colSpan={6} className="py-10">
                       <div className="mx-auto max-w-md text-center">
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#004c80] grid place-items-center">🗒️</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีคำขอของคุณ</h3>
@@ -682,7 +680,7 @@ export default function MyBookingsPage() {
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-gray-500 text-sm">
+                    <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
                       {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
                     </td>
                   </tr>
@@ -699,13 +697,12 @@ export default function MyBookingsPage() {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b bg-[#004c80]/5">
-                    <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
                     <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
+                    <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -713,7 +710,6 @@ export default function MyBookingsPage() {
                     filteredCompleted.map((b) => (
                       <Fragment key={b.id}>
                         <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                          <td className="hidden md:table-cell py-2 px-4 whitespace-nowrap font-mono">{b.id.substring(0, 8)}...</td>
                           <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
                           <td className="py-2 px-4">{b.endLocation || '-'}</td>
                           <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
@@ -736,7 +732,7 @@ export default function MyBookingsPage() {
                                   })}
                                   className="text-sm text-amber-700 hover:text-amber-800 underline"
                                 >
-                                  ⭐ ให้ Feedback คนขับ
+                                  ⭐ ให้ข้อเสนอแนะคนขับ
                                 </button>
                               )}
                               <button
@@ -752,7 +748,7 @@ export default function MyBookingsPage() {
                         </tr>
                         {expandedBookingIds.has(b.id) && (
                           <tr className="md:hidden border-b bg-slate-50/60">
-                            <td colSpan={7} className="px-4 py-3">
+                            <td colSpan={6} className="px-4 py-3">
                               <div className="grid grid-cols-1 gap-2 text-sm">
                                 <div>
                                   <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
@@ -772,7 +768,7 @@ export default function MyBookingsPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="py-4 text-center text-gray-500 text-sm">
+                      <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
                         ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
                       </td>
                     </tr>

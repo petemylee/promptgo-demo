@@ -52,12 +52,12 @@ export default function ApproveAndAllocateBookings({
     setIsLoading(true);
     try {
       const response = await fetch('/api/bookings?adminDashboard=true');
-      if (!response.ok) throw new Error('Failed to fetch data');
+      if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลได้');
       const dashboardData = await response.json();
       setData(dashboardData);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
-      else setError('An unknown error occurred');
+      else setError('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     } finally {
       setIsLoading(false);
     }
@@ -102,12 +102,12 @@ export default function ApproveAndAllocateBookings({
     setIsLoadingVehicles(true);
     try {
       const response = await fetch('/api/vehicles');
-      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลรถยนต์ได้');
       const vehiclesData = await response.json();
       setVehicles(vehiclesData);
     } catch (err: unknown) {
-      if (err instanceof Error) alert(`Error: ${err.message}`);
-      else alert('An unknown error occurred');
+      if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
+      else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     } finally {
       setIsLoadingVehicles(false);
     }
@@ -117,13 +117,13 @@ export default function ApproveAndAllocateBookings({
     setIsLoadingDrivers(true);
     try {
       const response = await fetch('/api/users');
-      if (!response.ok) throw new Error('Failed to fetch drivers');
+      if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลคนขับได้');
       const usersData = await response.json();
       const driversData = usersData.filter((user: ApprovalDriver) => user.role === 'Driver');
       setDrivers(driversData);
     } catch (err: unknown) {
-      if (err instanceof Error) alert(`Error: ${err.message}`);
-      else alert('An unknown error occurred');
+      if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
+      else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     } finally {
       setIsLoadingDrivers(false);
     }
@@ -155,7 +155,7 @@ export default function ApproveAndAllocateBookings({
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to update status');
+        throw new Error(errorData?.error || 'ไม่สามารถอัปเดตสถานะได้');
       }
 
       setShowVehicleModal(false);
@@ -164,8 +164,8 @@ export default function ApproveAndAllocateBookings({
       setSelectedDriverId('');
       fetchDashboardData();
     } catch (err: unknown) {
-      if (err instanceof Error) alert(`Error: ${err.message}`);
-      else alert('An unknown error occurred');
+      if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
+      else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     }
   };
 
@@ -192,15 +192,15 @@ export default function ApproveAndAllocateBookings({
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to update status');
+        throw new Error(errorData?.error || 'ไม่สามารถอัปเดตสถานะได้');
       }
       setShowRejectModal(false);
       setRejectBookingId(null);
       setRejectionReason('');
       fetchDashboardData();
     } catch (err: unknown) {
-      if (err instanceof Error) alert(`Error: ${err.message}`);
-      else alert('An unknown error occurred');
+      if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
+      else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     } finally {
       setIsRejecting(false);
     }
@@ -227,7 +227,7 @@ export default function ApproveAndAllocateBookings({
       </div>
     );
   }
-  if (error) return <p className={(className ?? 'p-4 md:p-8') + ' text-red-500'}>Error: {error}</p>;
+  if (error) return <p className={(className ?? 'p-4 md:p-8') + ' text-red-500'}>ข้อผิดพลาด: {error}</p>;
 
   if (isDetailModalOpen && selectedDetailBookingId && isDesktop) {
     return (
@@ -269,19 +269,19 @@ export default function ApproveAndAllocateBookings({
             <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#0076c3]/10" />
             <h3 className="text-sm font-medium text-gray-500">รอการพิจารณา</h3>
             <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.pending ?? 0}</p>
-            <p className="mt-1 text-xs text-gray-400">Pending</p>
+            <p className="mt-1 text-xs text-gray-400">รอการพิจารณา</p>
           </div>
           <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
             <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-emerald-500/10" />
             <h3 className="text-sm font-medium text-gray-500">รอการยืนยัน</h3>
             <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.approved ?? 0}</p>
-            <p className="mt-1 text-xs text-gray-400">Approved</p>
+            <p className="mt-1 text-xs text-gray-400">รอการยืนยัน</p>
           </div>
           <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
             <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-amber-500/10" />
             <h3 className="text-sm font-medium text-gray-500">กำลังเดินทาง</h3>
             <p className="mt-2 text-4xl font-extrabold text-[#004c80]">{data?.counts.inProgress ?? 0}</p>
-            <p className="mt-1 text-xs text-gray-400">In Progress</p>
+            <p className="mt-1 text-xs text-gray-400">กำลังเดินทาง</p>
           </div>
         </div>
       )}
@@ -293,20 +293,19 @@ export default function ApproveAndAllocateBookings({
             onClick={fetchDashboardData}
             className="rounded-xl bg-[#0076c3] px-3 py-1.5 text-white shadow hover:bg-[#0087de]"
           >
-            Refresh
+            รีเฟรช
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="border-b bg-[#004c80]/5">
-                <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">Booking ID</th>
                 <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">ผู้ขอใช้</th>
                 <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">ตำแหน่ง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
                 <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
-                <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
+                <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
               </tr>
             </thead>
             <tbody>
@@ -314,7 +313,6 @@ export default function ApproveAndAllocateBookings({
                 pendingBookings.map((booking) => (
                   <Fragment key={booking.id}>
                     <tr className="border-b hover:bg-[#0076c3]/5">
-                      <td className="hidden md:table-cell py-2 px-4">{booking.id.substring(0, 8)}...</td>
                       <td className="hidden md:table-cell py-2 px-4">
                         {booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}
                       </td>
@@ -361,12 +359,8 @@ export default function ApproveAndAllocateBookings({
                     </tr>
                     {expandedBookingIds.has(booking.id) && (
                       <tr className="md:hidden border-b bg-slate-50/60">
-                        <td colSpan={7} className="px-4 py-3">
+                        <td colSpan={6} className="px-4 py-3">
                           <div className="grid grid-cols-1 gap-2 text-sm text-slate-900">
-                            <div>
-                              <span className="font-medium text-slate-700">Booking ID:</span>{' '}
-                              <span>{booking.id.substring(0, 8)}...</span>
-                            </div>
                             <div>
                               <span className="font-medium text-slate-700">ผู้ขอใช้:</span>{' '}
                               <span>{booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}</span>
@@ -383,7 +377,7 @@ export default function ApproveAndAllocateBookings({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-4 px-4 text-center text-gray-500">
+                  <td colSpan={6} className="py-4 px-4 text-center text-gray-500">
                     ไม่มีรายการรออนุมัติ
                   </td>
                 </tr>

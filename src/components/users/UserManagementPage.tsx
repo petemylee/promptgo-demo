@@ -408,15 +408,15 @@ export default function UserManagementPage() {
         <>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#004c80]">User Management</h1>
-            <p className="text-sm text-gray-700">จัดการผู้ใช้งาน ระบบ และกำหนดบทบาท</p>
+            <h1 className="text-3xl font-bold text-[#004c80]">จัดการผู้ใช้</h1>
+            <p className="text-sm text-gray-700">จัดการผู้ใช้งาน ระบบ และกำหนดระดับสิทธิ์การเข้าถึง</p>
           </div>
           <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
             <div className="relative w-full md:w-80">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ค้นหา: ชื่อ ตำแหน่ง อีเมล หรือบทบาท"
+                placeholder="ค้นหา: ชื่อ ตำแหน่ง อีเมล หรือระดับสิทธิ์การเข้าถึง"
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
               />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
@@ -432,7 +432,7 @@ export default function UserManagementPage() {
               Import รายชื่อ
             </button>
             <button onClick={handleAdd} className="rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">
-              + Add User
+              + เพิ่มผู้ใช้
             </button>
           </div>
         </div>
@@ -475,9 +475,9 @@ export default function UserManagementPage() {
                       <th className="w-20 px-2 py-2 text-left">เลือก</th>
                       <th className="w-16 px-2 py-2 text-left">ลำดับ</th>
                       <th className="px-2 py-2 text-left">ชื่อ-นามสกุล</th>
-                      <th className="px-2 py-2 text-left">Email</th>
+                      <th className="px-2 py-2 text-left">อีเมล</th>
                       <th className="px-2 py-2 text-left">ตำแหน่ง</th>
-                      <th className="w-40 px-2 py-2 text-left">Role</th>
+                      <th className="w-40 px-2 py-2 text-left">ระดับสิทธิ์การเข้าถึง</th>
                       <th className="w-44 px-2 py-2 text-left">สถานะ</th>
                     </tr>
                   </thead>
@@ -581,11 +581,11 @@ export default function UserManagementPage() {
                 <tr className="border-b bg-[#004c80]/5">
                   <th className="text-left py-2 px-4 text-[#004c80] w-1/6">ชื่อ</th>
                   <th className="text-left py-2 px-4 text-[#004c80] w-1/6">ตำแหน่ง</th>
-                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">Email</th>
+                  <th className="text-left py-2 px-4 text-[#004c80] w-1/5">อีเมล</th>
                   <th className="text-left py-2 px-4 text-[#004c80] w-1/6">เบอร์โทร</th>
-                  <th className="text-center py-2 px-4 text-[#004c80] w-24">Role</th>
-                  <th className="text-center py-2 px-4 text-[#004c80] w-28">Status</th>
-                  <th className="text-center py-2 px-4 text-[#004c80] w-32">Actions</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-24">ระดับสิทธิ์การเข้าถึง</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-28">สถานะ</th>
+                  <th className="text-center py-2 px-4 text-[#004c80] w-32">การทำรายการ</th>
                 </tr>
               </thead>
               <tbody>
@@ -609,9 +609,9 @@ export default function UserManagementPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEdit(user)}
-                          aria-label="Edit user"
+                          aria-label="แก้ไขผู้ใช้"
                           className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-[#004c80]/20 bg-white text-[#004c80] hover:bg-[#004c80]/5 hover:ring-[#004c80]/30 transition"
-                          title="Edit"
+                          title="แก้ไข"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                             <path d="M21.731 2.269a2.625 2.625 0 0 0-3.713 0l-1.2 1.2 3.713 3.713 1.2-1.2a2.625 2.625 0 0 0 0-3.713z"/>
@@ -620,9 +620,9 @@ export default function UserManagementPage() {
                         </button>
                         <button
                           onClick={() => handleToggleActive(user)}
-                          aria-label="Toggle active"
+                          aria-label="สลับสถานะการใช้งาน"
                           className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:ring-gray-300 transition"
-                          title={(user.isActive ?? true) ? 'Deactivate' : 'Activate'}
+                          title={(user.isActive ?? true) ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                         >
                           {(user.isActive ?? true) ? (
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
@@ -644,7 +644,7 @@ export default function UserManagementPage() {
                         <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#0076c3] grid place-items-center">🙂</div>
                         <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีผู้ใช้ที่ตรงกับคำค้นหา</h3>
                         <p className="text-sm text-gray-500 mt-1">ลองปรับคำค้นหาหรือเพิ่มผู้ใช้ใหม่</p>
-                        <button onClick={handleAdd} className="mt-4 rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ Add User</button>
+                        <button onClick={handleAdd} className="mt-4 rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ เพิ่มผู้ใช้</button>
                       </div>
                     </td>
                   </tr>

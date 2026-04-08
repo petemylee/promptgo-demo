@@ -196,7 +196,7 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
           <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
         </div>
         <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
+          <label className="block mb-2 text-sm font-medium text-gray-700">อีเมล <span className="text-red-500">*</span></label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
         </div>
         <div className="mb-4">
@@ -206,13 +206,13 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       
         {!isEditMode && (
           <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Password <span className="text-red-500">*</span></label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">รหัสผ่าน <span className="text-red-500">*</span></label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
         )}
 
         <div className="mb-6">
-          <label className="block mb-2 text-sm font-medium text-gray-700">Role</label>
+          <label className="block mb-2 text-sm font-medium text-gray-700">ระดับสิทธิ์การเข้าถึง</label>
           <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60">
             {ROLES.map(roleValue => (
               <option key={roleValue} value={roleValue}>{roleValue}</option>

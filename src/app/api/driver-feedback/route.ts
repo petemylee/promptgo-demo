@@ -4,13 +4,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 
-// GET: ดึง feedback คนขับ
+// GET: ดึงข้อเสนอแนะคนขับ
 // - Driver: เห็นเฉพาะของตัวเอง
-// - Admin, Executive: ส่ง ?driverId= เพื่อดู feedback ของคนขับคนนั้น หรือไม่ส่ง = ดึงทั้งหมด
+// - Admin, Executive: ส่ง ?driverId= เพื่อดูข้อเสนอแนะของคนขับคนนั้น หรือไม่ส่ง = ดึงทั้งหมด
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 });
   }
 
   const role = session.user.role;
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (role === 'Driver') {
-      // คนขับเห็นเฉพาะ feedback ของตัวเอง
+      // คนขับเห็นเฉพาะข้อเสนอแนะของตัวเอง
       const feedbacks = await prisma.driverFeedback.findMany({
         where: { driverId: session.user.id },
         include: {
@@ -60,18 +60,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(feedbacks);
     }
 
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   } catch (error) {
     console.error('Error fetching driver feedback:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'เกิดข้อผิดพลาดของระบบ' }, { status: 500 });
   }
 }
 
-// POST: ผู้ขอใช้รถ (requester ของการจอง) สร้าง feedback ให้คนขับ - รองรับทุก role ที่เป็นผู้ขอการจอง
+// POST: ผู้ขอใช้รถ (requester ของการจอง) สร้างข้อเสนอแนะให้คนขับ - รองรับทุก role ที่เป็นผู้ขอการจอง
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 });
   }
 
   try {
@@ -100,25 +100,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ไม่พบการจอง' }, { status: 404 });
     }
     if (booking.requesterId !== session.user.id) {
-      return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ให้ feedback สำหรับการจองนี้' }, { status: 403 });
+      return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ให้ข้อเสนอแนะสำหรับการจองนี้' }, { status: 403 });
     }
     if (booking.driverId !== driverId) {
       return NextResponse.json({ error: 'การจองนี้ไม่ได้กำหนดคนขับนี้' }, { status: 400 });
     }
     if (booking.status !== 'COMPLETED') {
       return NextResponse.json(
-        { error: 'ให้ feedback ได้เฉพาะการจองที่เสร็จสิ้นแล้ว' },
+        { error: 'ให้ข้อเสนอแนะได้เฉพาะการจองที่เสร็จสิ้นแล้ว' },
         { status: 400 }
       );
     }
 
-    // ตรวจสอบว่ายังไม่มี feedback สำหรับ booking นี้
+    // ตรวจสอบว่ายังไม่มีข้อเสนอแนะสำหรับ booking นี้
     const existing = await prisma.driverFeedback.findUnique({
       where: { bookingId },
     });
     if (existing) {
       return NextResponse.json(
-        { error: 'มีการให้ feedback สำหรับการจองนี้แล้ว' },
+        { error: 'มีการให้ข้อเสนอแนะสำหรับการจองนี้แล้ว' },
         { status: 400 }
       );
     }

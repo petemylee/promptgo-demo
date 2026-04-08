@@ -50,7 +50,7 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
       const response = await fetch('/api/driver-feedback');
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to fetch feedback statistics');
+        throw new Error(body.error || 'ไม่สามารถดึงสถิติข้อเสนอแนะได้');
       }
       const data: DriverFeedbackItem[] = await response.json();
       setFeedbacks(data);
@@ -58,7 +58,7 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('An unknown error occurred');
+        setError('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
       }
     } finally {
       setIsLoading(false);
@@ -138,11 +138,11 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
   return (
     <section className={`rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 ${className ?? ''}`}>
       <div className="mb-5">
-        <h2 className="text-xl font-semibold text-[#004c80]">สถิติ Feedback คนขับ</h2>
+        <h2 className="text-xl font-semibold text-[#004c80]">สถิติข้อเสนอแนะคนขับ</h2>
         <p className="text-sm text-slate-600">ภาพรวมคะแนนและแนวโน้มคุณภาพการให้บริการคนขับ</p>
       </div>
 
-      {isLoading && <p className="py-10 text-center text-slate-500">กำลังโหลดสถิติ feedback...</p>}
+      {isLoading && <p className="py-10 text-center text-slate-500">กำลังโหลดสถิติข้อเสนอแนะ...</p>}
 
       {!isLoading && error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
@@ -154,7 +154,7 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">จำนวน Feedback</p>
+              <p className="text-xs text-slate-500">จำนวนข้อเสนอแนะ</p>
               <p className="mt-2 text-2xl font-bold text-[#004c80]">{feedbacks.length.toLocaleString()}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-4">
@@ -162,14 +162,14 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
               <p className="mt-2 text-2xl font-bold text-[#004c80]">{avgRating.toLocaleString()}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">คนขับที่มี Feedback</p>
+              <p className="text-xs text-slate-500">คนขับที่มีข้อเสนอแนะ</p>
               <p className="mt-2 text-2xl font-bold text-[#004c80]">{driverAggregates.length.toLocaleString()}</p>
             </div>
           </div>
 
           {feedbacks.length === 0 ? (
             <div className="rounded-xl bg-slate-50 px-4 py-8 text-center text-slate-500">
-              ยังไม่มีข้อมูล feedback สำหรับการวิเคราะห์
+              ยังไม่มีข้อมูลข้อเสนอแนะสำหรับการวิเคราะห์
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -183,7 +183,7 @@ export default function FeedbackStatsOverview({ className }: FeedbackStatsOvervi
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="count" name="จำนวน feedback" fill="#0076c3" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="count" name="จำนวนข้อเสนอแนะ" fill="#0076c3" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

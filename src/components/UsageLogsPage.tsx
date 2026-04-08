@@ -78,7 +78,7 @@ function actionLabel(action: UsageLogAction) {
 
 function simplifyPath(path: string) {
   const p = path || '/';
-  if (p === '/admin/usage-logs' || p === '/executive/usage-logs') return 'Usage Logs';
+  if (p === '/admin/usage-logs' || p === '/executive/usage-logs') return 'ประวัติการใช้งาน';
   if (p === '/admin/dashboard') return 'แดชบอร์ด (แอดมิน)';
   if (p === '/executive') return 'แดชบอร์ด (ผู้บริหาร)';
   if (p.startsWith('/admin/users')) return 'จัดการผู้ใช้';
@@ -244,7 +244,7 @@ export default function UsageLogsPage({ title }: { title: string }) {
               <input
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
-                placeholder="เช่น อนุมัติ, จัดการผู้ใช้, ประวัติ, dashboard"
+                placeholder="เช่น อนุมัติ, จัดการผู้ใช้, ประวัติ, แดชบอร์ด"
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none focus:border-[#004c80]"
               />
             </div>

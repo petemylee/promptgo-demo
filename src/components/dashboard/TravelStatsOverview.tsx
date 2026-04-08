@@ -51,7 +51,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
         const response = await fetch(`/api/stats/travel?month=${encodeURIComponent(selectedMonth)}`);
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to fetch travel statistics');
+          throw new Error(body.error || 'ไม่สามารถดึงสถิติการเดินทางได้');
         }
         const payload: TravelStatsResponse = await response.json();
         if (mounted) {
@@ -64,7 +64,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('An unknown error occurred');
+          setError('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
         }
       } finally {
         if (mounted) {
@@ -224,11 +224,11 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate sample data');
+        throw new Error(result.error || 'ไม่สามารถสร้างข้อมูลตัวอย่างได้');
       }
       alert(
         `สร้างข้อมูลตัวอย่างสำเร็จ ${result.created ?? 0} รายการ` +
-          `\nสร้าง feedback ตัวอย่าง ${result.createdFeedbacks ?? 0} รายการ` +
+          `\nสร้างข้อเสนอแนะตัวอย่าง ${result.createdFeedbacks ?? 0} รายการ` +
           `\nใช้รถ ${result.usedVehicles ?? 0} คัน | คนขับ ${result.usedDrivers ?? 0} คน` +
           `\nสร้างรถทดสอบเพิ่ม ${result.createdSampleVehicles ?? 0} คัน | คนขับทดสอบเพิ่ม ${result.createdSampleDrivers ?? 0} คน`,
       );
@@ -242,7 +242,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to generate sample data');
+        setError('ไม่สามารถสร้างข้อมูลตัวอย่างได้');
       }
     } finally {
       setIsGenerating(false);
@@ -263,7 +263,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to cleanup sample data');
+        throw new Error(result.error || 'ไม่สามารถลบข้อมูลตัวอย่างได้');
       }
       alert(
         `ลบข้อมูลตัวอย่างสำเร็จ ${result.deleted ?? 0} รายการ` +
@@ -279,7 +279,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to cleanup sample data');
+        setError('ไม่สามารถลบข้อมูลตัวอย่างได้');
       }
     } finally {
       setIsCleaning(false);
@@ -308,7 +308,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
             disabled={!data || isLoading}
             className="rounded-lg bg-[#0076c3] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#005b99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Export CSV
+            ส่งออก CSV
           </button>
           <button
             type="button"
@@ -316,7 +316,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
             disabled={isGenerating || isCleaning || isLoading}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isGenerating ? 'กำลังสร้างข้อมูล...' : 'Generate Sample Data'}
+            {isGenerating ? 'กำลังสร้างข้อมูล...' : 'สร้างข้อมูลตัวอย่าง'}
           </button>
           <button
             type="button"
@@ -324,7 +324,7 @@ export default function TravelStatsOverview({ month, className }: TravelStatsOve
             disabled={isGenerating || isCleaning || isLoading}
             className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isCleaning ? 'กำลังลบข้อมูล...' : 'Cleanup Sample Data'}
+            {isCleaning ? 'กำลังลบข้อมูล...' : 'ลบข้อมูลตัวอย่าง'}
           </button>
         </div>
       </div>

@@ -40,14 +40,14 @@ type Job = {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'Confirmed' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
-    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'In Progress' },
-    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Completed' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Cancelled' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Merged' },
+    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
+    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
+    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
+    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
+    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังเดินทาง' },
+    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'เสร็จสิ้น' },
+    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'ยกเลิก' },
+    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
   };
   const p = map[status] || { bg: 'bg-gray-50', text: 'text-gray-700', label: status };
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
@@ -73,7 +73,7 @@ export default function DriverDashboard() {
           const data = await res.json();
           setJobs(data);
         } else {
-          console.error('Failed to fetch jobs');
+          console.error('ไม่สามารถดึงข้อมูลงานได้');
         }
       } catch (error) {
         console.error('Error fetching jobs:', error);
@@ -105,7 +105,6 @@ export default function DriverDashboard() {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b bg-[#004c80]/5">
-                    <th className="text-left py-2 px-4 text-[#004c80]">หมายเลข</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">ผู้จอง</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
                     <th className="text-left py-2 px-4 text-[#004c80]">จุดเริ่มต้น</th>
@@ -120,7 +119,6 @@ export default function DriverDashboard() {
                 <tbody>
                   {jobs.map((job) => (
                     <tr key={job.id} className="border-b hover:bg-[#0076c3]/5">
-                      <td className="py-2 px-4 whitespace-nowrap font-mono text-xs">{job.id.substring(0, 8)}...</td>
                       <td className="py-2 px-4">
                         <div>
                           <div className="font-medium">{job.requestForSelf !== false ? (job.requester.name || job.requester.email) : (job.travelerName || '-')}</div>

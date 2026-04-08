@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'End time must be greater than or equal to start time' }, { status: 400 });
     }
     if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
-      return NextResponse.json({ error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' }, { status: 400 });
+      return NextResponse.json({ error: 'ไม่สามารถเลือกวันที่ย้อนหลังได้' }, { status: 400 });
     }
 
     const createData = {

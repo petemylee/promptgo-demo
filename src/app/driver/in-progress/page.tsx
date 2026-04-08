@@ -40,14 +40,14 @@ type Job = {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'Confirmed' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
+    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
+    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
+    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
+    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
     IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังทำอยู่' },
-    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Completed' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Cancelled' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Merged' },
+    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'เสร็จสิ้น' },
+    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'ยกเลิก' },
+    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
   };
   const p = map[status] || { bg: 'bg-gray-50', text: 'text-gray-700', label: status };
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
@@ -73,7 +73,7 @@ export default function InProgressJobsPage() {
           const data = await res.json();
           setJobs(data);
         } else {
-          console.error('Failed to fetch in-progress jobs');
+          console.error('ไม่สามารถดึงข้อมูลงานที่กำลังทำอยู่ได้');
         }
       } catch (error) {
         console.error('Error fetching in-progress jobs:', error);
@@ -84,7 +84,7 @@ export default function InProgressJobsPage() {
     if (status === 'authenticated') load();
   }, [status]);
 
-  if (status === 'loading') return <div className="p-6">Loading...</div>;
+  if (status === 'loading') return <div className="p-6">กำลังโหลด...</div>;
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4">

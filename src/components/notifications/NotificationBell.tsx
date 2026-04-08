@@ -34,7 +34,7 @@ function useIsMdUp() {
 export default function NotificationBell() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { items, unreadCount, isLoading, markRead } = useNotificationsContext();
+  const { items, unreadCount, isLoading, markRead, refresh } = useNotificationsContext();
   const mdUp = useIsMdUp();
 
   const [open, setOpen] = useState(false);
@@ -322,7 +322,13 @@ export default function NotificationBell() {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            const next = !v;
+            if (next) refresh().catch(() => {});
+            return next;
+          });
+        }}
         className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition hover:bg-slate-100"
         aria-label="การแจ้งเตือน"
         aria-expanded={open}

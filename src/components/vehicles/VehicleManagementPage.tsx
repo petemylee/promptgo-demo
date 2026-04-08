@@ -114,9 +114,9 @@ export default function VehicleManagementPage() {
       ) : (
         <>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <h1 className="text-3xl font-bold text-[#004c80]">Vehicle Management</h1>
+          <h1 className="text-3xl font-bold text-[#004c80]">จัดการรถยนต์</h1>
           <button onClick={handleAdd} className="bg-[#0076c3] text-white px-4 py-2 rounded-md shadow hover:bg-[#0087de] w-full md:w-auto">
-            + Add New Vehicle
+            + เพิ่มรถยนต์
           </button>
         </div>
         <div className="bg-white/90 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
@@ -129,14 +129,14 @@ export default function VehicleManagementPage() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b bg-[#004c80]/5">
-                  <th className="text-left py-2 px-4 text-[#004c80]">License Plate</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Brand & Model</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Color</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Type</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">ทะเบียนรถ</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">ยี่ห้อ/รุ่น</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">สี</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">ประเภทรถ</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">ความจุ (CC)</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">จำนวนที่สามารถโดยสารได้ (คน)</th>
                   <th className="text-left py-2 px-4 text-[#004c80]">เลขไมล์ปัจจุบัน (กม.)</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">Actions</th>
+                  <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,9 +157,9 @@ export default function VehicleManagementPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(vehicle)}
-                          aria-label="Edit vehicle"
+                          aria-label="แก้ไขข้อมูลรถยนต์"
                           className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-[#004c80]/20 bg-white text-[#004c80] hover:bg-[#004c80]/5 hover:ring-[#004c80]/30 transition"
-                          title="Edit"
+                          title="แก้ไข"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                             <path d="M21.731 2.269a2.625 2.625 0 0 0-3.713 0l-1.2 1.2 3.713 3.713 1.2-1.2a2.625 2.625 0 0 0 0-3.713z"/>
@@ -168,9 +168,9 @@ export default function VehicleManagementPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(vehicle.id)}
-                          aria-label="Delete vehicle"
+                          aria-label="ลบข้อมูลรถยนต์"
                           className="group inline-flex items-center justify-center rounded-full p-2 ring-1 ring-red-200 bg-white text-red-600 hover:bg-red-50 hover:ring-red-300 transition"
-                          title="Delete"
+                          title="ลบ"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                             <path d="M9 3a1 1 0 0 0-1 1v1H5.5a1 1 0 1 0 0 2h13a1 1 0 1 0 0-2H16V4a1 1 0 0 0-1-1H9z"/>

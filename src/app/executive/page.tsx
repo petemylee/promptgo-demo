@@ -48,7 +48,7 @@ export default function ExecutiveDashboard() {
     try {
       const response = await fetch('/api/bookings');
       if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
+        throw new Error('ไม่สามารถดึงข้อมูลการจองได้');
       }
       const data = await response.json();
       setBookings(data);
@@ -129,11 +129,11 @@ export default function ExecutiveDashboard() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#004c80] mb-1.5">Executive Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#004c80] mb-1.5">แดชบอร์ดผู้บริหาร</h1>
         <p className="text-slate-600">ภาพรวมการยืนยันการเดินทางและสถิติ</p>
         {session && (
           <p className="text-sm text-slate-500 mt-2">
-            ยินดีต้อนรับ {session.user?.name || 'Executive'}
+            ยินดีต้อนรับ {session.user?.name || 'ผู้บริหาร'}
           </p>
         )}
       </div>

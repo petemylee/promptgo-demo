@@ -56,7 +56,7 @@ export default function DriverFeedbackModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
         <div className="border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-semibold text-[#004c80]">ให้ Feedback คนขับ</h2>
+          <h2 className="text-xl font-semibold text-[#004c80]">ให้ข้อเสนอแนะคนขับ</h2>
           <p className="mt-1 text-sm text-gray-600">{driverName || 'คนขับ'}</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -107,7 +107,7 @@ export default function DriverFeedbackModal({
               disabled={isSubmitting || rating < 1}
               className="px-4 py-2 rounded-lg bg-[#0076c3] text-white hover:bg-[#005b99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'กำลังส่ง...' : 'ส่ง Feedback'}
+              {isSubmitting ? 'กำลังส่ง...' : 'ส่งข้อเสนอแนะ'}
             </button>
           </div>
         </form>

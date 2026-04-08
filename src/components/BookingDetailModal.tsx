@@ -290,7 +290,9 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                 </div>
               )}
               {booking.adminApprover && (
-                <p className="text-sm text-slate-600 mt-1">อนุมัติโดย: {booking.adminApprover.name}</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  {booking.status === 'REJECTED' ? 'ปฏิเสธโดย' : 'อนุมัติโดย'}: {booking.adminApprover.name}
+                </p>
               )}
               {booking.executiveConfirmer && (
                 <p className="text-sm text-slate-600 mt-1">ยืนยันโดย: {booking.executiveConfirmer.name}</p>
