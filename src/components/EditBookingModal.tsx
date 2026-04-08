@@ -3,7 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 import SignaturePad from './SignaturePad';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
-import { parseBangkokDateTimeLocal, toBangkokDateTimeLocalInput } from '@/lib/dateTime';
+import {
+  parseBangkokDateTimeLocal,
+  toBangkokDateTimeLocalInput,
+  bangkokStartOfTodayDatetimeLocalString,
+  isBeforeBangkokStartOfToday,
+} from '@/lib/dateTime';
 import { requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
@@ -27,7 +32,6 @@ interface BookingData {
   passengerCount: number | null;
   tripType: TripType | null;
   requesterSignatureUrl: string | null;
-  passengerImageUrl: string | null;
   status: string;
 }
 
@@ -44,9 +48,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
-  const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
-  const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
-  const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [postPendingEditNotice, setPostPendingEditNotice] = useState(false);
 
@@ -61,12 +62,19 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setError('รูปแบบวันเวลาไม่ถูกต้อง');
       return;
     }
+    if (isBeforeBangkokStartOfToday(parsedStart) || isBeforeBangkokStartOfToday(parsedEnd)) {
+      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
+      return;
+    }
     if (parsedEnd.getTime() < parsedStart.getTime()) {
       setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
       return;
     }
     setError('');
   };
+
+  const minBangkokToday = bangkokStartOfTodayDatetimeLocalString();
+  const endDatetimeMin = startTime && startTime >= minBangkokToday ? startTime : minBangkokToday;
 
   const fetchBookingData = useCallback(async () => {
     setIsLoadingData(true);
@@ -95,7 +103,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       const rawTrip = String(data.tripType ?? '');
       setTripType(rawTrip === 'PICK_UP' ? 'ONE_WAY' : (rawTrip as TripType | ''));
       setSignatureDataUrl(data.requesterSignatureUrl);
-      setPassengerPhotoPreview(data.passengerImageUrl);
     } catch (err) {
       setPostPendingEditNotice(false);
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -119,8 +126,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setTripType('');
       setError('');
       setSignatureDataUrl(null);
-      setPassengerPhotoFile(null);
-      setPassengerPhotoPreview(null);
       setPostPendingEditNotice(false);
     }
   }, [isOpen, bookingId, fetchBookingData]);
@@ -132,32 +137,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
 
   const handleSignatureClear = () => {
     setSignatureDataUrl(null);
-  };
-
-  const handlePassengerPhotoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith('image/')) {
-        setError('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPassengerPhotoPreview(e.target?.result as string);
-        setError('');
-      };
-      reader.readAsDataURL(file);
-      setPassengerPhotoFile(file);
-    }
-  };
-
-  const removePassengerPhoto = () => {
-    setPassengerPhotoFile(null);
-    setPassengerPhotoPreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,9 +152,12 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
       return;
     }
+    if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
+      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
+      return;
+    }
     setIsLoading(true);
     setIsUploadingSignature(false);
-    setIsUploadingPassengerPhoto(false);
 
     try {
       // Upload signature if changed
@@ -211,35 +193,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
         requesterSignatureUrl = signatureDataUrl;
       }
 
-      // Upload passenger photo if changed
-      let passengerImageUrl: string | null = null;
-      
-      if (passengerPhotoFile) {
-        setIsUploadingPassengerPhoto(true);
-        try {
-          const photoFormData = new FormData();
-          photoFormData.append('photo', passengerPhotoFile);
-
-          const photoResponse = await fetch('/api/upload/passenger-photo', {
-            method: 'POST',
-            body: photoFormData,
-          });
-
-          if (photoResponse.ok) {
-            const photoData = await photoResponse.json();
-            passengerImageUrl = photoData.url;
-          } else {
-            const errorData = await photoResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || 'ไม่สามารถอัปโหลดรูปภาพผู้โดยสารได้');
-          }
-        } finally {
-          setIsUploadingPassengerPhoto(false);
-        }
-      } else if (passengerPhotoPreview && passengerPhotoPreview.startsWith('http')) {
-        // Keep existing photo URL
-        passengerImageUrl = passengerPhotoPreview;
-      }
-
       // Update booking
       const res = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
@@ -254,7 +207,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
           requesterSignatureUrl,
-          passengerImageUrl,
         }),
       });
 
@@ -271,7 +223,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
     } finally {
       setIsLoading(false);
       setIsUploadingSignature(false);
-      setIsUploadingPassengerPhoto(false);
     }
   };
 
@@ -305,7 +256,9 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 </div>
               )}
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ต้นทาง*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  สถานที่ต้นทาง<span className="text-red-600">*</span>
+                </label>
                 <input
                   value={startLocation}
                   onChange={(e) => setStartLocation(e.target.value)}
@@ -314,7 +267,9 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  สถานที่ปลายทาง<span className="text-red-600">*</span>
+                </label>
                 <input 
                   value={destination} 
                   onChange={(e) => setDestination(e.target.value)} 
@@ -323,36 +278,43 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">วันเวลาออกเดินทาง*</label>
-                <input 
-                  type="datetime-local" 
-                  value={startTime} 
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  วันเวลาออกเดินทาง<span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  min={minBangkokToday}
+                  value={startTime}
                   onChange={(e) => {
                     const next = e.target.value;
                     setStartTime(next);
                     validateDateTimesLive(next, endTime);
-                  }} 
-                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
-                  required 
+                  }}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  required
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">วันที่สิ้นสุด*</label>
-                <input 
-                  type="datetime-local" 
-                  value={endTime} 
-                  min={startTime || undefined}
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  วันที่สิ้นสุด<span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={endTime}
+                  min={endDatetimeMin}
                   onChange={(e) => {
                     const next = e.target.value;
                     setEndTime(next);
                     validateDateTimesLive(startTime, next);
-                  }} 
-                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
-                  required 
+                  }}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  required
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  วัตถุประสงค์<span className="text-red-600">*</span>
+                </label>
                 <textarea 
                   rows={4} 
                   value={purpose} 
@@ -372,7 +334,9 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">ประเภทการเดินทาง*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  ประเภทการเดินทาง<span className="text-red-600">*</span>
+                </label>
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -401,49 +365,19 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 </div>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  value={passengerCount} 
-                  onChange={(e) => setPassengerCount(e.target.value)} 
-                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
-                  required 
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  จำนวนคนนั่ง<span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(e.target.value.replace(/\D/g, ''))}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+                  required
                   placeholder="ระบุจำนวนคนนั่ง"
                 />
-              </div>
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">รูปภาพผู้โดยสาร (ไม่บังคับ)</label>
-                <div className="space-y-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePassengerPhotoInput}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60 text-sm"
-                    disabled={isLoading || isUploadingPassengerPhoto}
-                  />
-                  {passengerPhotoPreview && (
-                    <div className="space-y-2">
-                      <div className="relative inline-block">
-                        <Image 
-                          src={passengerPhotoPreview} 
-                          alt="Passenger Photo Preview" 
-                          width={200}
-                          height={200}
-                          className="mx-auto max-h-32 border rounded-lg object-contain"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={removePassengerPhoto}
-                        className="text-xs text-red-600 hover:text-red-700 underline"
-                        disabled={isLoading || isUploadingPassengerPhoto}
-                      >
-                        ลบรูปภาพ
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">ลายเซ็นผู้ขอใช้รถ (ไม่บังคับ)</label>
@@ -479,7 +413,6 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
               </div>
               {error && <p className="text-red-600 text-center text-sm">{error}</p>}
               {isUploadingSignature && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดลายเซ็น...</p>}
-              {isUploadingPassengerPhoto && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดรูปภาพผู้โดยสาร...</p>}
             </div>
             <div className="px-8 py-6 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
               <button 

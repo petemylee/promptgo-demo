@@ -200,7 +200,6 @@ model Booking {
   rejectedAt          DateTime?      // วันที่/เวลาที่ปฏิเสธ
   generatedFormUrl    String?
   requesterSignatureUrl String?      // ลายเซ็นผู้ขอใช้รถ
-  passengerImageUrl   String?        // รูปภาพผู้โดยสาร
   requestForSelf     Boolean        @default(true) // ขอใช้สำหรับตนเอง = true, สำหรับบุคคลอื่น = false
   travelerName       String?        // ชื่อผู้เดินทาง (เมื่อขอใช้สำหรับบุคคลอื่น)
   travelerPosition   String?        // ตำแหน่งผู้เดินทาง (เมื่อขอใช้สำหรับบุคคลอื่น)

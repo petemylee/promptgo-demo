@@ -1,5 +1,6 @@
 'use client';
 import { Fragment, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import type {
@@ -7,6 +8,7 @@ import type {
   ApprovalDriver,
   ApprovalVehicle,
 } from '@/types/approvals';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 type Props = {
   showHeader?: boolean;
@@ -44,6 +46,8 @@ export default function ApproveAndAllocateBookings({
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
 
+  const pathname = usePathname();
+
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
@@ -74,6 +78,25 @@ export default function ApproveAndAllocateBookings({
     mql.addListener(onChange);
     return () => mql.removeListener(onChange);
   }, []);
+
+  useEffect(() => {
+    const reset = (e: Event) => {
+      const detail = (e as CustomEvent<SidebarRouteResetDetail>).detail;
+      if (detail?.href !== pathname) return;
+      setShowVehicleModal(false);
+      setSelectedBookingId(null);
+      setSelectedVehicleId('');
+      setSelectedDriverId('');
+      setIsDetailModalOpen(false);
+      setSelectedDetailBookingId(null);
+      setShowRejectModal(false);
+      setRejectBookingId(null);
+      setRejectionReason('');
+      setExpandedBookingIds(new Set());
+    };
+    window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
+    return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
+  }, [pathname]);
 
   const fetchVehicles = async () => {
     setIsLoadingVehicles(true);

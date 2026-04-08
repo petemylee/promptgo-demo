@@ -29,7 +29,6 @@ interface BookingDetail {
   rejectionReason?: string | null;
   rejectedAt?: string | null;
   requesterSignatureUrl: string | null;
-  passengerImageUrl: string | null;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
@@ -320,20 +319,6 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                     ยกเลิกคำขอ
                   </button>
                 )}
-              </div>
-            )}
-
-            {/* Passenger Photo */}
-            {booking.passengerImageUrl && (
-              <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-                <h3 className="font-semibold text-[#004c80] mb-2">รูปภาพผู้โดยสาร</h3>
-                <Image
-                  src={booking.passengerImageUrl}
-                  alt="Passenger Photo"
-                  width={200}
-                  height={200}
-                  className="rounded-lg object-cover"
-                />
               </div>
             )}
 

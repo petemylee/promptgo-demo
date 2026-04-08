@@ -104,17 +104,3 @@ export async function uploadDriverPhoto(
   return uploadToSupabaseStorage('uploads', filePath, file, contentType);
 }
 
-/**
- * Upload passenger photo
- */
-export async function uploadPassengerPhoto(
-  bookingId: string,
-  file: Buffer | Blob,
-  contentType: string = 'image/jpeg'
-): Promise<string> {
-  const timestamp = Date.now();
-  const fileExtension = contentType.includes('png') ? 'png' : 'jpg';
-  const filePath = `passenger-photos/passenger_${bookingId}_${timestamp}.${fileExtension}`;
-  
-  return uploadToSupabaseStorage('uploads', filePath, file, contentType);
-}

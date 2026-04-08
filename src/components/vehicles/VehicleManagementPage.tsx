@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import VehicleFormModal from '@/components/vehicles/VehicleFormModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 interface Vehicle {
   id: string;
@@ -83,6 +84,17 @@ export default function VehicleManagementPage() {
   useEffect(() => {
     setIsModalOpen(false);
     setEditingVehicle(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onSameRouteClick = (e: Event) => {
+      const detail = (e as CustomEvent<SidebarRouteResetDetail>).detail;
+      if (detail?.href !== pathname) return;
+      setIsModalOpen(false);
+      setEditingVehicle(null);
+    };
+    window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
+    return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
   }, [pathname]);
 
   if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูลรถยนต์..." /></div>;

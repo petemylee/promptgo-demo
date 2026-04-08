@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // ✅ 1. นำเข้าฟังก์ชันส่งไลน์
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
-import { parseMaybeDateInput } from '@/lib/dateTime';
+import { parseMaybeDateInput, isBeforeBangkokStartOfToday } from '@/lib/dateTime';
 import { createNotifications } from '@/lib/notifications';
 import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   try {
     // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
-    const { startLocation, endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, passengerImageUrl, additionalNotes } = body;
+    const { startLocation, endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, additionalNotes } = body;
 
     // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!startLocation || !endLocation || !purpose || !startTime || !endTime) {
@@ -69,6 +69,9 @@ export async function POST(req: Request) {
     if (parsedEndTime.getTime() < parsedStartTime.getTime()) {
       return NextResponse.json({ error: 'End time must be greater than or equal to start time' }, { status: 400 });
     }
+    if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
+      return NextResponse.json({ error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' }, { status: 400 });
+    }
 
     const createData = {
       startLocation,
@@ -86,7 +89,6 @@ export async function POST(req: Request) {
       status: 'PENDING' as const,
       requesterId: session.user.id,
       requesterSignatureUrl: requesterSignatureUrl || null,
-      passengerImageUrl: passengerImageUrl || null,
       additionalNotes: additionalNotes?.trim() || null,
     };
     const newBooking = await prisma.booking.create({

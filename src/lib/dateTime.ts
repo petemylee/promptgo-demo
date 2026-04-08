@@ -92,3 +92,31 @@ export function formatBangkokDateTime(value: Date | string | null | undefined): 
     timeZone: BANGKOK_TIMEZONE,
   });
 }
+
+/** Midnight at start of calendar day in Asia/Bangkok (wall clock). */
+export function bangkokStartOfToday(): Date {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BANGKOK_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const y = parts.find((p) => p.type === 'year')?.value;
+  const m = parts.find((p) => p.type === 'month')?.value;
+  const d = parts.find((p) => p.type === 'day')?.value;
+  if (!y || !m || !d) return new Date(NaN);
+  const iso = `${y}-${m}-${d}T00:00:00+07:00`;
+  const date = new Date(iso);
+  return isValidDate(date) ? date : new Date(NaN);
+}
+
+/** Value for `datetime-local` min= matching parseBangkokDateTimeLocal (00:00 Bangkok today). */
+export function bangkokStartOfTodayDatetimeLocalString(): string {
+  return toBangkokDateTimeLocalInput(bangkokStartOfToday());
+}
+
+export function isBeforeBangkokStartOfToday(date: Date): boolean {
+  if (!isValidDate(date)) return true;
+  return date.getTime() < bangkokStartOfToday().getTime();
+}

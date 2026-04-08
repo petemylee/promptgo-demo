@@ -184,7 +184,9 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
           <div className={`flex-1 ${variant === 'modal' ? 'overflow-y-auto' : ''}`}>
             <div className="max-w-lg mx-auto py-8 px-4 sm:px-6 space-y-4">
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">ชื่อ*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  ชื่อ<span className="text-red-600">*</span>
+                </label>
                 <input 
                   type="text" 
                   value={name} 
@@ -194,7 +196,9 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">ตำแหน่ง*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  ตำแหน่ง<span className="text-red-600">*</span>
+                </label>
                 <input 
                   type="text" 
                   value={position} 
@@ -204,7 +208,9 @@ export default function ProfileEditModal({ isOpen, onClose, onUpdated, variant =
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">Email*</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  Email<span className="text-red-600">*</span>
+                </label>
                 <input 
                   type="email" 
                   value={email} 

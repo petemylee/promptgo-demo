@@ -45,6 +45,7 @@ function worksheetToMatrix(worksheet: ExcelJS.Worksheet): unknown[][] {
 }
 import UserFormModal from '@/components/users/UserFormModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 interface User {
   id: string;
@@ -332,6 +333,17 @@ export default function UserManagementPage() {
   useEffect(() => {
     setIsModalOpen(false);
     setEditingUser(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onSameRouteClick = (e: Event) => {
+      const detail = (e as CustomEvent<SidebarRouteResetDetail>).detail;
+      if (detail?.href !== pathname) return;
+      setIsModalOpen(false);
+      setEditingUser(null);
+    };
+    window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
+    return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
   }, [pathname]);
 
   if (isLoading) return <div className="p-4 md:p-8"><LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูลผู้ใช้..." /></div>;

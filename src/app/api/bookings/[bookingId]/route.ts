@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 import { writeUsageLog } from '@/lib/usageLogs';
 import { buildBookingNotification } from '@/lib/lineNotifications';
-import { parseMaybeDateInput } from '@/lib/dateTime';
+import { parseMaybeDateInput, isBeforeBangkokStartOfToday } from '@/lib/dateTime';
 import { createNotifications } from '@/lib/notifications';
 import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
@@ -136,7 +136,6 @@ export async function PATCH(
       endTime,
       passengerCount,
       tripType,
-      passengerImageUrl,
       additionalNotes
     } = body;
 
@@ -219,7 +218,7 @@ export async function PATCH(
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
       if (startLocation !== undefined || endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
-          passengerImageUrl !== undefined || additionalNotes !== undefined) {
+          additionalNotes !== undefined) {
         if (!requesterMayEditBookingDetails(bookingForAuth.status)) {
           return NextResponse.json({
             error: 'ไม่สามารถแก้ไขคำขอที่อยู่ในสถานะนี้ได้ (แก้ไขได้เฉพาะคำขอที่ยังดำเนินการอยู่)',
@@ -235,7 +234,6 @@ export async function PATCH(
           endTime?: Date | null;
           passengerCount?: number | null;
           tripType?: TripType | null;
-          passengerImageUrl?: string | null;
           requesterSignatureUrl?: string | null;
           additionalNotes?: string | null;
         } = {};
@@ -278,7 +276,6 @@ export async function PATCH(
           }
           updateData.tripType = normalizedTrip;
         }
-        if (passengerImageUrl !== undefined) updateData.passengerImageUrl = passengerImageUrl || null;
         if (requesterSignatureUrl !== undefined) updateData.requesterSignatureUrl = requesterSignatureUrl || null;
 
         const effectiveStartTime = updateData.startTime !== undefined ? updateData.startTime : bookingForAuth.startTime;
@@ -286,6 +283,18 @@ export async function PATCH(
         if (effectiveStartTime && effectiveEndTime && effectiveEndTime.getTime() < effectiveStartTime.getTime()) {
           return NextResponse.json(
             { error: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น' },
+            { status: 400 }
+          );
+        }
+        if (effectiveStartTime && isBeforeBangkokStartOfToday(effectiveStartTime)) {
+          return NextResponse.json(
+            { error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' },
+            { status: 400 }
+          );
+        }
+        if (effectiveEndTime && isBeforeBangkokStartOfToday(effectiveEndTime)) {
+          return NextResponse.json(
+            { error: 'ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้' },
             { status: 400 }
           );
         }

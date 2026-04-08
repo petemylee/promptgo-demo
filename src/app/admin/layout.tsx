@@ -12,6 +12,7 @@ import AppSidebar from '@/components/layout/AppSidebar';
 import { adminSidebarItems } from '@/config/sidebar/admin';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { NotificationsProvider } from '@/components/notifications/NotificationsContext';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 export default function AdminLayout({
   children,
@@ -27,6 +28,16 @@ export default function AdminLayout({
   // ปิด modal เมื่อเปลี่ยน tab/หน้า
   useEffect(() => {
     setShowProfileModal(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onSameRouteClick = (e: Event) => {
+      const detail = (e as CustomEvent<SidebarRouteResetDetail>).detail;
+      if (detail?.href !== pathname) return;
+      setShowProfileModal(false);
+    };
+    window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
+    return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, onSameRouteClick);
   }, [pathname]);
 
   useEffect(() => {

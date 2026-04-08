@@ -5,6 +5,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
 import SidebarProfile from '@/components/SidebarProfile';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 export type SidebarItem = {
   href: string;
@@ -68,6 +69,16 @@ export default function AppSidebar({
                   <li key={item.href} className="mb-1.5">
                     <Link
                       href={item.href}
+                      onClick={(e) => {
+                        if (pathname === item.href) {
+                          e.preventDefault();
+                          window.dispatchEvent(
+                            new CustomEvent<SidebarRouteResetDetail>(SIDEBAR_ROUTE_RESET_EVENT, {
+                              detail: { href: item.href },
+                            })
+                          );
+                        }
+                      }}
                       className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 ${
                         isActive
                           ? 'bg-white text-[#004c80] shadow-md'

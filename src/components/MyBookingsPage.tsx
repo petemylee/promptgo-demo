@@ -1,6 +1,6 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import BookingFormModal from '@/components/BookingFormModal';
@@ -9,6 +9,7 @@ import EditBookingModal from '@/components/EditBookingModal';
 import DriverFeedbackModal from '@/components/DriverFeedbackModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
+import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
 type Booking = {
   id: string;
@@ -267,6 +268,7 @@ const InProgressBookingCard = ({
 export default function MyBookingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -357,6 +359,20 @@ export default function MyBookingsPage() {
       window.removeEventListener('openBookingModal', handleOpenModal);
     };
   }, []);
+
+  useEffect(() => {
+    const reset = (e: Event) => {
+      const detail = (e as CustomEvent<SidebarRouteResetDetail>).detail;
+      if (detail?.href !== pathname) return;
+      setShowCreateForm(false);
+      setIsDetailModalOpen(false);
+      setIsEditModalOpen(false);
+      setSelectedBookingId(null);
+      setFeedbackModal(null);
+    };
+    window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
+    return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
+  }, [pathname]);
 
   const { activeBookings, completedBookings, inProgressBookings } = useMemo(() => {
     const active = bookings.filter(b => b.status !== 'COMPLETED' && b.status !== 'IN_PROGRESS');

@@ -2,7 +2,11 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
-import { parseBangkokDateTimeLocal } from '@/lib/dateTime';
+import {
+  parseBangkokDateTimeLocal,
+  bangkokStartOfTodayDatetimeLocalString,
+  isBeforeBangkokStartOfToday,
+} from '@/lib/dateTime';
 
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
 
@@ -38,11 +42,11 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [signatureMode, setSignatureMode] = useState<SignatureMode>('NONE');
   const [saveAsProfileSignature, setSaveAsProfileSignature] = useState(true);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
-  const [passengerPhotoFile, setPassengerPhotoFile] = useState<File | null>(null);
-  const [passengerPhotoPreview, setPassengerPhotoPreview] = useState<string | null>(null);
-  const [isUploadingPassengerPhoto, setIsUploadingPassengerPhoto] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [isSavingProfileSignature, setIsSavingProfileSignature] = useState(false);
+
+  const minBangkokToday = bangkokStartOfTodayDatetimeLocalString();
+  const endDatetimeMin = startTime && startTime >= minBangkokToday ? startTime : minBangkokToday;
 
   const validateDateTimesLive = (nextStart: string, nextEnd: string) => {
     if (!nextStart || !nextEnd) {
@@ -53,6 +57,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
     const parsedEnd = parseBangkokDateTimeLocal(nextEnd);
     if (!parsedStart || !parsedEnd) {
       setError('รูปแบบวันเวลาไม่ถูกต้อง');
+      return;
+    }
+    if (isBeforeBangkokStartOfToday(parsedStart) || isBeforeBangkokStartOfToday(parsedEnd)) {
+      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
       return;
     }
     if (parsedEnd.getTime() < parsedStart.getTime()) {
@@ -104,9 +112,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setSaveAsProfileSignature(true);
       setIsSavingProfileSignature(false);
       setIsUploadingSignature(false);
-      setPassengerPhotoFile(null);
-      setPassengerPhotoPreview(null);
-      setIsUploadingPassengerPhoto(false);
       setAdditionalNotes('');
     }
   }, [variant, isOpen]);
@@ -135,35 +140,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
     setUserProfile((prev) => prev ? ({ ...prev, signatureImageUrl: profileSignatureUrl }) : prev);
   };
 
-  const handlePassengerPhotoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-        return;
-      }
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
-        return;
-      }
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPassengerPhotoPreview(e.target?.result as string);
-        setError('');
-      };
-      reader.readAsDataURL(file);
-      setPassengerPhotoFile(file);
-    }
-  };
-
-  const removePassengerPhoto = () => {
-    setPassengerPhotoFile(null);
-    setPassengerPhotoPreview(null);
-  };
-
   if (variant === 'modal' && !isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,9 +159,12 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setError('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น');
       return;
     }
+    if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
+      setError('ไม่สามารถเลือกวันเวลาก่อนวันนี้ (เวลาไทย) ได้');
+      return;
+    }
     setIsLoading(true);
     setIsUploadingSignature(false);
-    setIsUploadingPassengerPhoto(false);
 
     try {
       // Upload signature first if exists
@@ -230,37 +209,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
         requesterSignatureUrl = null;
       }
 
-      // Upload passenger photo if exists
-      let passengerImageUrl: string | null = null;
-      
-      if (passengerPhotoFile) {
-        setIsUploadingPassengerPhoto(true);
-        try {
-          const photoFormData = new FormData();
-          photoFormData.append('photo', passengerPhotoFile);
-
-          const photoResponse = await fetch('/api/upload/passenger-photo', {
-            method: 'POST',
-            body: photoFormData,
-          });
-
-          if (photoResponse.ok) {
-            const photoData = await photoResponse.json();
-            passengerImageUrl = photoData.url;
-          } else {
-            const errorData = await photoResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || 'ไม่สามารถอัปโหลดรูปภาพผู้โดยสารได้');
-          }
-        } catch (err: unknown) {
-          if (err instanceof Error) {
-            throw err;
-          }
-          throw new Error('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพผู้โดยสาร');
-        } finally {
-          setIsUploadingPassengerPhoto(false);
-        }
-      }
-
       // Create booking
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -279,7 +227,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           travelerPosition: requestForSelf ? null : travelerPosition?.trim() || null,
           travelerPhone: requestForSelf ? null : travelerPhone?.trim() || null,
           requesterSignatureUrl,
-          passengerImageUrl,
           additionalNotes: additionalNotes?.trim() || null,
         }),
       });
@@ -295,7 +242,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
     } finally {
       setIsLoading(false);
       setIsUploadingSignature(false);
-      setIsUploadingPassengerPhoto(false);
     }
   };
 
@@ -317,7 +263,9 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         <div className={`px-8 py-6 space-y-4 flex-1 ${variant === 'modal' ? 'overflow-y-auto' : ''}`}>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">ขอใช้สำหรับ*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              ขอใช้สำหรับ<span className="text-red-600">*</span>
+            </label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -352,23 +300,33 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             </div>
           ) : (
             <div className="space-y-4 rounded-xl border border-gray-200 bg-amber-50/30 p-4">
-              <p className="text-sm font-medium text-gray-700">ข้อมูลผู้เดินทาง*</p>
+              <p className="text-sm font-medium text-gray-700">
+                ข้อมูลผู้เดินทาง<span className="text-red-600">*</span>
+              </p>
               <div>
-                <label className="block mb-1 text-sm text-gray-600">ชื่อ-นามสกุล*</label>
+                <label className="block mb-1 text-sm text-gray-600">
+                  ชื่อ-นามสกุล<span className="text-red-600">*</span>
+                </label>
                 <input value={travelerName} onChange={(e) => setTravelerName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุชื่อ-นามสกุลผู้เดินทาง" />
               </div>
               <div>
-                <label className="block mb-1 text-sm text-gray-600">ตำแหน่ง*</label>
+                <label className="block mb-1 text-sm text-gray-600">
+                  ตำแหน่ง<span className="text-red-600">*</span>
+                </label>
                 <input value={travelerPosition} onChange={(e) => setTravelerPosition(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุตำแหน่ง" />
               </div>
               <div>
-                <label className="block mb-1 text-sm text-gray-600">เบอร์โทร*</label>
+                <label className="block mb-1 text-sm text-gray-600">
+                  เบอร์โทร<span className="text-red-600">*</span>
+                </label>
                 <input type="tel" value={travelerPhone} onChange={(e) => setTravelerPhone(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required={!requestForSelf} placeholder="ระบุเบอร์โทรศัพท์" />
               </div>
             </div>
           )}
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ต้นทาง*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              สถานที่ต้นทาง<span className="text-red-600">*</span>
+            </label>
             <input
               value={startLocation}
               onChange={(e) => setStartLocation(e.target.value)}
@@ -377,11 +335,15 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">สถานที่ปลายทาง*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              สถานที่ปลายทาง<span className="text-red-600">*</span>
+            </label>
             <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">วัตถุประสงค์*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              วัตถุประสงค์<span className="text-red-600">*</span>
+            </label>
             <textarea rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
           </div>
           <div>
@@ -389,21 +351,27 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             <textarea rows={3} value={additionalNotes} onChange={(e) => setAdditionalNotes(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" placeholder="ระบุหมายเหตุเพิ่มเติมถ้ามี" />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">จำนวนคนนั่ง*</label>
-            <input 
-              type="number" 
-              min="1" 
-              value={passengerCount} 
-              onChange={(e) => setPassengerCount(e.target.value)} 
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" 
-              required 
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              จำนวนคนนั่ง<span className="text-red-600">*</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={passengerCount}
+              onChange={(e) => setPassengerCount(e.target.value.replace(/\D/g, ''))}
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
+              required
               placeholder="ระบุจำนวนคนนั่ง"
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">วันเวลาออกเดินทาง*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              วันเวลาออกเดินทาง<span className="text-red-600">*</span>
+            </label>
             <input
               type="datetime-local"
+              min={minBangkokToday}
               value={startTime}
               onChange={(e) => {
                 const next = e.target.value;
@@ -415,11 +383,13 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">วันที่สิ้นสุด*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              วันที่สิ้นสุด<span className="text-red-600">*</span>
+            </label>
             <input
               type="datetime-local"
               value={endTime}
-              min={startTime || undefined}
+              min={endDatetimeMin}
               onChange={(e) => {
                 const next = e.target.value;
                 setEndTime(next);
@@ -430,7 +400,9 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">ประเภทการเดินทาง*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              ประเภทการเดินทาง<span className="text-red-600">*</span>
+            </label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -459,7 +431,9 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
             </div>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">การเดินทาง*</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              การเดินทาง<span className="text-red-600">*</span>
+            </label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -485,39 +459,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
                 />
                 <span className="text-sm text-gray-700">ไม่ใช้ทางด่วน</span>
               </label>
-            </div>
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">รูปภาพผู้โดยสาร (ไม่บังคับ)</label>
-            <div className="space-y-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePassengerPhotoInput}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60 text-sm"
-                disabled={isLoading || isUploadingPassengerPhoto}
-              />
-              {passengerPhotoPreview && (
-                <div className="space-y-2">
-                  <div className="relative inline-block">
-                    <Image 
-                      src={passengerPhotoPreview} 
-                      alt="Passenger Photo Preview" 
-                      width={200}
-                      height={200}
-                      className="mx-auto max-h-32 border rounded-lg object-contain"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removePassengerPhoto}
-                    className="text-xs text-red-600 hover:text-red-700 underline"
-                    disabled={isLoading || isUploadingPassengerPhoto}
-                  >
-                    ลบรูปภาพ
-                  </button>
-                </div>
-              )}
             </div>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
@@ -627,7 +568,6 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           </div>
           {error && <p className="text-red-600 text-center text-sm">{error}</p>}
           {isUploadingSignature && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดลายเซ็น...</p>}
-          {isUploadingPassengerPhoto && <p className="text-blue-600 text-center text-sm">กำลังอัปโหลดรูปภาพผู้โดยสาร...</p>}
         </div>
         <div className="px-8 py-6 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
           <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 ring-1 ring-black/10 bg-white hover:bg-gray-50">ยกเลิก</button>

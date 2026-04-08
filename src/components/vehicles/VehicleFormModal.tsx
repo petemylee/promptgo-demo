@@ -172,7 +172,9 @@ export default function VehicleFormModal({ isOpen, onClose, onVehicleUpdated, in
       {header}
       <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto space-y-4 flex-1">
         <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-700">License Plate*</label>
+          <label className="block mb-2 text-sm font-medium text-gray-700">
+            License Plate<span className="text-red-600">*</span>
+          </label>
           <input type="text" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
         </div>
         <div className="mb-4">
