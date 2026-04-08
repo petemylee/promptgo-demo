@@ -1,7 +1,7 @@
 'use client';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import BookingFormModal from '@/components/BookingFormModal';
 import BookingDetailModal from '@/components/BookingDetailModal';
@@ -10,6 +10,8 @@ import DriverFeedbackModal from '@/components/DriverFeedbackModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
+import StatusBadge from '@/components/booking/StatusBadge';
+import { formatDateTimeTH } from '@/lib/formatters';
 
 type Booking = {
   id: string;
@@ -43,7 +45,28 @@ type Booking = {
   } | null;
 };
 
-type SessionRole = 'Requester' | 'Admin' | 'Executive' | 'Driver' | string;
+type StatusFilter =
+  | 'ALL'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'CONFIRMED'
+  | 'REJECTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'MERGED';
+
+const STATUS_FILTERS: Array<{ id: StatusFilter; label: string }> = [
+  { id: 'ALL', label: 'ทั้งหมด' },
+  { id: 'PENDING', label: 'รอพิจารณา' },
+  { id: 'APPROVED', label: 'รอยืนยัน' },
+  { id: 'CONFIRMED', label: 'ยืนยันแล้ว' },
+  { id: 'IN_PROGRESS', label: 'กำลังเดินทาง' },
+  { id: 'COMPLETED', label: 'เสร็จสิ้น' },
+  { id: 'REJECTED', label: 'ปฏิเสธ' },
+  { id: 'CANCELLED', label: 'ยกเลิก' },
+  { id: 'MERGED', label: 'รวม' },
+];
 
 const BOOKING_STATUSES = new Set<Booking['status']>([
   'PENDING',
@@ -122,21 +145,6 @@ const normalizeBooking = (b: unknown): Booking | null => {
         }
       : null,
   };
-};
-
-const StatusBadge = ({ status }: { status: Booking['status'] }) => {
-  const map: Record<Booking['status'], { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
-    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังเดินทาง' },
-    COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'เสร็จสิ้น' },
-    CANCELLED: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'ยกเลิก' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
-  };
-  const p = map[status];
-  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
 const InProgressBookingCard = ({
@@ -234,13 +242,13 @@ const InProgressBookingCard = ({
           <p className="text-sm">
             <span className="font-medium text-gray-700">เวลาเริ่ม:</span>{' '}
             <span className="text-gray-900">
-              {booking.startTime ? new Date(booking.startTime).toLocaleString('th-TH') : '-'}
+              {formatDateTimeTH(booking.startTime)}
             </span>
           </p>
           {booking.endTime && (
             <p className="text-sm">
               <span className="font-medium text-gray-700">เวลาสิ้นสุด:</span>{' '}
-              <span className="text-gray-900">{new Date(booking.endTime).toLocaleString('th-TH')}</span>
+              <span className="text-gray-900">{formatDateTimeTH(booking.endTime)}</span>
             </p>
           )}
         </div>
@@ -273,12 +281,12 @@ export default function MyBookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{ bookingId: string; driverId: string; driverName: string | null } | null>(null);
-  const [expandedBookingIds, setExpandedBookingIds] = useState<Set<string>>(() => new Set());
   const [isDesktop, setIsDesktop] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -325,8 +333,7 @@ export default function MyBookingsPage() {
     const load = async () => {
       setIsLoading(true);
       setLoadError(null);
-      const role: SessionRole | undefined = session?.user?.role as SessionRole | undefined;
-      const endpoint = role === 'Admin' || role === 'Executive' ? '/api/bookings?all=true' : '/api/my/bookings';
+      const endpoint = '/api/my/bookings';
 
       const res = await fetch(endpoint);
       if (!res.ok) {
@@ -375,34 +382,31 @@ export default function MyBookingsPage() {
   }, [pathname]);
 
   const { activeBookings, completedBookings, inProgressBookings } = useMemo(() => {
-    const active = bookings.filter(b => b.status !== 'COMPLETED' && b.status !== 'IN_PROGRESS');
-    const completed = bookings.filter(b => b.status === 'COMPLETED');
-    const inProgress = bookings.filter(b => b.status === 'IN_PROGRESS');
+    const active = bookings.filter((b) => b.status !== 'COMPLETED' && b.status !== 'IN_PROGRESS');
+    const completed = bookings.filter((b) => b.status === 'COMPLETED');
+    const inProgress = bookings.filter((b) => b.status === 'IN_PROGRESS');
     return { activeBookings: active, completedBookings: completed, inProgressBookings: inProgress };
   }, [bookings]);
 
+  const statusFilteredActive = useMemo(() => {
+    if (statusFilter === 'ALL') return activeBookings;
+    return activeBookings.filter((b) => b.status === statusFilter);
+  }, [activeBookings, statusFilter]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return activeBookings;
-    return activeBookings.filter(b =>
+    if (!q) return statusFilteredActive;
+    return statusFilteredActive.filter((b) =>
       (b.purpose || '').toLowerCase().includes(q) ||
       (b.endLocation || '').toLowerCase().includes(q) ||
+      (b.startLocation || '').toLowerCase().includes(q) ||
       (b.status || '').toLowerCase().includes(q)
     );
-  }, [activeBookings, query]);
+  }, [statusFilteredActive, query]);
 
   const handleViewDetails = (bookingId: string) => {
     setSelectedBookingId(bookingId);
     setIsDetailModalOpen(true);
-  };
-
-  const toggleExpanded = (bookingId: string) => {
-    setExpandedBookingIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(bookingId)) next.delete(bookingId);
-      else next.add(bookingId);
-      return next;
-    });
   };
 
   const handleEdit = (bookingId: string) => {
@@ -434,8 +438,7 @@ export default function MyBookingsPage() {
   };
 
   const reloadBookings = async () => {
-    const role: SessionRole | undefined = session?.user?.role as SessionRole | undefined;
-    const endpoint = role === 'Admin' || role === 'Executive' ? '/api/bookings?all=true' : '/api/my/bookings';
+    const endpoint = '/api/my/bookings';
 
     const res = await fetch(endpoint);
     if (!res.ok) {
@@ -467,6 +470,131 @@ export default function MyBookingsPage() {
       (b.status || '').toLowerCase().includes(q)
     );
   }, [completedBookings, query]);
+
+  const BookingCard = ({
+    booking,
+    isCompletedList = false,
+  }: {
+    booking: Booking;
+    isCompletedList?: boolean;
+  }) => {
+    const primaryLabel = 'ดูรายละเอียด';
+    const canEdit = requesterMayEditBookingDetails(booking.status);
+    const canCancel = requesterMayCancelBooking(booking.status);
+
+    return (
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-slate-600">ปลายทาง</div>
+            <div className="font-semibold text-slate-900 truncate">{booking.endLocation || '-'}</div>
+            <div className="mt-1 text-xs text-slate-600 truncate">
+              {(booking.startLocation || '-') + ' → ' + (booking.endLocation || '-')}
+            </div>
+          </div>
+          <div className="shrink-0">
+            <StatusBadge status={booking.status} />
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+          <div className="rounded-xl bg-slate-50 p-3">
+            <div className="text-xs text-slate-600">เวลาเริ่ม</div>
+            <div className="font-medium text-slate-900">{formatDateTimeTH(booking.startTime)}</div>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3">
+            <div className="text-xs text-slate-600">เวลาสิ้นสุด</div>
+            <div className="font-medium text-slate-900">{formatDateTimeTH(booking.endTime)}</div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <details className="group">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-[#004c80] underline-offset-4 group-open:no-underline">
+              เพิ่มเติม
+            </summary>
+            <div className="mt-3 grid grid-cols-1 gap-3 text-sm">
+              <div className="rounded-xl bg-slate-50 p-3">
+                <div className="text-xs text-slate-600">วัตถุประสงค์</div>
+                <div className="font-medium text-slate-900">{booking.purpose || '-'}</div>
+              </div>
+              {booking.driver && (
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">คนขับ</div>
+                  <div className="font-medium text-slate-900">{booking.driver.name || booking.driver.email || '-'}</div>
+                </div>
+              )}
+              {booking.vehicle && (
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">รถ</div>
+                  <div className="font-medium text-slate-900">{booking.vehicle.licensePlate}</div>
+                  <div className="text-xs text-slate-600">
+                    {[booking.vehicle.brand, booking.vehicle.model, booking.vehicle.type].filter(Boolean).join(' • ')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => handleViewDetails(booking.id)}
+            className="inline-flex justify-center rounded-xl bg-[#0076c3] px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-[#0087de] transition"
+          >
+            {primaryLabel}
+          </button>
+
+          <div className="grid grid-cols-2 gap-2">
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => handleEdit(booking.id)}
+                className="inline-flex justify-center rounded-xl bg-white px-3 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 transition"
+              >
+                แก้ไข
+              </button>
+            ) : (
+              <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-400 grid place-items-center">
+                แก้ไข
+              </div>
+            )}
+
+            {canCancel ? (
+              <button
+                type="button"
+                onClick={() => handleCancel(booking.id)}
+                className="inline-flex justify-center rounded-xl bg-white px-3 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200 hover:bg-red-50 transition"
+              >
+                ยกเลิก
+              </button>
+            ) : (
+              <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-400 grid place-items-center">
+                ยกเลิก
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isCompletedList && booking.status === 'COMPLETED' && booking.driver && !booking.driverFeedback && (
+          <button
+            type="button"
+            onClick={() =>
+              setFeedbackModal({
+                bookingId: booking.id,
+                driverId: booking.driver!.id,
+                driverName: booking.driver!.name ?? '',
+              })
+            }
+            className="mt-3 w-full inline-flex justify-center rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100 transition"
+          >
+            ⭐ ให้ข้อเสนอแนะคนขับ
+          </button>
+        )}
+      </div>
+    );
+  };
 
   if (status === 'loading') return <LoadingScreen fullScreen message="กำลังโหลด..." />;
 
@@ -561,6 +689,28 @@ export default function MyBookingsPage() {
           </div>
         </div>
 
+        {/* Quick filters */}
+        <div className="mb-6 -mx-4 px-4 overflow-x-auto">
+          <div className="flex gap-2 w-max">
+            {STATUS_FILTERS.map((f) => {
+              const active = statusFilter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setStatusFilter(f.id)}
+                  className={[
+                    'whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ring-1 transition',
+                    active ? 'bg-[#004c80] text-white ring-[#004c80]' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50',
+                  ].join(' ')}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {!isLoading && inProgressBookings.length > 0 && (
           <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5 mb-6">
             <h2 className="text-xl font-bold text-[#004c80] mb-4">รายการที่กำลังเดินทาง</h2>
@@ -584,198 +734,46 @@ export default function MyBookingsPage() {
               {loadError}
             </div>
           )}
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b bg-[#004c80]/5">
-                  <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
-                  <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="py-12">
-                      <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
-                    </td>
-                  </tr>
-                ) : filtered.length > 0 ? (
-                  filtered.map((b) => (
-                    <Fragment key={b.id}>
-                      <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                        <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
-                        <td className="py-2 px-4">{b.endLocation || '-'}</td>
-                        <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
-                        <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
-                        <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
-                        <td className="py-2 px-4">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <button
-                              onClick={() => handleViewDetails(b.id)}
-                              className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
-                            >
-                              ดูรายละเอียด
-                            </button>
-                            {requesterMayEditBookingDetails(b.status) && (
-                              <button
-                                onClick={() => handleEdit(b.id)}
-                                className="text-sm text-emerald-600 hover:text-emerald-700 underline"
-                              >
-                                แก้ไข
-                              </button>
-                            )}
-                            {requesterMayCancelBooking(b.status) && (
-                              <button
-                                onClick={() => handleCancel(b.id)}
-                                className="text-sm text-red-600 hover:text-red-700 underline"
-                              >
-                                ยกเลิกคำขอ
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => toggleExpanded(b.id)}
-                              className="md:hidden text-sm text-slate-700 hover:text-slate-900 underline"
-                              aria-expanded={expandedBookingIds.has(b.id)}
-                            >
-                              {expandedBookingIds.has(b.id) ? 'ย่อ' : 'เพิ่มเติม'} {expandedBookingIds.has(b.id) ? '▾' : '▸'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedBookingIds.has(b.id) && (
-                        <tr className="md:hidden border-b bg-slate-50/60">
-                          <td colSpan={6} className="px-4 py-3">
-                            <div className="grid grid-cols-1 gap-2 text-sm">
-                              <div>
-                                <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
-                                <span className="text-slate-900">{b.purpose || '-'}</span>
-                              </div>
-                              {b.startLocation && (
-                                <div>
-                                  <span className="font-medium text-slate-700">จุดเริ่มต้น:</span>{' '}
-                                  <span className="text-slate-900">{b.startLocation}</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))
-                ) : bookings.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-10">
-                      <div className="mx-auto max-w-md text-center">
-                        <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#004c80] grid place-items-center">🗒️</div>
-                        <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีคำขอของคุณ</h3>
-                        <p className="text-sm text-gray-500 mt-1">เริ่มต้นสร้างคำขอแรกของคุณได้เลย</p>
-                        <button onClick={() => setShowCreateForm(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ ขอใช้รถยนต์</button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
-                      {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {isLoading ? (
+            <div className="py-12">
+              <LoadingScreen fullScreen={false} message="กำลังโหลดข้อมูล..." />
+            </div>
+          ) : filtered.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {filtered.map((b) => (
+                <BookingCard key={b.id} booking={b} />
+              ))}
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="py-10">
+              <div className="mx-auto max-w-md text-center">
+                <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#0076c3]/10 text-[#004c80] grid place-items-center">🗒️</div>
+                <h3 className="text-lg font-semibold text-gray-800">ยังไม่มีคำขอของคุณ</h3>
+                <p className="text-sm text-gray-500 mt-1">เริ่มต้นสร้างคำขอแรกของคุณได้เลย</p>
+                <button onClick={() => setShowCreateForm(true)} className="mt-4 inline-block rounded-xl bg-[#0076c3] px-4 py-2.5 text-white shadow hover:bg-[#0087de]">+ ขอใช้รถยนต์</button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-4 text-center text-gray-500 text-sm">
+              {query.trim() ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการในหมวดนี้'}
+            </div>
+          )}
         </div>
 
         {!isLoading && completedBookings.length > 0 && (
           <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
             <h2 className="text-xl font-bold text-[#004c80] mb-4">การเดินทางที่เสร็จสิ้น</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b bg-[#004c80]/5">
-                    <th className="hidden md:table-cell text-left py-2 px-4 text-[#004c80]">วัตถุประสงค์</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">ปลายทาง</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาเริ่ม</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">วันเวลาสิ้นสุด</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">สถานะ</th>
-                    <th className="text-left py-2 px-4 text-[#004c80]">การทำรายการ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCompleted.length > 0 ? (
-                    filteredCompleted.map((b) => (
-                      <Fragment key={b.id}>
-                        <tr key={b.id} className="border-b hover:bg-[#0076c3]/5">
-                          <td className="hidden md:table-cell py-2 px-4">{b.purpose || '-'}</td>
-                          <td className="py-2 px-4">{b.endLocation || '-'}</td>
-                          <td className="py-2 px-4">{b.startTime ? new Date(b.startTime).toLocaleString('th-TH') : '-'}</td>
-                          <td className="py-2 px-4">{b.endTime ? new Date(b.endTime).toLocaleString('th-TH') : '-'}</td>
-                          <td className="py-2 px-4"><StatusBadge status={b.status} /></td>
-                          <td className="py-2 px-4">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <button
-                                onClick={() => handleViewDetails(b.id)}
-                                className="text-sm text-[#0076c3] hover:text-[#005b99] underline"
-                              >
-                                ดูรายละเอียด
-                              </button>
-                              {b.status === 'COMPLETED' && b.driver && !b.driverFeedback && (
-                                <button
-                                  onClick={() => setFeedbackModal({
-                                    bookingId: b.id,
-                                    driverId: b.driver!.id,
-                                    driverName: b.driver!.name ?? '',
-                                  })}
-                                  className="text-sm text-amber-700 hover:text-amber-800 underline"
-                                >
-                                  ⭐ ให้ข้อเสนอแนะคนขับ
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => toggleExpanded(b.id)}
-                                className="md:hidden text-sm text-slate-700 hover:text-slate-900 underline"
-                                aria-expanded={expandedBookingIds.has(b.id)}
-                              >
-                                {expandedBookingIds.has(b.id) ? 'ย่อ' : 'เพิ่มเติม'} {expandedBookingIds.has(b.id) ? '▾' : '▸'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        {expandedBookingIds.has(b.id) && (
-                          <tr className="md:hidden border-b bg-slate-50/60">
-                            <td colSpan={6} className="px-4 py-3">
-                              <div className="grid grid-cols-1 gap-2 text-sm">
-                                <div>
-                                  <span className="font-medium text-slate-700">วัตถุประสงค์:</span>{' '}
-                                  <span className="text-slate-900">{b.purpose || '-'}</span>
-                                </div>
-                                {b.startLocation && (
-                                  <div>
-                                    <span className="font-medium text-slate-700">จุดเริ่มต้น:</span>{' '}
-                                    <span className="text-slate-900">{b.startLocation}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="py-4 text-center text-gray-500 text-sm">
-                        ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {filteredCompleted.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {filteredCompleted.map((b) => (
+                  <BookingCard key={b.id} booking={b} isCompletedList />
+                ))}
+              </div>
+            ) : (
+              <div className="py-4 text-center text-gray-500 text-sm">
+                ไม่พบรายการที่เสร็จสิ้นที่ตรงกับคำค้นหา
+              </div>
+            )}
           </div>
         )}
 

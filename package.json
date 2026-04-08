@@ -39,8 +39,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "madge": "^8.0.0",
     "prisma": "^6.15.0",
     "tailwindcss": "^4",
+    "ts-prune": "^0.10.3",
     "typescript": "^5"
   }
 }

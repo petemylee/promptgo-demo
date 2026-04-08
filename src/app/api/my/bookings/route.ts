@@ -9,10 +9,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // My Bookings ใช้สำหรับ role ผู้ขอใช้รถ (Requester) เท่านั้น
-  if (session.user.role !== 'Requester') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  // My Bookings: แสดงเฉพาะรายการที่ "ผู้ใช้นี้เป็นผู้ขอใช้ (requester)" ไม่ว่าผู้ใช้จะอยู่ role ใด
+  // (เช่น Admin/Executive ก็มีเมนู My bookings ของตัวเองได้ แต่ต้องไม่เห็นของคนอื่น)
 
   try {
     const bookings = await prisma.booking.findMany({

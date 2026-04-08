@@ -2,6 +2,9 @@
 'use client';
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
+import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import NextStepCallout from '@/components/booking/NextStepCallout';
+import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface Booking {
   id: string;
@@ -110,15 +113,7 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeTHLong(dateString);
 
   if (isLoading) {
     return (
@@ -190,77 +185,24 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
         <p className="text-gray-600">สิ้นสุดงานเมื่อถึงปลายทาง</p>
       </div>
 
+      <div className="mb-6 space-y-3">
+        <BookingSummaryHeader
+          status={booking.status}
+          startLocation={booking.startLocation}
+          endLocation={booking.endLocation}
+          startTime={booking.startTime}
+          endTime={booking.endTime}
+          vehicle={booking.vehicle ? { licensePlate: booking.vehicle.licensePlate } : null}
+        />
+        <NextStepCallout role="Driver" status={booking.status} />
+      </div>
+
       <div className="grid grid-cols-1 gap-8">
         {/* Job Info & End Job */}
         <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-          <h2 className="text-xl font-semibold text-[#004c80] mb-6">รายละเอียดงาน</h2>
+          <h2 className="text-xl font-semibold text-[#004c80] mb-6">สิ้นสุดงาน</h2>
           
           <div className="space-y-6">
-            {/* Job Details */}
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
-                <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
-                {booking.purpose && (
-                  <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
-                )}
-              </div>
-
-              {booking.additionalNotes && (
-                <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                    <span className="text-amber-600" aria-hidden>📌</span>
-                    หมายเหตุเพิ่มเติม
-                  </h3>
-                  <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
-                  <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
-                  {booking.requestForSelf === false && (
-                    <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  {booking.vehicle ? (
-                    <>
-                      <p className="font-medium">{booking.vehicle.licensePlate}</p>
-                      <p className="text-sm text-gray-600">
-                        {booking.vehicle.brand} {booking.vehicle.model}
-                      </p>
-                      {booking.startMileage !== null && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          <span className="font-medium">เลขไมล์ก่อนออกเดินทาง:</span> {booking.startMileage.toLocaleString()} กม.
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-gray-500">ยังไม่ได้กำหนดรถ</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
-                <div className="bg-gray-50 p-3 rounded-lg space-y-1">
-                  <p className="text-sm">
-                    <span className="font-medium">เริ่ม:</span> {booking.startTime ? formatDate(booking.startTime) : '-'}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">สิ้นสุด:</span> {booking.endTime ? formatDate(booking.endTime) : '-'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Notice */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-start">
@@ -323,6 +265,80 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
                 'สิ้นสุดงาน'
               )}
             </button>
+
+            <details className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5">
+              <summary className="cursor-pointer list-none select-none px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-[#004c80]">รายละเอียดงาน</h3>
+                  <span className="text-slate-500" aria-hidden>▾</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4 space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
+                  <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
+                  {booking.purpose && (
+                    <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
+                  )}
+                </div>
+
+                {booking.additionalNotes && (
+                  <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+                    <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                      <span className="text-amber-600" aria-hidden>📌</span>
+                      หมายเหตุเพิ่มเติม
+                    </h3>
+                    <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+                      <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
+                      {booking.requestForSelf === false && (
+                        <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      {booking.vehicle ? (
+                        <>
+                          <p className="font-medium">{booking.vehicle.licensePlate}</p>
+                          <p className="text-sm text-gray-600">
+                            {booking.vehicle.brand} {booking.vehicle.model}
+                          </p>
+                          {booking.startMileage !== null && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              <span className="font-medium">เลขไมล์ก่อนออกเดินทาง:</span> {booking.startMileage.toLocaleString()} กม.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-gray-500">ยังไม่ได้กำหนดรถ</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
+                  <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+                    <p className="text-sm">
+                      <span className="font-medium">เริ่ม:</span> {booking.startTime ? formatDate(booking.startTime) : '-'}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">สิ้นสุด:</span> {booking.endTime ? formatDate(booking.endTime) : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>

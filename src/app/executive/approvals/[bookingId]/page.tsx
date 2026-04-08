@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import SignaturePad from '@/components/SignaturePad';
+import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import NextStepCallout from '@/components/booking/NextStepCallout';
+import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface Booking {
   id: string;
@@ -296,15 +299,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeTHLong(dateString);
 
   if (isLoading) {
     return (
@@ -376,15 +371,39 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
         <p className="text-gray-600">ตรวจสอบรายละเอียดและยืนยันการเดินทางขั้นสุดท้าย</p>
       </div>
 
+      <div className="mb-6 space-y-3">
+        <BookingSummaryHeader
+          status={booking.status}
+          startLocation={null}
+          endLocation={booking.endLocation}
+          startTime={booking.startTime}
+          endTime={booking.endTime}
+          vehicle={booking.vehicle ? { licensePlate: booking.vehicle.licensePlate } : null}
+          driver={booking.driver ? { name: booking.driver.name } : null}
+        />
+        <NextStepCallout
+          role="Executive"
+          status={booking.status}
+          hasVehicle={!!selectedVehicleId}
+          hasDriver={!!selectedDriverId}
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Booking Details */}
         <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
           <h2 className="text-xl font-semibold text-[#004c80] mb-6">รายละเอียดการเดินทาง</h2>
           
           <div className="space-y-6">
+            <details className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5" open>
+              <summary className="cursor-pointer list-none select-none px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-[#004c80]">ผู้เดินทาง</h3>
+                  <span className="text-slate-500" aria-hidden>▾</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
             {/* ผู้เดินทาง */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">ผู้เดินทาง</h3>
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 {booking.requestForSelf !== false && booking.requester.profileImageUrl && (
                   <div className="mb-2">
@@ -404,16 +423,24 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                   <p className="text-sm text-gray-500 mt-2">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
                 )}
               </div>
-            </div>
+              </div>
+            </details>
 
             {/* Trip Details */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">รายละเอียดการเดินทาง</h3>
+            <details className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5" open>
+              <summary className="cursor-pointer list-none select-none px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-[#004c80]">รายละเอียดการเดินทาง</h3>
+                  <span className="text-slate-500" aria-hidden>▾</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p><span className="font-medium">ไป:</span> {booking.endLocation}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
               </div>
-            </div>
+              </div>
+            </details>
 
             {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
             {booking.additionalNotes && (
@@ -427,17 +454,30 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
             )}
 
             {/* Schedule */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">กำหนดการ</h3>
+            <details className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5">
+              <summary className="cursor-pointer list-none select-none px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-[#004c80]">กำหนดการ</h3>
+                  <span className="text-slate-500" aria-hidden>▾</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p><span className="font-medium">วันที่เริ่ม:</span> {booking.startTime ? formatDate(booking.startTime) : '-'}</p>
                 <p><span className="font-medium">วันที่สิ้นสุด:</span> {booking.endTime ? formatDate(booking.endTime) : '-'}</p>
               </div>
-            </div>
+              </div>
+            </details>
 
             {/* Vehicle & Driver */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">ยานพาหนะ & คนขับ</h3>
+            <details className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5" open>
+              <summary className="cursor-pointer list-none select-none px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-[#004c80]">ยานพาหนะ & คนขับ (ต้องเลือก)</h3>
+                  <span className="text-slate-500" aria-hidden>▾</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
               <div className="bg-gray-50 p-4 rounded-lg space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -557,7 +597,8 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            </details>
 
             {/* Admin Approver */}
             {booking.adminApprover && (
@@ -581,6 +622,24 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
           <h2 className="text-xl font-semibold text-[#004c80] mb-6">ยืนยันการเดินทาง</h2>
           
           <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-slate-900">ตรวจสอบก่อนยืนยัน</div>
+                  <ul className="mt-2 text-sm text-slate-700 space-y-1">
+                    <li className={selectedVehicleId ? 'text-emerald-700' : 'text-slate-700'}>
+                      {selectedVehicleId ? '✓' : '•'} เลือกรถยนต์
+                    </li>
+                    <li className={selectedDriverId ? 'text-emerald-700' : 'text-slate-700'}>
+                      {selectedDriverId ? '✓' : '•'} เลือกคนขับ
+                    </li>
+                    <li className={(signatureMode === 'PROFILE' && !!mySignatureUrl) || (signatureMode === 'NEW' && !!signatureDataUrl) ? 'text-emerald-700' : 'text-slate-700'}>
+                      {((signatureMode === 'PROFILE' && !!mySignatureUrl) || (signatureMode === 'NEW' && !!signatureDataUrl)) ? '✓' : '•'} ลายเซ็นผู้ยืนยัน
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
             {/* Signature Upload */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-[#004c80]">ลายเซ็นผู้ยืนยัน</h3>

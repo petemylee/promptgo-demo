@@ -4,6 +4,9 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
+import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import NextStepCallout from '@/components/booking/NextStepCallout';
+import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface BookingDetailModalProps {
   isOpen: boolean;
@@ -150,18 +153,36 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = (dateString: string | null) => formatDateTimeTHLong(dateString);
 
   if (!isOpen) return null;
+
+  const Section = ({
+    title,
+    defaultOpen,
+    children,
+  }: {
+    title: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+  }) => {
+    return (
+      <details
+        className="rounded-2xl border border-slate-200/70 bg-white shadow-sm ring-1 ring-black/5"
+        open={defaultOpen}
+      >
+        <summary className="cursor-pointer list-none select-none px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold text-[#004c80]">{title}</h3>
+            <span className="text-slate-500" aria-hidden>
+              ▾
+            </span>
+          </div>
+        </summary>
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">{children}</div>
+      </details>
+    );
+  };
 
   const detailBody = (
     <>
@@ -182,34 +203,84 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
         </div>
       ) : booking ? (
         <div className="space-y-6">
-            {/* ผู้เดินทาง / ผู้ขอใช้ */}
-            <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-              <h3 className="font-semibold text-[#004c80] mb-2">ข้อมูลผู้เดินทาง</h3>
-              <p><span className="font-medium">ชื่อ:</span> {booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
-              <p><span className="font-medium">ตำแหน่ง:</span> {booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
-              <p><span className="font-medium">เบอร์โทร:</span> {booking.requestForSelf !== false ? (booking.requester.phoneNumber || '-') : (booking.travelerPhone || '-')}</p>
-              {booking.requestForSelf === false && (
-                <p className="mt-2 text-sm text-slate-500"><span className="font-medium">ผู้สร้างคำขอ:</span> {booking.requester.name} ({booking.requester.email})</p>
-              )}
+            <div className="space-y-3">
+              <BookingSummaryHeader
+                status={booking.status}
+                startLocation={booking.startLocation}
+                endLocation={booking.endLocation}
+                startTime={booking.startTime}
+                endTime={booking.endTime}
+                vehicle={booking.vehicle ? { licensePlate: booking.vehicle.licensePlate } : null}
+                driver={booking.driver ? { name: booking.driver.name || booking.driver.email } : null}
+              />
+              <NextStepCallout
+                role="Requester"
+                status={booking.status}
+                hasVehicle={!!booking.vehicle}
+                hasDriver={!!booking.driver}
+                rejectionReason={booking.rejectionReason ?? null}
+              />
             </div>
 
-            {/* Trip Details */}
-            <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-              <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
-              <p><span className="font-medium">ต้นทาง:</span> {booking.startLocation || '-'}</p>
-              <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
-              <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>
-              {booking.tripType && (
-                <p><span className="font-medium">ประเภทการเดินทาง:</span> {
-                  booking.tripType === 'ONE_WAY' || booking.tripType === 'PICK_UP' ? 'ส่ง' :
-                  booking.tripType === 'ROUND_TRIP' ? 'ส่ง/รับกลับ' :
-                  booking.tripType
-                }</p>
-              )}
-              {booking.passengerCount && (
-                <p><span className="font-medium">จำนวนคนนั่ง:</span> {booking.passengerCount} คน</p>
-              )}
-            </div>
+            {/* การทำรายการ (ผู้ขอใช้รถ) — โชว์ไว้ด้านบนเพื่อลดการเลื่อน */}
+            {((onEditRequest && requesterMayEditBookingDetails(booking.status)) ||
+              (onCancelRequest && requesterMayCancelBooking(booking.status))) && (
+              <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ring-1 ring-black/5">
+                <h3 className="font-semibold text-[#004c80] mb-2">ทำรายการ</h3>
+                <div className="flex flex-wrap gap-2">
+                  {onEditRequest && requesterMayEditBookingDetails(booking.status) && (
+                    <button
+                      type="button"
+                      onClick={() => onEditRequest(bookingId)}
+                      className="flex-1 min-w-[140px] rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      แก้ไขรายละเอียด
+                    </button>
+                  )}
+                  {onCancelRequest && requesterMayCancelBooking(booking.status) && (
+                    <button
+                      type="button"
+                      onClick={() => onCancelRequest(bookingId)}
+                      className="flex-1 min-w-[140px] rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100"
+                    >
+                      ยกเลิกคำขอ
+                    </button>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-slate-600">
+                  ถ้ารายการถูกปฏิเสธ ให้กด “แก้ไขรายละเอียด” แล้วส่งใหม่อีกครั้ง
+                </p>
+              </div>
+            )}
+
+            <Section title="ข้อมูลผู้เดินทาง" defaultOpen>
+              <div className="space-y-1 text-slate-900">
+                <p><span className="font-medium">ชื่อ:</span> {booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
+                <p><span className="font-medium">ตำแหน่ง:</span> {booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
+                <p><span className="font-medium">เบอร์โทร:</span> {booking.requestForSelf !== false ? (booking.requester.phoneNumber || '-') : (booking.travelerPhone || '-')}</p>
+                {booking.requestForSelf === false && (
+                  <p className="mt-2 text-sm text-slate-500"><span className="font-medium">ผู้สร้างคำขอ:</span> {booking.requester.name} ({booking.requester.email})</p>
+                )}
+              </div>
+            </Section>
+
+            <Section title="รายละเอียดการเดินทาง" defaultOpen>
+              <div className="space-y-1 text-slate-900">
+                <p><span className="font-medium">ต้นทาง:</span> {booking.startLocation || '-'}</p>
+                <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
+                <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>
+                {booking.tripType && (
+                  <p><span className="font-medium">ประเภทการเดินทาง:</span> {
+                    booking.tripType === 'ONE_WAY' || booking.tripType === 'PICK_UP' ? 'ส่ง' :
+                    booking.tripType === 'ROUND_TRIP' ? 'ส่ง/รับกลับ' :
+                    booking.tripType
+                  }</p>
+                )}
+                {booking.passengerCount && (
+                  <p><span className="font-medium">จำนวนคนนั่ง:</span> {booking.passengerCount} คน</p>
+                )}
+              </div>
+            </Section>
 
             {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
             {booking.additionalNotes && (
@@ -222,112 +293,99 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
               </div>
             )}
 
-            {/* Schedule */}
-            <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-              <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
-              <p><span className="font-medium">วันเวลาเริ่ม:</span> {formatDate(booking.startTime)}</p>
-              <p><span className="font-medium">วันเวลาสิ้นสุด:</span> {formatDate(booking.endTime)}</p>
-            </div>
+            <Section title="กำหนดการ">
+              <div className="space-y-1 text-slate-900">
+                <p><span className="font-medium">วันเวลาเริ่ม:</span> {formatDate(booking.startTime)}</p>
+                <p><span className="font-medium">วันเวลาสิ้นสุด:</span> {formatDate(booking.endTime)}</p>
+              </div>
+            </Section>
 
             {/* Vehicle & Driver */}
-            {booking.vehicle && (
-              <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-                <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
-                {booking.vehicle.vehicleImageUrl && (
-                  <div className="mb-3">
-                    <Image
-                      src={booking.vehicle.vehicleImageUrl}
-                      alt="Vehicle Photo"
-                      width={320}
-                      height={200}
-                      sizes="(max-width: 640px) 100vw, 320px"
-                      className="rounded-lg object-cover ring-1 ring-black/10"
-                      style={{ width: '100%', height: 'auto' }}
-                    />
-                  </div>
-                )}
-                <p>{booking.vehicle.licensePlate} - {booking.vehicle.brand} {booking.vehicle.model}</p>
-                <p className="text-sm text-slate-600">สีรถ: {booking.vehicle.color || '-'}</p>
-              </div>
-            )}
+            {(booking.vehicle || booking.driver) && (
+              <Section title="รถและคนขับ">
+                <div className="space-y-4">
+                  {booking.vehicle && (
+                    <div className="rounded-xl bg-slate-50 p-3 text-slate-900">
+                      <div className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</div>
+                      {booking.vehicle.vehicleImageUrl && (
+                        <div className="mb-3">
+                          <Image
+                            src={booking.vehicle.vehicleImageUrl}
+                            alt="Vehicle Photo"
+                            width={320}
+                            height={200}
+                            sizes="(max-width: 640px) 100vw, 320px"
+                            className="rounded-lg object-cover ring-1 ring-black/10"
+                            style={{ width: '100%', height: 'auto' }}
+                          />
+                        </div>
+                      )}
+                      <p className="font-medium">{booking.vehicle.licensePlate}</p>
+                      <p className="text-sm text-slate-700">{booking.vehicle.brand} {booking.vehicle.model}</p>
+                      <p className="text-sm text-slate-600">สีรถ: {booking.vehicle.color || '-'}</p>
+                    </div>
+                  )}
 
-            {booking.driver && (
-              <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-                <h3 className="font-semibold text-[#004c80] mb-2">คนขับ</h3>
-                {booking.driver.profileImageUrl && (
-                  <div className="mb-3">
-                    <Image
-                      src={booking.driver.profileImageUrl}
-                      alt="Driver Photo"
-                      width={160}
-                      height={160}
-                      className="rounded-lg object-cover ring-1 ring-black/10"
-                    />
-                  </div>
-                )}
-                <p>{booking.driver.name || booking.driver.email}</p>
-                {booking.driver.phoneNumber && (
-                  <p className="text-sm text-slate-600">โทร: {booking.driver.phoneNumber}</p>
-                )}
-              </div>
+                  {booking.driver && (
+                    <div className="rounded-xl bg-slate-50 p-3 text-slate-900">
+                      <div className="font-semibold text-[#004c80] mb-2">คนขับ</div>
+                      {booking.driver.profileImageUrl && (
+                        <div className="mb-3">
+                          <Image
+                            src={booking.driver.profileImageUrl}
+                            alt="Driver Photo"
+                            width={160}
+                            height={160}
+                            className="rounded-lg object-cover ring-1 ring-black/10"
+                          />
+                        </div>
+                      )}
+                      <p className="font-medium">{booking.driver.name || booking.driver.email}</p>
+                      {booking.driver.phoneNumber && (
+                        <p className="text-sm text-slate-600">โทร: {booking.driver.phoneNumber}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Section>
             )}
 
             {/* Status */}
-            <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
-              <h3 className="font-semibold text-[#004c80] mb-2">สถานะ</h3>
-              <p>{booking.status}</p>
-              {booking.status === 'REJECTED' && (booking.rejectionReason || booking.rejectedAt) && (
-                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <p className="text-sm font-medium text-red-800">เหตุผลในการปฏิเสธ</p>
-                  <p className="mt-1 text-sm text-red-700 whitespace-pre-wrap">
-                    {booking.rejectionReason || '-'}
-                  </p>
-                  {booking.rejectedAt && (
-                    <p className="mt-2 text-xs text-red-700/80">
-                      อัปเดตเมื่อ: {formatDate(booking.rejectedAt)}
+            <Section title="สถานะและการอนุมัติ">
+              <div className="space-y-2 text-slate-900">
+                {booking.status === 'REJECTED' && (booking.rejectionReason || booking.rejectedAt) && (
+                  <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm font-semibold text-red-800">เหตุผลในการปฏิเสธ</p>
+                    <p className="mt-1 text-sm text-red-700 whitespace-pre-wrap">
+                      {booking.rejectionReason || '-'}
                     </p>
-                  )}
-                </div>
-              )}
-              {booking.adminApprover && (
-                <p className="text-sm text-slate-600 mt-1">
-                  {booking.status === 'REJECTED' ? 'ปฏิเสธโดย' : 'อนุมัติโดย'}: {booking.adminApprover.name}
-                </p>
-              )}
-              {booking.executiveConfirmer && (
-                <p className="text-sm text-slate-600 mt-1">ยืนยันโดย: {booking.executiveConfirmer.name}</p>
-              )}
-            </div>
-
-            {/* แก้ไข / ยกเลิก — สำหรับผู้ขอใช้รถ */}
-            {((onEditRequest && requesterMayEditBookingDetails(booking.status)) ||
-              (onCancelRequest && requesterMayCancelBooking(booking.status))) && (
-              <div className="pt-2 border-t border-gray-200 flex flex-wrap gap-2">
-                {onEditRequest && requesterMayEditBookingDetails(booking.status) && (
-                  <button
-                    type="button"
-                    onClick={() => onEditRequest(bookingId)}
-                    className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
-                  >
-                    แก้ไขรายละเอียด
-                  </button>
+                    {booking.rejectedAt && (
+                      <p className="mt-2 text-xs text-red-700/80">
+                        อัปเดตเมื่อ: {formatDate(booking.rejectedAt)}
+                      </p>
+                    )}
+                  </div>
                 )}
-                {onCancelRequest && requesterMayCancelBooking(booking.status) && (
-                  <button
-                    type="button"
-                    onClick={() => onCancelRequest(bookingId)}
-                    className="rounded-xl border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                  >
-                    ยกเลิกคำขอ
-                  </button>
+                {booking.adminApprover && (
+                  <p className="text-sm text-slate-700">
+                    {booking.status === 'REJECTED' ? 'ปฏิเสธโดย' : 'อนุมัติโดย'}: {booking.adminApprover.name}
+                  </p>
+                )}
+                {booking.executiveConfirmer && (
+                  <p className="text-sm text-slate-700">ยืนยันโดย: {booking.executiveConfirmer.name}</p>
+                )}
+                {!booking.adminApprover && !booking.executiveConfirmer && booking.status !== 'REJECTED' && (
+                  <p className="text-sm text-slate-600">
+                    ยังไม่มีข้อมูลการอนุมัติ/ยืนยัน (สถานะรายการดูได้ที่สรุปด้านบน)
+                  </p>
                 )}
               </div>
-            )}
+            </Section>
 
             {/* Signature Section */}
-            <div className="bg-gray-50 p-4 rounded-lg text-slate-900">
+            <Section title="ลายเซ็นผู้ขอใช้">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold text-[#004c80]">ลายเซ็นผู้ขอใช้</h3>
+                <div className="text-sm text-slate-700">ลายเซ็น</div>
                 {!isEditingSignature && (
                   <button
                     onClick={() => setIsEditingSignature(true)}
@@ -337,7 +395,7 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                   </button>
                 )}
               </div>
-              
+
               {isEditingSignature ? (
                 <div className="space-y-4">
                   <SignaturePad
@@ -372,7 +430,7 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
               ) : (
                 <p className="text-slate-500 text-sm">ยังไม่มีลายเซ็น</p>
               )}
-            </div>
+            </Section>
 
             {error && (
               <div className="bg-red-50 p-4 rounded-lg">

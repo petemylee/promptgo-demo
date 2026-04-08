@@ -3,6 +3,9 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
+import StatusBadge from '@/components/booking/StatusBadge';
+import { formatDateTimeTHLong } from '@/lib/formatters';
 
 type Job = {
   id: string;
@@ -46,21 +49,6 @@ type Job = {
     createdAt: string;
     requester: { name: string | null };
   } | null;
-};
-
-const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
-    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังเดินทาง' },
-    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'เสร็จสิ้น' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'ยกเลิก' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
-  };
-  const p = map[status] || { bg: 'bg-gray-50', text: 'text-gray-700', label: status };
-  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
 export default function DriverHistoryPage() {
@@ -108,15 +96,7 @@ export default function DriverHistoryPage() {
     );
   }, [jobs, query]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeTHLong(dateString);
 
   if (status === 'loading') return <div className="p-6">กำลังโหลด...</div>;
 
@@ -259,6 +239,12 @@ export default function DriverHistoryPage() {
                       <p className="text-xs text-gray-500">
                         อัปเดตล่าสุด: {formatDate(job.updatedAt)}
                       </p>
+                      <Link
+                        href={`/driver/jobs/${job.id}`}
+                        className="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
+                      >
+                        ดูรายละเอียด
+                      </Link>
                     </div>
                   </div>
                 </div>

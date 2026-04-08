@@ -4,6 +4,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import { formatDateTimeTH } from '@/lib/formatters';
 
 type Job = {
   id: string;
@@ -36,21 +38,6 @@ type Job = {
   executiveConfirmer: {
     name: string | null;
   } | null;
-};
-
-const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, { bg: string; text: string; label: string }> = {
-    PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'รอการพิจารณา' },
-    APPROVED: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'รอยืนยัน' },
-    CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', label: 'ยืนยันแล้ว' },
-    REJECTED: { bg: 'bg-red-50', text: 'text-red-700', label: 'ปฏิเสธ' },
-    IN_PROGRESS: { bg: 'bg-indigo-50', text: 'text-indigo-700', label: 'กำลังทำอยู่' },
-    COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'เสร็จสิ้น' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'ยกเลิก' },
-    MERGED: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'รวมการเดินทาง' },
-  };
-  const p = map[status] || { bg: 'bg-gray-50', text: 'text-gray-700', label: status };
-  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${p.bg} ${p.text} ring-1 ring-black/5`}>{p.label}</span>;
 };
 
 export default function InProgressJobsPage() {
@@ -96,111 +83,129 @@ export default function InProgressJobsPage() {
         </div>
 
         <div className="rounded-2xl bg-white/90 p-6 shadow ring-1 ring-black/5">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
-            ) : jobs.length > 0 ? (
-              <div className="space-y-4">
-                {jobs.map((job) => (
-                  <div key={job.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      {/* Job Info */}
-                      <div className="flex-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* ผู้เดินทาง */}
-                          <div>
-                            <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
-                            <p className="font-medium">{job.requestForSelf !== false ? (job.requester.name || '-') : (job.travelerName || '-')}</p>
-                            <p className="text-sm text-gray-600">{job.requestForSelf !== false ? (job.requester.position || '-') : (job.travelerPosition || '-')}</p>
-                            {job.requestForSelf === false && (
-                              <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {job.requester.name} ({job.requester.email})</p>
-                            )}
-                          </div>
+          {isLoading ? (
+            <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
+          ) : jobs.length > 0 ? (
+            <div className="space-y-4">
+              {jobs.map((job) => {
+                const who =
+                  job.requestForSelf !== false ? job.requester.name || '-' : job.travelerName || '-';
+                const whoPos =
+                  job.requestForSelf !== false
+                    ? job.requester.position || '-'
+                    : job.travelerPosition || '-';
 
-                          {/* Trip Details */}
-                          <div>
-                            <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
-                            <p className="text-sm">
-                              <span className="font-medium">จุดเริ่มต้น:</span> {job.startLocation || '-'}
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">ปลายทาง:</span> {job.endLocation || '-'}
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">วัตถุประสงค์:</span> {job.purpose || '-'}
-                            </p>
-                          </div>
+                return (
+                  <div
+                    key={job.id}
+                    className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ring-1 ring-black/5 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <BookingSummaryHeader
+                          status={job.status}
+                          startLocation={job.startLocation}
+                          endLocation={job.endLocation}
+                          startTime={job.startTime}
+                          endTime={job.endTime}
+                          vehicle={job.vehicle ? { licensePlate: job.vehicle.licensePlate } : null}
+                        />
 
-                          {/* Schedule */}
-                          <div>
-                            <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
-                            <p className="text-sm">
-                              <span className="font-medium">วันที่เริ่ม:</span>{' '}
-                              {job.startTime ? new Date(job.startTime).toLocaleString('th-TH') : '-'}
-                            </p>
-                            <p className="text-sm">
-                              <span className="font-medium">วันที่สิ้นสุด:</span>{' '}
-                              {job.endTime ? new Date(job.endTime).toLocaleString('th-TH') : '-'}
-                            </p>
-                          </div>
+                        <details className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+                          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                            ดูรายละเอียดเพิ่มเติม
+                          </summary>
+                          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-900 md:grid-cols-2">
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">ผู้เดินทาง</div>
+                              <div className="font-semibold text-slate-900">{who}</div>
+                              <div className="text-xs text-slate-500">{whoPos}</div>
+                              {job.requestForSelf === false && (
+                                <div className="mt-2 text-xs text-slate-600">
+                                  ผู้สร้างคำขอ: {job.requester.name || '-'} ({job.requester.email})
+                                </div>
+                              )}
+                            </div>
 
-                          {/* Vehicle */}
-                          <div>
-                            <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
-                            {job.vehicle ? (
-                              <>
-                                <p className="text-sm font-medium">{job.vehicle.licensePlate}</p>
-                                <p className="text-sm text-gray-600">
-                                  {job.vehicle.brand} {job.vehicle.model}
-                                </p>
-                                <p className="text-sm text-gray-600">สี: {job.vehicle.color || '-'}</p>
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-500">ยังไม่ได้กำหนดรถ</p>
-                            )}
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">วัตถุประสงค์</div>
+                              <div className="font-medium text-slate-900">{job.purpose || '-'}</div>
+                            </div>
+
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">รถ</div>
+                              {job.vehicle ? (
+                                <div className="mt-1">
+                                  <div className="font-semibold text-slate-900">{job.vehicle.licensePlate}</div>
+                                  <div className="text-xs text-slate-600">
+                                    {[job.vehicle.brand, job.vehicle.model, job.vehicle.type]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                  </div>
+                                  <div className="text-xs text-slate-600">สี: {job.vehicle.color || '-'}</div>
+                                </div>
+                              ) : (
+                                <div className="mt-1 text-sm text-slate-600">ยังไม่ได้กำหนดรถ</div>
+                              )}
+                            </div>
+
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">สถานะและการยืนยัน</div>
+                              <div className="mt-2 text-xs text-slate-500">
+                                อัปเดตล่าสุด: {formatDateTimeTH(job.updatedAt || job.createdAt)}
+                              </div>
+                              <div className="mt-2 space-y-1 text-sm">
+                                <div>
+                                  <span className="font-medium text-slate-700">อนุมัติโดย:</span>{' '}
+                                  <span>{job.adminApprover?.name || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">ยืนยันโดย:</span>{' '}
+                                  <span>{job.executiveConfirmer?.name || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        </details>
                       </div>
 
-                      {/* Status & Actions */}
-                      <div className="flex flex-col items-end gap-3">
-                        <StatusBadge status={job.status} />
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/driver/jobs/${job.id}/navigate`}
-                            className="inline-flex items-center gap-1 rounded-lg bg-[#0076c3] px-4 py-2 text-sm font-medium text-white hover:bg-[#0087de] transition"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            ทำงานต่อ
-                          </Link>
-                          <Link
-                            href={`/driver/jobs/${job.id}`}
-                            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                          >
-                            ดูรายละเอียด
-                          </Link>
-                        </div>
+                      <div className="grid grid-cols-2 gap-2 md:w-[320px] md:grid-cols-1 md:self-center">
+                        <Link
+                          href={`/driver/jobs/${job.id}/navigate`}
+                          className="col-span-2 md:col-span-1 inline-flex items-center justify-center rounded-xl bg-[#0076c3] px-4 py-3 text-sm font-semibold text-white shadow hover:bg-[#0087de] transition"
+                        >
+                          ทำงานต่อ
+                        </Link>
+                        <Link
+                          href={`/driver/jobs/${job.id}`}
+                          className="col-span-2 md:col-span-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
+                        >
+                          ดูรายละเอียด
+                        </Link>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-10">
-                <div className="mx-auto max-w-md text-center">
-                  <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 grid place-items-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">ไม่มีงานที่กำลังทำอยู่</h3>
-                  <p className="text-sm text-gray-500 mt-1">งานที่เริ่มทำแล้วจะแสดงที่นี่</p>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-10">
+              <div className="mx-auto max-w-md text-center">
+                <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 grid place-items-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
                 </div>
+                <h3 className="text-lg font-semibold text-gray-800">ไม่มีงานที่กำลังทำอยู่</h3>
+                <p className="text-sm text-gray-500 mt-1">งานที่เริ่มทำแล้วจะแสดงที่นี่</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
