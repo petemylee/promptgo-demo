@@ -13,6 +13,7 @@ import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/s
 import StatusBadge from '@/components/booking/StatusBadge';
 import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
+import RequesterMyBookingsOverview from '@/components/dashboard/RequesterMyBookingsOverview';
 
 type Booking = {
   id: string;
@@ -290,6 +291,7 @@ export default function MyBookingsPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [lightboxAlt, setLightboxAlt] = useState<string>('รูปภาพ');
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   const openLightbox = (src: string, alt: string) => {
     setLightboxSrc(src);
@@ -375,6 +377,10 @@ export default function MyBookingsPage() {
       setIsEditModalOpen(false);
       setSelectedBookingId(null);
       setFeedbackModal(null);
+      setDashboardOpen(false);
+      setQuery('');
+      setStatusFilter('ALL');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
     return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
@@ -671,6 +677,28 @@ export default function MyBookingsPage() {
         <div className="mb-6 flex flex-col gap-1">
           <h1 className="text-2xl font-bold text-[#004c80]">My Bookings</h1>
           <p className="text-gray-700">ติดตามสถานะคำขอใช้รถยนต์ของคุณ</p>
+        </div>
+
+        <div className="mb-6 rounded-2xl bg-white/90 shadow ring-1 ring-black/5">
+          <button
+            type="button"
+            onClick={() => setDashboardOpen((v) => !v)}
+            className="w-full rounded-2xl px-5 py-4 text-left hover:bg-slate-50/60 transition"
+            aria-expanded={dashboardOpen}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[#004c80]">แดชบอร์ด</h2>
+                <p className="text-sm text-slate-600">สรุปข้อมูลภาพรวม (กดเพื่อ {dashboardOpen ? 'ย่อ' : 'ขยาย'})</p>
+              </div>
+              <span className="text-slate-500">{dashboardOpen ? '▾' : '▸'}</span>
+            </div>
+          </button>
+          {dashboardOpen && (
+            <div className="px-5 pb-5">
+              <RequesterMyBookingsOverview className="shadow-none ring-0 bg-transparent p-0" />
+            </div>
+          )}
         </div>
 
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

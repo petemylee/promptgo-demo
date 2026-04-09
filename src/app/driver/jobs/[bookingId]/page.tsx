@@ -25,6 +25,7 @@ interface Booking {
     name: string | null;
     email: string;
     position: string | null;
+    phoneNumber?: string | null;
   };
   adminApprover: {
     name: string | null;
@@ -100,16 +101,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
     } finally {
       setIsStarting(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   if (isLoading) {
@@ -233,7 +224,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
                   {booking.requestForSelf !== false ? booking.requester.position || '-' : booking.travelerPosition || '-'}
                 </div>
                 <div className="mt-1 text-xs text-slate-600">
-                  โทร: {booking.requestForSelf !== false ? (booking.requester as any).phoneNumber || '-' : booking.travelerPhone || '-'}
+                  โทร: {booking.requestForSelf !== false ? booking.requester.phoneNumber || '-' : booking.travelerPhone || '-'}
                 </div>
                 {booking.requestForSelf === false && (
                   <div className="mt-2 text-xs text-slate-600">

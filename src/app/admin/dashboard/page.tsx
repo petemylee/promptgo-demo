@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
 import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
 import FeedbackStatsOverview from '@/components/dashboard/FeedbackStatsOverview';
+import BookingInsightsOverview from '@/components/dashboard/BookingInsightsOverview';
 import type { DashboardCounts } from '@/types/approvals';
 
 interface DashboardData {
@@ -69,6 +70,7 @@ export default function AdminDashboard() {
       </div>
 
       <TravelStatsOverview role="Admin" className="mb-6" />
+      <BookingInsightsOverview className="mb-6" />
       <FeedbackStatsOverview className="mb-6" />
     </div>
   );

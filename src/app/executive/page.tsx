@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
 import FeedbackStatsOverview from '@/components/dashboard/FeedbackStatsOverview';
+import BookingInsightsOverview from '@/components/dashboard/BookingInsightsOverview';
 import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 
 interface Booking {
@@ -202,6 +203,7 @@ export default function ExecutiveDashboard() {
       </div>
 
       <TravelStatsOverview role="Executive" className="mb-8" />
+      <BookingInsightsOverview className="mb-8" />
       <FeedbackStatsOverview className="mb-8" />
 
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/80 overflow-hidden">
