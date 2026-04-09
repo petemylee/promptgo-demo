@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
 import type {
   ApprovalDashboardData,
@@ -329,7 +330,7 @@ export default function ApproveAndAllocateBookings({
                         <summary className="cursor-pointer text-sm font-semibold text-slate-800">
                           ดูรายละเอียดเพิ่มเติม
                         </summary>
-                        <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-900">
+                        <div className={`mt-3 grid grid-cols-1 gap-2 text-sm text-slate-900 ${routeTextWrapClass}`}>
                           <div>
                             <span className="font-medium text-slate-700">ปลายทาง:</span>{' '}
                             <span>{booking.endLocation || '-'}</span>

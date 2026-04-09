@@ -2,6 +2,7 @@
 'use client';
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 
 interface Booking {
   id: string;
@@ -198,7 +199,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
             {/* Trip Details */}
             <div>
               <h3 className="font-semibold text-[#004c80] mb-3">รายละเอียดการเดินทาง</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className={`bg-gray-50 p-4 rounded-lg space-y-2 ${routeTextWrapClass}`}>
                 <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
                 <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/booking/StatusBadge';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTHLong } from '@/lib/formatters';
 
 type Job = {
@@ -147,7 +148,7 @@ export default function DriverHistoryPage() {
                         </div>
 
                         {/* Trip Details */}
-                        <div>
+                        <div className={routeTextWrapClass}>
                           <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
                           <p className="text-sm">
                             <span className="font-medium">จุดเริ่มต้น:</span> {job.startLocation || '-'}

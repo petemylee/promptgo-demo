@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import TravelStatsOverview from '@/components/dashboard/TravelStatsOverview';
 import FeedbackStatsOverview from '@/components/dashboard/FeedbackStatsOverview';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 
 interface Booking {
   id: string;
@@ -232,8 +233,8 @@ export default function ExecutiveDashboard() {
                       <p className="text-sm text-slate-500">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4">
-                    <div>
+                  <td className="py-3.5 px-4 max-w-[18rem] align-top">
+                    <div className={routeTextWrapClass}>
                       <p className="text-sm text-slate-800">{booking.endLocation}</p>
                       <p className="text-xs text-slate-500">{booking.purpose}</p>
                     </div>

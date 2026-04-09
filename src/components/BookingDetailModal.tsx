@@ -6,6 +6,7 @@ import SignaturePad from './SignaturePad';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
 import NextStepCallout from '@/components/booking/NextStepCallout';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface BookingDetailModalProps {
@@ -265,7 +266,7 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
             </Section>
 
             <Section title="รายละเอียดการเดินทาง" defaultOpen>
-              <div className="space-y-1 text-slate-900">
+              <div className={`space-y-1 text-slate-900 ${routeTextWrapClass}`}>
                 <p><span className="font-medium">ต้นทาง:</span> {booking.startLocation || '-'}</p>
                 <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>

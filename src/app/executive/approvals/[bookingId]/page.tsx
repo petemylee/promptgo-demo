@@ -6,6 +6,7 @@ import Image from 'next/image';
 import SignaturePad from '@/components/SignaturePad';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
 import NextStepCallout from '@/components/booking/NextStepCallout';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface Booking {
@@ -435,7 +436,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                 </div>
               </summary>
               <div className="px-4 pb-4">
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className={`bg-gray-50 p-4 rounded-lg space-y-2 ${routeTextWrapClass}`}>
                 <p><span className="font-medium">ไป:</span> {booking.endLocation}</p>
                 <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose}</p>
               </div>

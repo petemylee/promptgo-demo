@@ -11,6 +11,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { requesterMayCancelBooking, requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 import StatusBadge from '@/components/booking/StatusBadge';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
 
 type Booking = {
@@ -174,12 +175,12 @@ const InProgressBookingCard = ({
         <h4 className="font-semibold text-[#004c80]">รายละเอียด</h4>
         <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-2">
           {booking.startLocation && (
-            <p className="text-sm">
+            <p className={`text-sm ${routeTextWrapClass}`}>
               <span className="font-medium text-gray-700">จุดเริ่มต้น:</span>{' '}
               <span className="text-gray-900">{booking.startLocation}</span>
             </p>
           )}
-          <p className="text-sm">
+          <p className={`text-sm ${routeTextWrapClass}`}>
             <span className="font-medium text-gray-700">ปลายทาง:</span>{' '}
             <span className="text-gray-900">{booking.endLocation || '-'}</span>
           </p>
@@ -487,8 +488,8 @@ export default function MyBookingsPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs text-slate-600">ปลายทาง</div>
-            <div className="font-semibold text-slate-900 truncate">{booking.endLocation || '-'}</div>
-            <div className="mt-1 text-xs text-slate-600 truncate">
+            <div className={`font-semibold text-slate-900 ${routeTextWrapClass}`}>{booking.endLocation || '-'}</div>
+            <div className={`mt-1 text-xs text-slate-600 ${routeTextWrapClass}`}>
               {(booking.startLocation || '-') + ' → ' + (booking.endLocation || '-')}
             </div>
           </div>

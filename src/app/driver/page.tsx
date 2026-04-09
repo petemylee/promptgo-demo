@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import LoadingScreen from '@/components/LoadingScreen';
 import StatusBadge from '@/components/booking/StatusBadge';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
 
 type Job = {
@@ -145,7 +146,7 @@ export default function DriverDashboard() {
                             <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
                               <div className="rounded-xl bg-[#004c80]/5 p-3 md:col-span-2">
                                 <div className="text-xs text-gray-600">เส้นทาง</div>
-                                <div className="font-medium text-gray-900">
+                                <div className={`font-medium text-gray-900 leading-snug ${routeTextWrapClass}`}>
                                   {job.startLocation || '-'} → {job.endLocation || '-'}
                                 </div>
                               </div>

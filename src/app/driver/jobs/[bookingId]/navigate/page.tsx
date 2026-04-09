@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
 import NextStepCallout from '@/components/booking/NextStepCallout';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTHLong } from '@/lib/formatters';
 
 interface Booking {
@@ -274,7 +275,7 @@ export default function NavigationPage({ params }: { params: Promise<{ bookingId
                 </div>
               </summary>
               <div className="px-4 pb-4 space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className={`bg-gray-50 p-4 rounded-lg space-y-2 ${routeTextWrapClass}`}>
                   <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
                   <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
                   {booking.purpose && (

@@ -1,4 +1,5 @@
 import StatusBadge from './StatusBadge';
+import { routeTextWrapClass } from './routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
 
 type Props = {
@@ -25,7 +26,7 @@ export default function BookingSummaryHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs text-slate-600">เส้นทาง</div>
-          <div className="font-semibold text-slate-900 truncate">
+          <div className={`font-semibold text-slate-900 leading-snug ${routeTextWrapClass}`}>
             {(startLocation || '-') + ' → ' + (endLocation || '-')}
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 
 interface DriverFeedbackItem {
   id: string;
@@ -175,7 +176,7 @@ export default function DriverFeedbackManagementPage() {
               {filteredFeedbacks.map((item) => (
                 <div key={item.id} className="rounded-xl border border-gray-200 p-4 transition-shadow hover:shadow-sm">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-2">
+                    <div className={`space-y-2 min-w-0 ${routeTextWrapClass}`}>
                       <p className="text-sm text-gray-500">
                         คนขับ:{' '}
                         <span className="font-medium text-slate-800">
