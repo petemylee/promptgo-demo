@@ -24,7 +24,6 @@ interface UserFormModalProps {
 export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialData, variant = 'modal' }: UserFormModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Requester');
   const [position, setPosition] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -43,14 +42,12 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
       setRole(initialData.role || 'Requester');
       setPosition(initialData.position || '');
       setPhoneNumber(initialData.phoneNumber || '');
-      setPassword('');
       setExistingDriverPhotoUrl(initialData.profileImageUrl ?? null);
       setSelectedDriverPhoto(null);
       setDriverPhotoPreviewUrl(null);
     } else {
       setName('');
       setEmail('');
-      setPassword('');
       setRole('Requester');
       setPosition('');
       setPhoneNumber('');
@@ -97,22 +94,13 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
         return;
       }
       
-      if (!isEditMode && (!password || password.trim() === '')) {
-        setError('กรุณากรอกรหัสผ่าน');
-        setIsLoading(false);
-        return;
-      }
-      
-      const body: { name: string; email: string; role: Role; position: string; phoneNumber?: string; password?: string } = { 
+      const body: { name: string; email: string; role: Role; position: string; phoneNumber?: string } = { 
         name: name.trim(), 
         email: email.trim(), 
         role, 
         position: position.trim(),
         ...(phoneNumber.trim() ? { phoneNumber: phoneNumber.trim() } : {})
       };
-      if (!isEditMode) {
-        body.password = password;
-      }
 
       const response = await fetch(url, {
         method: method,
@@ -145,7 +133,13 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
           throw new Error(uploadData?.error || `Failed to upload driver photo (HTTP ${uploadRes.status})`);
         }
       }
-      
+
+      if (!isEditMode && savedUser && savedUser.emailSent === false) {
+        setError('สร้างบัญชีแล้ว แต่ส่งอีเมลรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบการตั้งค่า SMTP');
+        onUserUpdated();
+        return;
+      }
+
       onUserUpdated();
       onClose();
       
@@ -203,13 +197,6 @@ export default function UserFormModal({ isOpen, onClose, onUserUpdated, initialD
           <label className="block mb-2 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
           <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="เช่น 0812345678" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" />
         </div>
-      
-        {!isEditMode && (
-          <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">รหัสผ่าน <span className="text-red-500">*</span></label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-          </div>
-        )}
 
         <div className="mb-6">
           <label className="block mb-2 text-sm font-medium text-gray-700">ระดับสิทธิ์การเข้าถึง</label>

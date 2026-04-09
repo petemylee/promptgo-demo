@@ -2,11 +2,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { writeUsageLog } from '@/lib/usageLogs';
-import { sendMail } from '@/lib/email';
+import { randomInitialPassword, sendNewUserWelcomeEmail } from '@/lib/newUserWelcome';
 import type { Role as PrismaRole } from '@prisma/client';
 
 type SessionLike = {
@@ -22,14 +21,6 @@ function actorName(session: SessionLike) {
 }
 
 const VALID_ROLES = new Set(['Requester', 'Driver', 'Admin', 'Executive']);
-
-function randomInitialPassword(length = 12) {
-  return crypto
-    .randomBytes(length)
-    .toString('base64')
-    .replace(/[+/=]/g, '')
-    .slice(0, length);
-}
 
 // GET: ดึงข้อมูลผู้ใช้ทั้งหมด
 export async function GET() {
@@ -198,18 +189,10 @@ export async function POST(req: Request) {
           });
           existingEmailSet.add(item.email);
 
-          const emailSent = await sendMail({
+          const emailSent = await sendNewUserWelcomeEmail({
             to: item.email,
-            subject: 'บัญชีผู้ใช้ใหม่ - OFM PROMPTGO',
-            html: `
-              <p>สวัสดีครับ/ค่ะ คุณ ${created.name || item.name}</p>
-              <p>ได้มีการสร้างบัญชีผู้ใช้ให้คุณในระบบ OFM PROMPTGO แล้ว</p>
-              <p><strong>อีเมล:</strong> ${item.email}</p>
-              <p><strong>รหัสผ่านเริ่มต้น:</strong> ${initialPassword}</p>
-              <p>เพื่อความปลอดภัย กรุณาเข้าสู่ระบบและเปลี่ยนรหัสผ่านที่หน้าข้อมูลส่วนตัวทันที</p>
-              <p>— OFM PROMPTGO</p>
-            `,
-            text: `สวัสดี คุณ ${created.name || item.name}\nบัญชีของคุณใน OFM PROMPTGO ถูกสร้างแล้ว\nอีเมล: ${item.email}\nรหัสผ่านเริ่มต้น: ${initialPassword}\nกรุณาเปลี่ยนรหัสผ่านในข้อมูลส่วนตัวทันที`,
+            displayName: created.name || item.name,
+            initialPassword,
           });
 
           results.push({
@@ -277,23 +260,69 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role, position, phoneNumber } = body;
+    const { name, email, role, position, phoneNumber } = body;
 
-    if (!name || !email || !password || !role || !position) {
+    if (!name || !email || !role || !position) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const trimmedName = String(name).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const trimmedRole = String(role).trim();
+    const trimmedPosition = String(position).trim();
 
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        position: position.trim(),
-        phoneNumber: phoneNumber?.trim() || null,
-      },
+    if (!VALID_ROLES.has(trimmedRole)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    const initialPassword = randomInitialPassword(12);
+    const hashedPassword = await bcrypt.hash(initialPassword, 10);
+
+    let newUser;
+    try {
+      newUser = await prisma.user.create({
+        data: {
+          name: trimmedName,
+          email: normalizedEmail,
+          password: hashedPassword,
+          role: trimmedRole as PrismaRole,
+          position: trimmedPosition,
+          phoneNumber: phoneNumber?.trim() || null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          position: true,
+          phoneNumber: true,
+          profileImageUrl: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string }).code === 'P2002'
+      ) {
+        return NextResponse.json({ error: 'อีเมลนี้มีในระบบแล้ว' }, { status: 409 });
+      }
+      throw error;
+    }
+
+    const emailSent = await sendNewUserWelcomeEmail({
+      to: normalizedEmail,
+      displayName: newUser.name || trimmedName,
+      initialPassword,
     });
 
     const actor = actorName(session);
@@ -308,7 +337,7 @@ export async function POST(req: Request) {
       message: `${session.user.role === 'Executive' ? 'ผู้บริหาร' : 'แอดมิน'} ${actor} สร้างผู้ใช้ใหม่ ${target}`,
     });
 
-    return NextResponse.json(newUser, { status: 201 });
+    return NextResponse.json({ ...newUser, emailSent }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
