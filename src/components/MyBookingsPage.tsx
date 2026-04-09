@@ -54,8 +54,7 @@ type StatusFilter =
   | 'REJECTED'
   | 'IN_PROGRESS'
   | 'COMPLETED'
-  | 'CANCELLED'
-  | 'MERGED';
+  | 'CANCELLED';
 
 const STATUS_FILTERS: Array<{ id: StatusFilter; label: string }> = [
   { id: 'ALL', label: 'ทั้งหมด' },
@@ -66,7 +65,6 @@ const STATUS_FILTERS: Array<{ id: StatusFilter; label: string }> = [
   { id: 'COMPLETED', label: 'เสร็จสิ้น' },
   { id: 'REJECTED', label: 'ปฏิเสธ' },
   { id: 'CANCELLED', label: 'ยกเลิก' },
-  { id: 'MERGED', label: 'รวม' },
 ];
 
 const BOOKING_STATUSES = new Set<Booking['status']>([

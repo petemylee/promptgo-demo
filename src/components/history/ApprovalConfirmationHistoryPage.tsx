@@ -21,6 +21,8 @@ interface Booking {
   status: string;
   createdAt: string;
   updatedAt?: string;
+  startMileage?: number | null;
+  endMileage?: number | null;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
@@ -73,6 +75,8 @@ export default function ApprovalConfirmationHistoryPage({
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [startDateFrom, setStartDateFrom] = useState(''); // YYYY-MM-DD
+  const [startDateTo, setStartDateTo] = useState(''); // YYYY-MM-DD
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -138,6 +142,8 @@ export default function ApprovalConfirmationHistoryPage({
       setSelectedBookingId(null);
       setQuery('');
       setStatusFilter('all');
+      setStartDateFrom('');
+      setStartDateTo('');
     };
     window.addEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
     return () => window.removeEventListener(SIDEBAR_ROUTE_RESET_EVENT, reset);
@@ -152,6 +158,19 @@ export default function ApprovalConfirmationHistoryPage({
 
     if (statusFilter !== 'all') {
       result = result.filter((booking) => booking.status === statusFilter);
+    }
+
+    if (startDateFrom || startDateTo) {
+      const from = startDateFrom ? new Date(`${startDateFrom}T00:00:00`) : null;
+      const to = startDateTo ? new Date(`${startDateTo}T23:59:59.999`) : null;
+      result = result.filter((booking) => {
+        if (!booking.startTime) return false;
+        const t = new Date(booking.startTime).getTime();
+        if (Number.isNaN(t)) return false;
+        if (from && t < from.getTime()) return false;
+        if (to && t > to.getTime()) return false;
+        return true;
+      });
     }
 
     const q = query.trim().toLowerCase();
@@ -169,7 +188,7 @@ export default function ApprovalConfirmationHistoryPage({
         (booking.status || '').toLowerCase().includes(q)
       );
     });
-  }, [bookings, query, statusFilter]);
+  }, [bookings, statusFilter, startDateFrom, startDateTo, query]);
 
   const formatDate = (dateString: string) => formatDateTimeTHLong(dateString);
 
@@ -239,6 +258,30 @@ export default function ApprovalConfirmationHistoryPage({
             >
               ยืนยันแล้ว
             </button>
+            <button
+              onClick={() => setStatusFilter('IN_PROGRESS')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === 'IN_PROGRESS' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              กำลังเดินทาง
+            </button>
+            <button
+              onClick={() => setStatusFilter('COMPLETED')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === 'COMPLETED' ? 'bg-slate-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              เสร็จสิ้น
+            </button>
+            <button
+              onClick={() => setStatusFilter('CANCELLED')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === 'CANCELLED' ? 'bg-slate-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              ยกเลิก
+            </button>
           </div>
 
           <div className="relative w-full md:w-80">
@@ -251,6 +294,50 @@ export default function ApprovalConfirmationHistoryPage({
               className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          </div>
+        </div>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5">
+            <div className="text-xs font-semibold text-slate-700">ช่วงวันเวลาเริ่มเดินทาง</div>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="text-xs text-slate-600">
+                จากวันที่
+                <input
+                  type="date"
+                  value={startDateFrom}
+                  onChange={(e) => setStartDateFrom(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                />
+              </label>
+              <label className="text-xs text-slate-600">
+                ถึงวันที่
+                <input
+                  type="date"
+                  value={startDateTo}
+                  onChange={(e) => setStartDateTo(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5 md:col-span-2">
+            <div className="text-xs font-semibold text-slate-700">ตัวกรอง</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDateFrom('');
+                  setStartDateTo('');
+                  setStatusFilter('all');
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
+              >
+                ล้างตัวกรอง
+              </button>
+              <span className="text-slate-500">* ช่วงวันที่นับจากวันเวลาเริ่มเดินทาง (startTime)</span>
+            </div>
           </div>
         </div>
 
@@ -307,6 +394,19 @@ export default function ApprovalConfirmationHistoryPage({
                           <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
                             <div className="text-xs text-slate-600">วัตถุประสงค์</div>
                             <div className="font-medium text-slate-900">{booking.purpose || '-'}</div>
+                          </div>
+
+                          <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                            <div className="text-xs text-slate-600">ระยะทางที่ใช้ไป</div>
+                            <div className="font-medium text-slate-900">
+                              {booking.startMileage != null && booking.endMileage != null
+                                ? `${Math.max(0, booking.endMileage - booking.startMileage).toLocaleString('th-TH')} กม.`
+                                : '-'}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-600">
+                              เลขไมล์: {booking.startMileage != null ? booking.startMileage.toLocaleString('th-TH') : '-'} →{' '}
+                              {booking.endMileage != null ? booking.endMileage.toLocaleString('th-TH') : '-'}
+                            </div>
                           </div>
 
                           {(booking.adminApprover || booking.executiveConfirmer) && (

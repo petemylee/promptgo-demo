@@ -18,6 +18,8 @@ type Job = {
   status: string;
   createdAt: string;
   updatedAt: string;
+  startMileage?: number | null;
+  endMileage?: number | null;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
@@ -58,6 +60,9 @@ export default function DriverHistoryPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [startDateFrom, setStartDateFrom] = useState(''); // YYYY-MM-DD
+  const [startDateTo, setStartDateTo] = useState(''); // YYYY-MM-DD
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -85,17 +90,37 @@ export default function DriverHistoryPage() {
   }, [status]);
 
   const filtered = useMemo(() => {
+    let result = jobs;
+
+    if (statusFilter !== 'ALL') {
+      result = result.filter((job) => job.status === statusFilter);
+    }
+
+    if (startDateFrom || startDateTo) {
+      const from = startDateFrom ? new Date(`${startDateFrom}T00:00:00`) : null;
+      const to = startDateTo ? new Date(`${startDateTo}T23:59:59.999`) : null;
+      result = result.filter((job) => {
+        if (!job.startTime) return false;
+        const t = new Date(job.startTime).getTime();
+        if (Number.isNaN(t)) return false;
+        if (from && t < from.getTime()) return false;
+        if (to && t > to.getTime()) return false;
+        return true;
+      });
+    }
+
     const q = query.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter(job =>
-      (job.purpose || '').toLowerCase().includes(q) ||
-      (job.startLocation || '').toLowerCase().includes(q) ||
-      (job.endLocation || '').toLowerCase().includes(q) ||
-      (job.requester.name || '').toLowerCase().includes(q) ||
-      (job.requestForSelf === false && (job.travelerName || '').toLowerCase().includes(q)) ||
-      (job.status || '').toLowerCase().includes(q)
+    if (!q) return result;
+    return result.filter(
+      (job) =>
+        (job.purpose || '').toLowerCase().includes(q) ||
+        (job.startLocation || '').toLowerCase().includes(q) ||
+        (job.endLocation || '').toLowerCase().includes(q) ||
+        (job.requester.name || '').toLowerCase().includes(q) ||
+        (job.requestForSelf === false && (job.travelerName || '').toLowerCase().includes(q)) ||
+        (job.status || '').toLowerCase().includes(q)
     );
-  }, [jobs, query]);
+  }, [jobs, statusFilter, startDateFrom, startDateTo, query]);
 
   const formatDate = (dateString: string) => formatDateTimeTHLong(dateString);
 
@@ -110,19 +135,84 @@ export default function DriverHistoryPage() {
           <p className="text-gray-700">รายการงานที่เสร็จสิ้น, ยกเลิก หรือถูกปฏิเสธ</p>
         </div>
 
-        {/* Search */}
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm text-gray-600">
-            พบ {filtered.length} รายการจากทั้งหมด {jobs.length} รายการ
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-gray-600">
+              พบ {filtered.length} รายการจากทั้งหมด {jobs.length} รายการ
+            </div>
+            <div className="relative w-full md:w-80">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ค้นหา: วัตถุประสงค์ จุดเริ่มต้น ปลายทาง หรือสถานะ"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            </div>
           </div>
-          <div className="relative w-full md:w-80">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหา: วัตถุประสงค์ จุดเริ่มต้น ปลายทาง หรือสถานะ"
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
-            />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'ALL' as const, label: 'ทั้งหมด' },
+              { id: 'COMPLETED' as const, label: 'เสร็จสิ้น' },
+              { id: 'CANCELLED' as const, label: 'ยกเลิก' },
+            ].map((f) => {
+              const active = statusFilter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setStatusFilter(f.id)}
+                  className={[
+                    'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                    active ? 'bg-[#0076c3] text-white' : 'bg-white text-gray-700 hover:bg-gray-50',
+                  ].join(' ')}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5 md:col-span-2">
+              <div className="text-xs font-semibold text-slate-700">ช่วงวันเวลาเริ่มเดินทาง</div>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label className="text-xs text-slate-600">
+                  จากวันที่
+                  <input
+                    type="date"
+                    value={startDateFrom}
+                    onChange={(e) => setStartDateFrom(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                  />
+                </label>
+                <label className="text-xs text-slate-600">
+                  ถึงวันที่
+                  <input
+                    type="date"
+                    value={startDateTo}
+                    onChange={(e) => setStartDateTo(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5">
+              <div className="text-xs font-semibold text-slate-700">ตัวกรอง</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('ALL');
+                  setStartDateFrom('');
+                  setStartDateTo('');
+                }}
+                className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
+              >
+                ล้างตัวกรอง
+              </button>
+              <div className="mt-2 text-xs text-slate-500">* ช่วงวันที่นับจากวันเวลาเริ่มเดินทาง (startTime)</div>
+            </div>
           </div>
         </div>
 
@@ -131,125 +221,159 @@ export default function DriverHistoryPage() {
             <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
           ) : filtered.length > 0 ? (
             <div className="space-y-4">
-              {filtered.map((job) => (
-                <div key={job.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Job Info */}
-                    <div className="flex-1">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* ผู้เดินทาง */}
-                        <div>
-                          <h3 className="font-semibold text-[#004c80] mb-2">ผู้เดินทาง</h3>
-                          <p className="font-medium">{job.requestForSelf !== false ? (job.requester.name || '-') : (job.travelerName || '-')}</p>
-                          <p className="text-sm text-gray-600">{job.requestForSelf !== false ? (job.requester.position || '-') : (job.travelerPosition || '-')}</p>
-                          {job.requestForSelf === false && (
-                            <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {job.requester.name} ({job.requester.email})</p>
-                          )}
+              {filtered.map((job) => {
+                const who =
+                  job.requestForSelf !== false ? job.requester.name || '-' : job.travelerName || '-';
+                const whoPos =
+                  job.requestForSelf !== false
+                    ? job.requester.position || '-'
+                    : job.travelerPosition || '-';
+
+                return (
+                  <div
+                    key={job.id}
+                    className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ring-1 ring-black/5 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-xs text-slate-600">เส้นทาง</div>
+                            <div className={`font-semibold text-slate-900 leading-snug ${routeTextWrapClass}`}>
+                              {job.startLocation || '-'} → {job.endLocation || '-'}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              เริ่ม: {job.startTime ? formatDate(job.startTime) : '-'} • สิ้นสุด:{' '}
+                              {job.endTime ? formatDate(job.endTime) : '-'}
+                            </div>
+                          </div>
+                          <div className="shrink-0">
+                            <StatusBadge status={job.status} />
+                          </div>
                         </div>
 
-                        {/* Trip Details */}
-                        <div className={routeTextWrapClass}>
-                          <h3 className="font-semibold text-[#004c80] mb-2">รายละเอียดการเดินทาง</h3>
-                          <p className="text-sm">
-                            <span className="font-medium">จุดเริ่มต้น:</span> {job.startLocation || '-'}
-                          </p>
-                          <p className="text-sm">
-                            <span className="font-medium">ปลายทาง:</span> {job.endLocation || '-'}
-                          </p>
-                          <p className="text-sm">
-                            <span className="font-medium">วัตถุประสงค์:</span> {job.purpose || '-'}
-                          </p>
-                        </div>
+                        <Link
+                          href={`/driver/jobs/${job.id}`}
+                          className="inline-flex w-full items-center justify-center rounded-xl bg-[#0076c3] px-4 py-3 text-base font-semibold text-white shadow hover:bg-[#0087de] transition"
+                        >
+                          ดูรายละเอียด
+                        </Link>
 
-                        {/* Schedule */}
-                        <div>
-                          <h3 className="font-semibold text-[#004c80] mb-2">กำหนดการ</h3>
-                          <p className="text-sm">
-                            <span className="font-medium">วันที่เริ่ม:</span> {job.startTime ? formatDate(job.startTime) : '-'}
-                          </p>
-                          <p className="text-sm">
-                            <span className="font-medium">วันที่สิ้นสุด:</span> {job.endTime ? formatDate(job.endTime) : '-'}
-                          </p>
-                        </div>
+                        <details className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+                          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                            รายละเอียดเพิ่มเติม
+                          </summary>
+                          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-900 md:grid-cols-2">
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">ผู้เดินทาง</div>
+                              <div className="font-semibold text-slate-900">{who}</div>
+                              <div className="text-xs text-slate-500">{whoPos}</div>
+                              {job.requestForSelf === false && (
+                                <div className="mt-2 text-xs text-slate-600">
+                                  ผู้สร้างคำขอ: {job.requester.name || '-'} ({job.requester.email})
+                                </div>
+                              )}
+                            </div>
 
-                        {/* Vehicle */}
-                        <div>
-                          <h3 className="font-semibold text-[#004c80] mb-2">ยานพาหนะ</h3>
-                          {job.vehicle ? (
-                            <>
-                              <p className="text-sm font-medium">{job.vehicle.licensePlate}</p>
-                              <p className="text-sm text-gray-600">
-                                {job.vehicle.brand} {job.vehicle.model}
-                              </p>
-                              <p className="text-sm text-gray-600">สี: {job.vehicle.color || '-'}</p>
-                            </>
-                          ) : (
-                            <p className="text-sm text-gray-500">ยังไม่ได้กำหนดรถ</p>
-                          )}
-                        </div>
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">วัตถุประสงค์</div>
+                              <div className="font-medium text-slate-900">{job.purpose || '-'}</div>
+                            </div>
+
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">เลขไมล์/ระยะทาง</div>
+                              <div className="mt-1 space-y-1">
+                                <div>
+                                  <span className="font-medium text-slate-700">ก่อน:</span>{' '}
+                                  <span>
+                                    {job.startMileage != null ? `${job.startMileage.toLocaleString('th-TH')} กม.` : '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">หลัง:</span>{' '}
+                                  <span>
+                                    {job.endMileage != null ? `${job.endMileage.toLocaleString('th-TH')} กม.` : '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">รวม:</span>{' '}
+                                  <span>
+                                    {job.startMileage != null && job.endMileage != null
+                                      ? `${Math.max(0, job.endMileage - job.startMileage).toLocaleString('th-TH')} กม.`
+                                      : '-'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70">
+                              <div className="text-xs text-slate-600">รถ</div>
+                              {job.vehicle ? (
+                                <div className="mt-1">
+                                  <div className="font-semibold text-slate-900">{job.vehicle.licensePlate}</div>
+                                  <div className="text-xs text-slate-600">
+                                    {[job.vehicle.brand, job.vehicle.model, job.vehicle.type].filter(Boolean).join(' ')}
+                                  </div>
+                                  <div className="text-xs text-slate-600">สี: {job.vehicle.color || '-'}</div>
+                                </div>
+                              ) : (
+                                <div className="mt-1 text-sm text-slate-600">-</div>
+                              )}
+                            </div>
+
+                            {(job.adminApprover || job.executiveConfirmer) && (
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70 md:col-span-2">
+                                <div className="text-xs text-slate-600">การอนุมัติ/ยืนยัน</div>
+                                <div className="mt-1 grid grid-cols-1 gap-1 text-sm">
+                                  <div>
+                                    <span className="font-medium text-slate-700">อนุมัติโดย:</span>{' '}
+                                    <span>{job.adminApprover?.name || '-'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-slate-700">ยืนยันโดย:</span>{' '}
+                                    <span>{job.executiveConfirmer?.name || '-'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {(job.feedback || job.driverFeedback) && (
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200/70 md:col-span-2">
+                                <div className="text-xs text-slate-600">ข้อเสนอแนะ</div>
+                                {job.feedback && (
+                                  <div className="mt-1 text-sm text-slate-900">
+                                    <span className="font-medium">
+                                      จากผู้ขอ: {'⭐'.repeat(job.feedback.rating)} ({job.feedback.rating}/5)
+                                    </span>
+                                    {job.feedback.comment && <div className="mt-1 text-slate-800">{job.feedback.comment}</div>}
+                                  </div>
+                                )}
+                                {job.driverFeedback && (
+                                  <div className="mt-2 text-sm text-slate-900">
+                                    <span className="font-medium">
+                                      จากผู้ขอใช้: {'⭐'.repeat(job.driverFeedback.rating)} ({job.driverFeedback.rating}/5)
+                                    </span>
+                                    {job.driverFeedback.requester?.name && (
+                                      <span className="text-slate-600"> โดย {job.driverFeedback.requester.name}</span>
+                                    )}
+                                    {job.driverFeedback.comment && (
+                                      <div className="mt-1 text-slate-800">{job.driverFeedback.comment}</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="text-xs text-slate-500 md:col-span-2">
+                              อัปเดตล่าสุด: {formatDate(job.updatedAt)}
+                            </div>
+                          </div>
+                        </details>
                       </div>
-
-                      {/* ข้อเสนอแนะจากผู้ขอใช้รถ */}
-                      {job.feedback && (
-                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-blue-700">
-                            <span className="font-medium">คะแนนจากผู้ขอ:</span> {'⭐'.repeat(job.feedback.rating)} ({job.feedback.rating}/5)
-                          </p>
-                          {job.feedback.comment && (
-                            <p className="text-sm text-blue-700 mt-1">
-                              <span className="font-medium">ความคิดเห็น:</span> {job.feedback.comment}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      {/* ข้อเสนอแนะจากผู้ขอใช้รถ (Admin, Executive, Driver เห็นได้) */}
-                      {job.driverFeedback && (
-                        <div className="mt-4 p-3 bg-amber-50 rounded-lg">
-                          <p className="text-sm text-amber-800">
-                            <span className="font-medium">ข้อเสนอแนะจากผู้ขอใช้:</span> {'⭐'.repeat(job.driverFeedback.rating)} ({job.driverFeedback.rating}/5)
-                            {job.driverFeedback.requester?.name && ` โดย ${job.driverFeedback.requester.name}`}
-                          </p>
-                          {job.driverFeedback.comment && (
-                            <p className="text-sm text-amber-800 mt-1">
-                              <span className="font-medium">ข้อเสนอแนะ:</span> {job.driverFeedback.comment}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Approvals */}
-                      {(job.adminApprover || job.executiveConfirmer) && (
-                        <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                          {job.adminApprover && (
-                            <p className="text-sm text-green-700">
-                              <span className="font-medium">อนุมัติโดย:</span> {job.adminApprover.name}
-                            </p>
-                          )}
-                          {job.executiveConfirmer && (
-                            <p className="text-sm text-green-700">
-                              <span className="font-medium">ยืนยันโดย:</span> {job.executiveConfirmer.name}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className="flex flex-col items-end gap-2">
-                      <StatusBadge status={job.status} />
-                      <p className="text-xs text-gray-500">
-                        อัปเดตล่าสุด: {formatDate(job.updatedAt)}
-                      </p>
-                      <Link
-                        href={`/driver/jobs/${job.id}`}
-                        className="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
-                      >
-                        ดูรายละเอียด
-                      </Link>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">

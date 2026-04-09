@@ -2,7 +2,10 @@
 'use client';
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
+import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import NextStepCallout from '@/components/booking/NextStepCallout';
 
 interface Booking {
   id: string;
@@ -71,6 +74,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
 
   const handleStartJob = async () => {
     if (!booking) return;
+    if (booking.status !== 'CONFIRMED') {
+      setError('งานนี้ยังไม่อยู่ในสถานะที่สามารถเริ่มงานได้');
+      return;
+    }
 
     setIsStarting(true);
     setError('');
@@ -136,205 +143,159 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
     );
   }
 
-  // ตรวจสอบว่า booking มีอยู่และอยู่ในสถานะที่ถูกต้อง (CONFIRMED หรือ IN_PROGRESS)
-  if (!booking || (booking.status !== 'CONFIRMED' && booking.status !== 'IN_PROGRESS')) {
-    return (
-      <div className="p-4 md:p-8">
-        <div className="text-center py-12">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-yellow-100 text-yellow-600 grid place-items-center">
-            ⚠️
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">ไม่สามารถเข้าถึงได้</h3>
-          <p className="text-gray-500 mb-4">
-            งานนี้ไม่ได้อยู่ในสถานะที่พร้อมเข้าถึง หรือไม่พบข้อมูล
-          </p>
-          <button
-            onClick={() => router.push('/driver')}
-            className="px-4 py-2 bg-[#0076c3] text-white rounded-lg hover:bg-[#005b99] transition-colors"
-          >
-            กลับไปหน้า Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!booking) return null;
 
   const isInProgress = booking.status === 'IN_PROGRESS';
+  const isConfirmed = booking.status === 'CONFIRMED';
 
   return (
-    <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-[#0076c3] hover:text-[#005b99] mb-4"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          กลับ
-        </button>
-        <h1 className="text-3xl font-bold text-[#004c80] mb-2">รายละเอียดงาน</h1>
-        <p className="text-gray-600">ตรวจสอบรายละเอียดงานก่อนเริ่มเดินทาง</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Job Details */}
-        <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-          <h2 className="text-xl font-semibold text-[#004c80] mb-6">รายละเอียดงาน</h2>
-          
-          <div className="space-y-6">
-            {/* ผู้เดินทาง */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">ผู้เดินทาง</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-medium">{booking.requestForSelf !== false ? (booking.requester.name || '-') : (booking.travelerName || '-')}</p>
-                <p className="text-sm text-gray-600">{booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}</p>
-                {booking.requestForSelf === false && (
-                  <p className="text-sm text-gray-500">ผู้สร้างคำขอ: {booking.requester.name} ({booking.requester.email})</p>
-                )}
-              </div>
-            </div>
-
-            {/* Trip Details */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">รายละเอียดการเดินทาง</h3>
-              <div className={`bg-gray-50 p-4 rounded-lg space-y-2 ${routeTextWrapClass}`}>
-                <p><span className="font-medium">จุดเริ่มต้น:</span> {booking.startLocation || '-'}</p>
-                <p><span className="font-medium">ปลายทาง:</span> {booking.endLocation || '-'}</p>
-                <p><span className="font-medium">วัตถุประสงค์:</span> {booking.purpose || '-'}</p>
-              </div>
-            </div>
-
-            {/* หมายเหตุเพิ่มเติม - แยกกล่องให้โดดเด่น */}
-            {booking.additionalNotes && (
-              <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-                <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                  <span className="text-amber-600" aria-hidden>📌</span>
-                  หมายเหตุเพิ่มเติม
-                </h3>
-                <p className="text-gray-800 whitespace-pre-wrap">{booking.additionalNotes}</p>
-              </div>
-            )}
-
-            {/* Schedule */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">กำหนดการ</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <p><span className="font-medium">วันที่เริ่ม:</span> {booking.startTime ? formatDate(booking.startTime) : '-'}</p>
-                <p><span className="font-medium">วันที่สิ้นสุด:</span> {booking.endTime ? formatDate(booking.endTime) : '-'}</p>
-              </div>
-            </div>
-
-            {/* Vehicle */}
-            <div>
-              <h3 className="font-semibold text-[#004c80] mb-3">ยานพาหนะ</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                {booking.vehicle ? (
-                  <>
-                    <p><span className="font-medium">ทะเบียน:</span> {booking.vehicle.licensePlate}</p>
-                    <p><span className="font-medium">ยี่ห้อ/รุ่น:</span> {booking.vehicle.brand} {booking.vehicle.model}</p>
-                    <p><span className="font-medium">สี:</span> {booking.vehicle.color || '-'}</p>
-                    <p><span className="font-medium">ประเภท:</span> {booking.vehicle.type || '-'}</p>
-                  </>
-                ) : (
-                  <p className="text-gray-500">ยังไม่ได้กำหนดรถ</p>
-                )}
-              </div>
-            </div>
-
-            {/* Approvals */}
-            {booking.adminApprover && (
-              <div>
-                <h3 className="font-semibold text-[#004c80] mb-3">การอนุมัติ</h3>
-                <div className="bg-green-50 p-4 rounded-lg space-y-2">
-                  <p className="text-green-700">
-                    <span className="font-medium">อนุมัติโดย:</span> {booking.adminApprover.name}
-                  </p>
-                  {booking.executiveConfirmer && (
-                    <p className="text-green-700">
-                      <span className="font-medium">ยืนยันโดย:</span> {booking.executiveConfirmer.name}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+    <div className="relative min-h-screen overflow-hidden p-4 md:p-8">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#f0f7ff] to-[#e6f3ff]" />
+      <div className="relative z-10 mx-auto w-full max-w-5xl">
+        <div className="mb-6">
+          <button
+            onClick={() => router.back()}
+            className="mb-3 inline-flex items-center text-[#0076c3] hover:text-[#005b99]"
+          >
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            กลับ
+          </button>
+          <h1 className="text-2xl font-bold text-[#004c80]">รายละเอียดงาน</h1>
+          <p className="text-slate-700">ดูสรุปงานและทำงานต่อได้จากหน้านี้</p>
         </div>
 
-        {/* Action Form */}
-        <div className="bg-white/80 backdrop-blur p-6 rounded-lg shadow-md ring-1 ring-black/5">
-          <h2 className="text-xl font-semibold text-[#004c80] mb-6">
-            {isInProgress ? 'จัดการงาน' : 'เริ่มงาน'}
-          </h2>
-          
-          <div className="space-y-6">
-            {/* Notice */}
-            <div className={`p-4 rounded-lg ${isInProgress ? 'bg-indigo-50' : 'bg-blue-50'}`}>
-              <div className="flex items-start">
-                <svg className={`w-5 h-5 mt-0.5 mr-3 ${isInProgress ? 'text-indigo-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <div>
-                  <h4 className={`font-medium ${isInProgress ? 'text-indigo-900' : 'text-blue-900'}`}>
-                    {isInProgress ? 'งานกำลังดำเนินการอยู่' : 'ข้อควรทราบ'}
-                  </h4>
-                  <p className={`text-sm mt-1 ${isInProgress ? 'text-indigo-700' : 'text-blue-700'}`}>
-                    {isInProgress 
-                      ? 'งานนี้กำลังดำเนินการอยู่ คุณสามารถทำงานต่อหรือสิ้นสุดงานได้'
-                      : 'เมื่อเริ่มงานแล้ว ระบบจะเริ่มติดตามตำแหน่งของคุณ และผู้ขอใช้จะสามารถติดตามการเดินทางได้'
-                    }
-                  </p>
-                </div>
-              </div>
+        <div className="space-y-4">
+          <BookingSummaryHeader
+            status={booking.status}
+            startLocation={booking.startLocation}
+            endLocation={booking.endLocation}
+            startTime={booking.startTime}
+            endTime={booking.endTime}
+            vehicle={booking.vehicle ? { licensePlate: booking.vehicle.licensePlate } : null}
+            driver={booking.driver ? { name: booking.driver.name } : null}
+          />
+          <NextStepCallout role="Driver" status={booking.status} />
+
+          {error && (
+            <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200/70">
+              {error}
             </div>
+          )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 p-4 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-4">
-              <button
-                onClick={() => router.back()}
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                disabled={isStarting}
-              >
-                ยกเลิก
-              </button>
-              {isInProgress ? (
-                <>
-                  <button
-                    onClick={() => router.push(`/driver/jobs/${bookingId}/navigate`)}
-                    className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] transition-colors font-medium"
-                  >
-                    ทำงานต่อ
-                  </button>
-                </>
-              ) : (
+          <div className="rounded-2xl bg-white/90 p-4 shadow ring-1 ring-black/5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {isInProgress && (
+                <Link
+                  href={`/driver/jobs/${bookingId}/navigate`}
+                  className="inline-flex items-center justify-center rounded-xl bg-[#0076c3] px-4 py-3 text-base font-semibold text-white shadow hover:bg-[#0087de] transition"
+                >
+                  ทำงานต่อ
+                </Link>
+              )}
+              {isConfirmed && (
                 <button
+                  type="button"
                   onClick={handleStartJob}
                   disabled={isStarting}
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#0076c3] text-white hover:bg-[#005b99] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="inline-flex items-center justify-center rounded-xl bg-[#0076c3] px-4 py-3 text-base font-semibold text-white shadow hover:bg-[#0087de] disabled:bg-gray-300 disabled:cursor-not-allowed transition"
                 >
-                  {isStarting ? (
-                    <div className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      กำลังเริ่มงาน...
-                    </div>
-                  ) : (
-                    'เริ่มงาน'
-                  )}
+                  {isStarting ? 'กำลังเริ่มงาน...' : 'เริ่มงาน'}
                 </button>
               )}
+              {!isInProgress && !isConfirmed && (
+                <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 ring-1 ring-slate-200/70">
+                  งานนี้เป็นงานในประวัติ คุณสามารถกด “ดูรายละเอียดเพิ่มเติม” ด้านล่างเพื่อดูข้อมูลทั้งหมดได้
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => router.push('/driver')}
+                className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-3 text-base font-semibold text-[#004c80] ring-1 ring-slate-200 hover:bg-slate-50 transition"
+              >
+                กลับหน้า “งานของฉัน”
+              </button>
             </div>
           </div>
+
+          <details className="rounded-2xl bg-white/90 p-4 shadow ring-1 ring-black/5" open>
+            <summary className="cursor-pointer text-sm font-semibold text-[#004c80]">
+              ดูรายละเอียดเพิ่มเติม
+            </summary>
+            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-slate-900 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+                <div className="text-xs text-slate-600">ผู้เดินทาง</div>
+                <div className="font-semibold text-slate-900">
+                  {booking.requestForSelf !== false ? booking.requester.name || '-' : booking.travelerName || '-'}
+                </div>
+                <div className="text-xs text-slate-600">
+                  {booking.requestForSelf !== false ? booking.requester.position || '-' : booking.travelerPosition || '-'}
+                </div>
+                <div className="mt-1 text-xs text-slate-600">
+                  โทร: {booking.requestForSelf !== false ? (booking.requester as any).phoneNumber || '-' : booking.travelerPhone || '-'}
+                </div>
+                {booking.requestForSelf === false && (
+                  <div className="mt-2 text-xs text-slate-600">
+                    ผู้สร้างคำขอ: {booking.requester.name || '-'} ({booking.requester.email})
+                  </div>
+                )}
+              </div>
+
+              <div className={`rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70 ${routeTextWrapClass}`}>
+                <div className="text-xs text-slate-600">รายละเอียดการเดินทาง</div>
+                <div className="mt-2 space-y-1">
+                  <div>
+                    <span className="font-medium text-slate-700">จุดเริ่มต้น:</span> {booking.startLocation || '-'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">ปลายทาง:</span> {booking.endLocation || '-'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">วัตถุประสงค์:</span> {booking.purpose || '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+                <div className="text-xs text-slate-600">ยานพาหนะ</div>
+                {booking.vehicle ? (
+                  <div className="mt-2 space-y-1">
+                    <div>
+                      <span className="font-medium text-slate-700">ทะเบียน:</span> {booking.vehicle.licensePlate}
+                    </div>
+                    <div className="text-xs text-slate-700">
+                      {[booking.vehicle.brand, booking.vehicle.model, booking.vehicle.type].filter(Boolean).join(' ')}
+                    </div>
+                    <div className="text-xs text-slate-700">สี: {booking.vehicle.color || '-'}</div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-slate-700">-</div>
+                )}
+              </div>
+
+              {(booking.adminApprover || booking.executiveConfirmer) && (
+                <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+                  <div className="text-xs text-slate-600">การอนุมัติ/ยืนยัน</div>
+                  <div className="mt-2 space-y-1">
+                    <div>
+                      <span className="font-medium text-slate-700">อนุมัติโดย:</span> {booking.adminApprover?.name || '-'}
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-700">ยืนยันโดย:</span> {booking.executiveConfirmer?.name || '-'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {booking.additionalNotes && (
+                <div className={`rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200/70 ${routeTextWrapClass} md:col-span-2`}>
+                  <div className="text-xs font-semibold text-amber-900">หมายเหตุเพิ่มเติม</div>
+                  <div className="mt-1 text-sm text-amber-900 whitespace-pre-wrap">{booking.additionalNotes}</div>
+                </div>
+              )}
+            </div>
+          </details>
         </div>
       </div>
     </div>

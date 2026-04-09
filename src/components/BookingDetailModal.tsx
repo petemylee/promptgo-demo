@@ -30,6 +30,8 @@ interface BookingDetail {
   passengerCount: number | null;
   tripType: string | null;
   status: string;
+  startMileage?: number | null;
+  endMileage?: number | null;
   rejectionReason?: string | null;
   rejectedAt?: string | null;
   requesterSignatureUrl: string | null;
@@ -157,6 +159,11 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
   const formatDate = (dateString: string | null) => formatDateTimeTHLong(dateString);
 
   if (!isOpen) return null;
+
+  const distanceTraveledKm =
+    booking?.startMileage != null && booking?.endMileage != null
+      ? Math.max(0, booking.endMileage - booking.startMileage)
+      : null;
 
   const Section = ({
     title,
@@ -298,6 +305,23 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
               <div className="space-y-1 text-slate-900">
                 <p><span className="font-medium">วันเวลาเริ่ม:</span> {formatDate(booking.startTime)}</p>
                 <p><span className="font-medium">วันเวลาสิ้นสุด:</span> {formatDate(booking.endTime)}</p>
+              </div>
+            </Section>
+
+            <Section title="เลขไมล์และระยะทาง">
+              <div className="space-y-1 text-slate-900">
+                <p>
+                  <span className="font-medium">เลขไมล์ก่อนออกเดินทาง:</span>{' '}
+                  {booking.startMileage != null ? `${booking.startMileage.toLocaleString('th-TH')} กม.` : '-'}
+                </p>
+                <p>
+                  <span className="font-medium">เลขไมล์หลังเดินทาง:</span>{' '}
+                  {booking.endMileage != null ? `${booking.endMileage.toLocaleString('th-TH')} กม.` : '-'}
+                </p>
+                <p>
+                  <span className="font-medium">ระยะทางที่ใช้ไป:</span>{' '}
+                  {distanceTraveledKm != null ? `${distanceTraveledKm.toLocaleString('th-TH')} กม.` : '-'}
+                </p>
               </div>
             </Section>
 
