@@ -56,6 +56,7 @@ export default function AdminLayout({
 
   if (
     status === 'loading' ||
+    status === 'unauthenticated' ||
     (status === 'authenticated' && session?.user?.role !== 'Admin')
   ) {
     return <LoadingScreen fullScreen message="กำลังโหลด..." />;

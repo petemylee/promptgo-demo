@@ -45,7 +45,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     }
   }, [status, session, router]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Driver')) {
+  if (
+    status === 'loading' ||
+    status === 'unauthenticated' ||
+    (status === 'authenticated' && session?.user?.role !== 'Driver')
+  ) {
     return <LoadingScreen fullScreen message="กำลังโหลด..." />;
   }
 

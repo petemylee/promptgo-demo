@@ -44,7 +44,11 @@ export default function RequesterLayout({ children }: { children: React.ReactNod
     }
   }, [status, session, router]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Requester')) {
+  if (
+    status === 'loading' ||
+    status === 'unauthenticated' ||
+    (status === 'authenticated' && session?.user?.role !== 'Requester')
+  ) {
     return <LoadingScreen fullScreen message="กำลังโหลด..." />;
   }
 

@@ -48,7 +48,11 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
     // Intentionally no client-side page-view logging.
   }, [status, pathname]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'Executive')) {
+  if (
+    status === 'loading' ||
+    status === 'unauthenticated' ||
+    (status === 'authenticated' && session?.user?.role !== 'Executive')
+  ) {
     return <LoadingScreen fullScreen message="กำลังโหลด..." />;
   }
 
