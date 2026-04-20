@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-datepicker/dist/react-datepicker.css";
 
 /* Theme: เก็บสีเดิม #004c80, #0076c3 */
 :root {

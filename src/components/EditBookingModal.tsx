@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import SignaturePad from './SignaturePad';
 import Image from 'next/image';
 import LoadingScreen from '@/components/LoadingScreen';
+import DateTimePicker24 from '@/components/DateTimePicker24';
 import SuggestTextField, { type SuggestItem } from '@/components/SuggestTextField';
 import {
   parseBangkokDateTimeLocal,
@@ -315,37 +316,41 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                 inputClassName={bookingInputClass}
               />
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">
-                  วันเวลาออกเดินทาง<span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="datetime-local"
+                <DateTimePicker24
+                  id="edit-booking-start-datetime"
+                  label={
+                    <>
+                      วันเวลาออกเดินทาง<span className="text-red-600">*</span>
+                    </>
+                  }
                   min={minBangkokToday}
                   value={startTime}
-                  onChange={(e) => {
-                    const next = e.target.value;
+                  onChange={(next) => {
                     setStartTime(next);
                     validateDateTimesLive(next, endTime);
                   }}
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
                   required
+                  timeIntervals={5}
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">
-                  วันที่สิ้นสุด<span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={endTime}
+                <DateTimePicker24
+                  id="edit-booking-end-datetime"
+                  label={
+                    <>
+                      วันที่สิ้นสุด<span className="text-red-600">*</span>
+                    </>
+                  }
                   min={endDatetimeMin}
-                  onChange={(e) => {
-                    const next = e.target.value;
+                  value={endTime}
+                  onChange={(next) => {
                     setEndTime(next);
                     validateDateTimesLive(startTime, next);
                   }}
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
                   required
+                  timeIntervals={5}
                 />
               </div>
               <div>
