@@ -19,7 +19,7 @@ export async function DELETE(
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 401 });
   }
 
   try {
@@ -40,13 +40,13 @@ export async function DELETE(
     });
 
     return NextResponse.json(
-      { message: 'Vehicle deleted successfully' },
+      { message: 'ลบรถยนต์สำเร็จ' },
       { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting vehicle:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'เกิดข้อผิดพลาดของระบบ' },
       { status: 500 }
     );
   }
@@ -61,7 +61,7 @@ export async function PATCH(
 
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && session?.user?.role !== 'Executive') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 401 });
   }
 
   try {
@@ -98,7 +98,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating vehicle:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'เกิดข้อผิดพลาดของระบบ' },
       { status: 500 }
     );
   }

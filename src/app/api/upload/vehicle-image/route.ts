@@ -7,11 +7,11 @@ import { uploadVehicleImage } from '@/lib/supabase-storage';
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 });
   }
 
   if (session.user.role !== 'Admin' && session.user.role !== 'Executive') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   try {
@@ -20,22 +20,22 @@ export async function POST(request: NextRequest) {
     const vehicleId = (formData.get('vehicleId') as string | null)?.trim() || null;
 
     if (!vehicleId) {
-      return NextResponse.json({ error: 'vehicleId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'ต้องระบุรหัสรถยนต์' }, { status: 400 });
     }
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'ไม่พบไฟล์ที่อัปโหลด' }, { status: 400 });
     }
 
     if (!file.type.startsWith('image/')) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only images are allowed.' },
+        { error: 'ประเภทไฟล์ไม่ถูกต้อง อนุญาตเฉพาะไฟล์รูปภาพ' },
         { status: 400 }
       );
     }
 
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 5MB.' },
+        { error: 'ไฟล์ใหญ่เกินไป ขนาดสูงสุด 5MB' },
         { status: 400 }
       );
     }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
     if (!vehicle) {
-      return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+      return NextResponse.json({ error: 'ไม่พบรถยนต์' }, { status: 404 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error uploading vehicle image:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดของระบบ' },
       { status: 500 }
     );
   }

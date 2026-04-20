@@ -124,12 +124,14 @@ function createHandler(sessionMaxAge: number) {
 }
 
 export async function GET(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+  const params = await context.params;
   const maxAge = SESSION_MAX_AGE_DEFAULT;
-  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, context);
+  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, { params });
 }
 
 export async function POST(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+  const params = await context.params;
   const rememberMe = await getRememberMeFromRequest(req);
   const maxAge = rememberMe === 'true' ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
-  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, context);
+  return createHandler(maxAge)(req as unknown as Request & { nextUrl?: URL }, { params });
 }

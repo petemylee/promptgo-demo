@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import SignaturePad from './SignaturePad';
+import SuggestTextField, { type SuggestItem } from '@/components/SuggestTextField';
 import {
   parseBangkokDateTimeLocal,
   bangkokStartOfTodayDatetimeLocalString,
@@ -44,6 +45,13 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [isSavingProfileSignature, setIsSavingProfileSignature] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<{
+    startLocation: SuggestItem[];
+    endLocation: SuggestItem[];
+  }>({ startLocation: [], endLocation: [] });
+
+  const bookingInputClass =
+    'w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60';
 
   const minBangkokToday = bangkokStartOfTodayDatetimeLocalString();
   const endDatetimeMin = startTime && startTime >= minBangkokToday ? startTime : minBangkokToday;
@@ -89,6 +97,27 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
         })
         .catch(() => setUserProfile(null));
     }
+  }, [variant, isOpen]);
+
+  useEffect(() => {
+    const shouldFetch = variant === 'fullpage' || (variant === 'modal' && isOpen);
+    if (!shouldFetch) return;
+    let cancelled = false;
+    fetch('/api/bookings/location-suggestions')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setLocationSuggestions({
+          startLocation: Array.isArray(data.startLocation) ? data.startLocation : [],
+          endLocation: Array.isArray(data.endLocation) ? data.endLocation : [],
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLocationSuggestions({ startLocation: [], endLocation: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [variant, isOpen]);
 
   useEffect(() => {
@@ -323,23 +352,37 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
               </div>
             </div>
           )}
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
-              สถานที่ต้นทาง<span className="text-red-600">*</span>
-            </label>
-            <input
-              value={startLocation}
-              onChange={(e) => setStartLocation(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
-              สถานที่ปลายทาง<span className="text-red-600">*</span>
-            </label>
-            <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-[#0076c3]/60" required />
-          </div>
+          <p className="text-xs text-gray-500">
+            สถานที่ต้นทางและปลายทาง: พิมพ์เองได้ หรือเลือกจากรายการที่ใช้บ่อย (ตัวเลข = จำนวนคำขอในระบบ)
+          </p>
+          <SuggestTextField
+            id="booking-start-location"
+            label={
+              <>
+                สถานที่ต้นทาง<span className="text-red-600">*</span>
+              </>
+            }
+            value={startLocation}
+            onChange={setStartLocation}
+            suggestions={locationSuggestions.startLocation}
+            required
+            rootClassName=""
+            inputClassName={bookingInputClass}
+          />
+          <SuggestTextField
+            id="booking-end-location"
+            label={
+              <>
+                สถานที่ปลายทาง<span className="text-red-600">*</span>
+              </>
+            }
+            value={destination}
+            onChange={setDestination}
+            suggestions={locationSuggestions.endLocation}
+            required
+            rootClassName=""
+            inputClassName={bookingInputClass}
+          />
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">
               วัตถุประสงค์<span className="text-red-600">*</span>
