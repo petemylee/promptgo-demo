@@ -52,6 +52,7 @@ export async function PATCH(
             phoneNumber: true,
           },
         },
+        expresswayCertifier: { select: { id: true } },
         vehicle: {
           select: {
             brand: true,

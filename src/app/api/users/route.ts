@@ -39,6 +39,7 @@ export async function GET() {
         position: true,
         phoneNumber: true,
         profileImageUrl: true,
+        signatureImageUrl: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

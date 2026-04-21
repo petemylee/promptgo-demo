@@ -32,7 +32,7 @@ export async function GET(
   try {
     const bookingForAuth = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { requesterId: true, driverId: true },
+      select: { requesterId: true, driverId: true, expresswayCertifierId: true },
     });
 
     if (!bookingForAuth) {
@@ -43,8 +43,9 @@ export async function GET(
     const isAdminOrExec = role === 'Admin' || role === 'Executive';
     const isRequester = role === 'Requester' && bookingForAuth.requesterId === session.user.id;
     const isDriver = role === 'Driver' && bookingForAuth.driverId === session.user.id;
+    const isCertifier = bookingForAuth.expresswayCertifierId === session.user.id;
 
-    if (!isAdminOrExec && !isRequester && !isDriver) {
+    if (!isAdminOrExec && !isRequester && !isDriver && !isCertifier) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

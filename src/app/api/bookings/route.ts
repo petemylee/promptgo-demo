@@ -17,8 +17,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // สร้างคำขอจองได้เฉพาะ role ผู้ขอใช้รถ (Requester) เท่านั้น
-  if (session.user.role !== 'Requester') {
+  // สร้างคำขอได้ทุก role ยกเว้น Driver
+  if (session.user.role === 'Driver') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -295,15 +295,15 @@ export async function GET(req: Request) {
 
       const pendingBookings = await prisma.booking.findMany({
         where: { status: 'PENDING' },
-        include: { 
+        include: {
           requester: { 
             select: { 
               name: true, 
               position: true,
               email: true,
               phoneNumber: true
-            } 
-          } 
+            },
+          },
         },
         orderBy: [{ startTime: 'desc' }, { createdAt: 'desc' }],
       });

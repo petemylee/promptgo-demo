@@ -38,6 +38,12 @@ enum ExpresswayOption {
   NO_EXPRESSWAY // ไม่ขึ้นทางด่วน
 }
 
+enum ExpresswayCertificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum UsageLogAction {
   PAGE_VIEW
   API_CALL
@@ -77,6 +83,7 @@ model User {
   bookingsDriven         Booking[] @relation("DriverTrips")
   bookingsApprovedByAdmin Booking[] @relation("AdminApprovals")
   bookingsConfirmedByExec Booking[] @relation("ExecutiveConfirmations")
+  expresswayCertifications Booking[] @relation("ExpresswayCertifications")
   driverFeedbackGivenAsRequester DriverFeedback[] @relation("RequesterDriverFeedback")
   driverFeedbackReceived DriverFeedback[] @relation("DriverFeedbackReceived")
   usageLogs              UsageLog[]
@@ -209,6 +216,13 @@ model Booking {
   endMileage          Int?           // เลขไมล์หลังเดินทาง
   executiveConfirmedAt DateTime?     // วันที่ Executive ยืนยัน
   adminApprovedAt     DateTime?     // วันที่ Admin/Executive กดอนุมัติและจัดสรรรถ-คนขับ (เบื้องต้น)
+  expresswayCertifierId String?     // ผู้รับรอง (กรณีใช้ทางด่วน) - เลือกจากรายชื่อผู้ใช้
+  expresswayCertificationStatus ExpresswayCertificationStatus? // สถานะการรับรองทางด่วน
+  expresswayCertifiedAt DateTime?   // วันที่/เวลาที่รับรองทางด่วน
+  expresswayCertifierSignatureUrl String? // ลายเซ็นผู้รับรอง (snapshot ต่อรายการ)
+  expresswayCertifierName String?   // ชื่อผู้รับรอง (snapshot ต่อรายการ)
+  expresswayCertifierPosition String? // ตำแหน่งผู้รับรอง (snapshot ต่อรายการ)
+  expresswayCertificationNote String? // หมายเหตุ/เหตุผลที่ปฏิเสธ (optional)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -217,15 +231,19 @@ model Booking {
   vehicleId             String?
   adminApproverId       String?
   executiveConfirmerId  String?
+  // note: expresswayCertifierId is declared above as a data column
 
   requester          User      @relation("RequesterBookings", fields: [requesterId], references: [id])
   driver             User?     @relation("DriverTrips", fields: [driverId], references: [id])
   vehicle            Vehicle?  @relation(fields: [vehicleId], references: [id])
   adminApprover      User?     @relation("AdminApprovals", fields: [adminApproverId], references: [id])
   executiveConfirmer User?     @relation("ExecutiveConfirmations", fields: [executiveConfirmerId], references: [id])
+  expresswayCertifier User?    @relation("ExpresswayCertifications", fields: [expresswayCertifierId], references: [id])
 
   feedback           Feedback?
   driverFeedback     DriverFeedback?
+
+  @@index([expresswayCertifierId, expresswayCertificationStatus])
 }
 
 // Feedback จาก Requester (ผู้ขอใช้รถ) ให้คนขับ (Admin, Executive, Driver เห็นได้)

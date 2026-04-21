@@ -11,7 +11,10 @@ import {
   CAR_REQUEST_PDF_LAYOUT,
   resolveCarRequestTemplate,
 } from '@/lib/pdf/car-request-pdf-layout';
-import { drawSignatureInFieldAndRemoveWidget } from '@/lib/pdf/signature-field-draw';
+import {
+  drawSignatureInFieldAndRemoveWidget,
+  ensureSignatureFieldsHaveNormalAppearance,
+} from '@/lib/pdf/signature-field-draw';
 
 const thaiMonths = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -447,6 +450,7 @@ export async function GET(
         driver: true,
         adminApprover: { select: { name: true, position: true, signatureImageUrl: true } },
         executiveConfirmer: true, // ผู้บริหารที่จะเซ็นอนุมัติ
+        expresswayCertifier: { select: { id: true, name: true, position: true, signatureImageUrl: true } },
       },
       // Prisma include จะดึงทุก field ของ Booking model รวมถึง executiveConfirmedAt
     });
@@ -520,13 +524,16 @@ export async function GET(
     fill('req_year', (requestDate.getFullYear() + 543).toString());
     fill(
       'req_date_long',
-      `${requestDate.getDate()} ${thaiMonths[requestDate.getMonth()]} ${requestDate.getFullYear() + 543}`
+      `วันที่ ${requestDate.getDate()} ${thaiMonths[requestDate.getMonth()]} ${requestDate.getFullYear() + 543}`
     );
 
     // --- ผู้ขอ (เจ้าของบัญชีผู้สร้างคำขอ) ---
     const requesterAccountName = booking.requester?.name || '-';
     const requesterAccountPosition = booking.requester?.position || '-';
     fill('requester_name', requesterAccountName);
+    // รองรับเทมเพลตที่ใช้ชื่อ field แยกเป็น 2 กล่อง (Sejda/PDF editors บางตัว)
+    fill('req_name_1', requesterAccountName);
+    fill('req_name_2', requesterAccountName);
     fill('requester_position', requesterAccountPosition);
 
     // --- ผู้เดินทาง (ถ้าต้องการแยก field เพิ่มในอนาคต) ---
@@ -571,6 +578,29 @@ export async function GET(
       fill('admin_approve_date_long', '-');
     }
 
+    // --- ผู้รับรองทางด่วน (เฉพาะกรณีใช้ทางด่วน) ---
+    if (booking.expresswayOption === 'EXPRESSWAY') {
+      fill('expressway_certifier_name', booking.expresswayCertifierName || booking.expresswayCertifier?.name || '-');
+      fill(
+        'expressway_certifier_position',
+        booking.expresswayCertifierPosition || booking.expresswayCertifier?.position || '-'
+      );
+      if (booking.expresswayCertifiedAt) {
+        const certifiedAt = new Date(booking.expresswayCertifiedAt);
+        fill(
+          'expressway_certified_date_long',
+          `${certifiedAt.getDate()} ${thaiMonths[certifiedAt.getMonth()]} ${certifiedAt.getFullYear() + 543}`
+        );
+      } else {
+        fill('expressway_certified_date_long', '');
+      }
+    } else {
+      // Keep fields blank-safe if template includes them
+      fill('expressway_certifier_name', '');
+      fill('expressway_certifier_position', '');
+      fill('expressway_certified_date_long', '');
+    }
+
     // --- รถ/คนขับ ---
     if (booking.vehicle) {
         fill('vehicle_brand', booking.vehicle.brand?.trim() || '-');
@@ -605,35 +635,57 @@ export async function GET(
       booking.adminApprover?.signatureImageUrl
     );
 
+    // ลายเซ็นผู้รับรองทางด่วน (เฉพาะเมื่อเป็นแบบใช้ทางด่วน)
+    if (booking.expresswayOption === 'EXPRESSWAY') {
+      const certSigUrl =
+        booking.expresswayCertifierSignatureUrl ?? booking.expresswayCertifier?.signatureImageUrl ?? null;
+      await drawSignatureInFieldAndRemoveWidget(
+        pdfDoc,
+        form,
+        'expressway_certifier_signature',
+        certSigUrl
+      );
+    }
+
+    // Executive signature should show only after executive confirms.
+    // If not confirmed yet, keep signature/date blank.
+    const confirmedAt = bookingWithConfirmedAt.executiveConfirmedAt;
+    const executiveSigUrl = confirmedAt ? booking.executiveConfirmer?.signatureImageUrl : null;
     const executiveInPdfField = await drawSignatureInFieldAndRemoveWidget(
       pdfDoc,
       form,
       'executive_signature',
-      booking.executiveConfirmer?.signatureImageUrl
+      executiveSigUrl
     );
     
     // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่ Executive ยืนยัน (executiveConfirmedAt)
     // เนื่องจาก booking ต้องเป็น CONFIRMED ก่อนถึงจะสร้าง PDF ได้ ดังนั้นควรจะมี executiveConfirmedAt อยู่แล้ว
     // ใช้ type assertion เพราะ Prisma type อาจจะยังไม่ sync
-    const confirmedAt = bookingWithConfirmedAt.executiveConfirmedAt;
     console.log('[PDF] executiveConfirmedAt:', confirmedAt, 'Type:', typeof confirmedAt);
     console.log('[PDF] booking status:', booking.status);
     
-    if (!confirmedAt) {
-      console.warn('[PDF] WARNING: executiveConfirmedAt is null/undefined, using current date as fallback');
+    if (confirmedAt) {
+      const approvalDate = new Date(confirmedAt);
+      fill(
+        'approve_date_full',
+        `${approvalDate.getDate()} ${thaiMonths[approvalDate.getMonth()]} ${approvalDate.getFullYear() + 543}`
+      );
+    } else {
+      fill('approve_date_full', '');
     }
-    
-    const approvalDate = confirmedAt
-      ? new Date(confirmedAt)
-      : new Date(); // Fallback เป็นวันที่ปัจจุบันถ้าไม่มี (ไม่ควรเกิดขึ้น)
-    console.log('[PDF] approvalDate:', approvalDate.toISOString());
-    fill(
-      'approve_date_full',
-      `${approvalDate.getDate()} ${thaiMonths[approvalDate.getMonth()]} ${approvalDate.getFullYear() + 543}`
-    );
 
     // 7. จบงาน
-    form.flatten(); // ลบช่องกรอกข้อมูลทิ้ง ให้เหลือแต่เนื้อหา
+    // ลบช่องกรอกข้อมูลทิ้ง ให้เหลือแต่เนื้อหา
+    // Defensive: fix broken signature widgets before flatten.
+    const fixedSigWidgets = ensureSignatureFieldsHaveNormalAppearance(pdfDoc, form);
+    if (fixedSigWidgets > 0) {
+      console.warn(`[PDF] WARN: fixed ${fixedSigWidgets} signature widget appearance(s) before flatten`);
+    }
+    try {
+      form.flatten();
+    } catch (e) {
+      console.warn('[PDF] WARN: flatten failed; returning non-flattened PDF as fallback.', e);
+    }
     const pdfBytes = await pdfDoc.save();
 
     // แปลง Uint8Array เป็น Buffer เพื่อให้ NextResponse รับได้

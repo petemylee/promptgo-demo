@@ -33,6 +33,24 @@ export function getSignatureFieldPlacement(
   return { page: findPageForWidget(pdfDoc, w), rect };
 }
 
+/** All widget rectangles for a signature field (supports multiple boxes). */
+function getSignatureFieldPlacements(
+  pdfDoc: PDFDocument,
+  form: PDFForm,
+  fieldName: string
+): Array<{ page: PDFPage; rect: PdfRect; widget: PDFWidgetAnnotation }> {
+  const field = form.getFieldMaybe(fieldName);
+  if (!(field instanceof PDFSignature)) return [];
+  const widgets = field.acroField.getWidgets();
+  const placements: Array<{ page: PDFPage; rect: PdfRect; widget: PDFWidgetAnnotation }> = [];
+  for (const w of widgets) {
+    const rect = w.getRectangle();
+    if (!rect.width || !rect.height) continue;
+    placements.push({ page: findPageForWidget(pdfDoc, w), rect, widget: w });
+  }
+  return placements;
+}
+
 export function drawFittedImageInRect(page: PDFPage, image: PDFImage, rect: PdfRect): void {
   const aspect = image.width / image.height;
   let dw = rect.width;
@@ -79,31 +97,30 @@ export async function drawSignatureInFieldAndRemoveWidget(
   fieldName: string,
   imageUrl: string | null | undefined
 ): Promise<boolean> {
-  const placement = getSignatureFieldPlacement(pdfDoc, form, fieldName);
-  if (!placement) return false;
   const signatureField = form.getFieldMaybe(fieldName);
   if (!(signatureField instanceof PDFSignature)) return false;
+  const widgets = signatureField.acroField.getWidgets();
+  if (widgets.length === 0) return false;
+  const placements = getSignatureFieldPlacements(pdfDoc, form, fieldName);
   try {
     // If we have an image, draw it. If not, still remove the field to prevent
     // pdf-lib flatten from crashing on signature widgets without /AP /N.
-    if (imageUrl) {
+    if (imageUrl && placements.length > 0) {
       const embedded = await embedSignatureImageFromUrl(pdfDoc, imageUrl);
       if (embedded) {
-        drawFittedImageInRect(placement.page, embedded, placement.rect);
+        for (const p of placements) {
+          drawFittedImageInRect(p.page, embedded, p.rect);
+        }
       }
     }
     // Some templates create signature widgets without a normal appearance stream (AP /N).
     // pdf-lib's flatten/removeField expects a normal appearance to exist, otherwise it throws.
     // We attach a minimal empty appearance stream to satisfy that invariant before removal.
-    try {
-      const widget = signatureField.acroField.getWidgets()[0];
-      if (widget) {
+    for (const widget of widgets) {
+      try {
         // Throws when /AP or /N is missing
         widget.getNormalAppearance();
-      }
-    } catch {
-      const widget = signatureField.acroField.getWidgets()[0];
-      if (widget) {
+      } catch {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const emptyRef = (signatureField as any).createAppearanceStream(widget, [], undefined);
         widget.setNormalAppearance(emptyRef);
@@ -116,4 +133,34 @@ export async function drawSignatureInFieldAndRemoveWidget(
     console.error(`Signature draw/remove ${fieldName}:`, e);
     return false;
   }
+}
+
+/**
+ * Defensive fixup for broken SignatureField widgets (missing /AP /N).
+ * If any SignatureField remains in the form, pdf-lib flatten() may throw
+ * "Unexpected N type: undefined". This function ensures every signature widget
+ * has a normal appearance stream before flatten/remove operations.
+ */
+export function ensureSignatureFieldsHaveNormalAppearance(pdfDoc: PDFDocument, form: PDFForm): number {
+  let fixed = 0;
+  for (const f of form.getFields()) {
+    if (!(f instanceof PDFSignature)) continue;
+    const widgets = f.acroField.getWidgets();
+    for (const widget of widgets) {
+      try {
+        widget.getNormalAppearance();
+      } catch {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const emptyRef = (f as any).createAppearanceStream(widget, [], undefined);
+          widget.setNormalAppearance(emptyRef);
+          fixed += 1;
+        } catch (e) {
+          // If we can't fix it, keep going; caller may choose to skip flatten.
+          console.warn('[PDF] WARN: failed to attach empty appearance to SignatureField widget', e);
+        }
+      }
+    }
+  }
+  return fixed;
 }

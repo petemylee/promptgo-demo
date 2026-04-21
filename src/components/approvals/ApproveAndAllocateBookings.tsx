@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
 import { routeTextWrapClass } from '@/components/booking/routeTextWrap';
 import { formatDateTimeTH } from '@/lib/formatters';
+import SuggestTextField, { type SuggestItem } from '@/components/SuggestTextField';
 import type {
   ApprovalDashboardData,
   ApprovalDriver,
@@ -40,6 +41,9 @@ export default function ApproveAndAllocateBookings({
   const [drivers, setDrivers] = useState<ApprovalDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [certifiers, setCertifiers] = useState<Array<ApprovalDriver & { signatureImageUrl?: string | null }>>([]);
+  const [selectedCertifierId, setSelectedCertifierId] = useState<string>('');
+  const [certifierQuery, setCertifierQuery] = useState<string>('');
   const [hasPrefetchedOptions, setHasPrefetchedOptions] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailBookingId, setSelectedDetailBookingId] = useState<string | null>(null);
@@ -123,6 +127,11 @@ export default function ApproveAndAllocateBookings({
       const usersData = await response.json();
       const driversData = usersData.filter((user: ApprovalDriver) => user.role === 'Driver');
       setDrivers(driversData);
+      const certifierCandidates = usersData.filter(
+        (user: ApprovalDriver & { isActive?: boolean }) =>
+          user.role !== 'Driver' && user.role !== 'Requester' && (user as any).isActive !== false
+      );
+      setCertifiers(certifierCandidates);
     } catch (err: unknown) {
       if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
       else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
@@ -147,6 +156,8 @@ export default function ApproveAndAllocateBookings({
     setSelectedBookingId(bookingId);
     setSelectedVehicleId('');
     setSelectedDriverId('');
+    setSelectedCertifierId('');
+    setCertifierQuery('');
     await prefetchOptions();
     setShowVehicleModal(true);
   };
@@ -172,15 +183,57 @@ export default function ApproveAndAllocateBookings({
         throw new Error(errorData?.error || 'ไม่สามารถอัปเดตสถานะได้');
       }
 
+      // If booking is expressway, set certifier (optional at this step)
+      const booking = data?.pendingBookings?.find((b) => b.id === selectedBookingId);
+      if (booking?.expresswayOption === 'EXPRESSWAY' && selectedCertifierId) {
+        await fetch(`/api/bookings/${selectedBookingId}/expressway-certifier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ certifierUserId: selectedCertifierId }),
+        });
+      }
+
       setShowVehicleModal(false);
       setSelectedBookingId(null);
       setSelectedVehicleId('');
       setSelectedDriverId('');
+      setSelectedCertifierId('');
+      setCertifierQuery('');
       fetchDashboardData();
     } catch (err: unknown) {
       if (err instanceof Error) alert(`ข้อผิดพลาด: ${err.message}`);
       else alert('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
     }
+  };
+
+  const certifierSuggestions = useMemo<SuggestItem[]>(() => {
+    return certifiers
+      .map((u) => {
+        const primary = u.name?.trim() || u.email;
+        const pos = u.position?.trim();
+        const suffix = u.signatureImageUrl ? '✓ มีลายเซ็น' : 'ยังไม่มีลายเซ็น';
+        const value = `${primary} — ${u.email}${pos ? ` (${pos})` : ''} · ${suffix}`;
+        return { value, count: 0 };
+      })
+      .sort((a, b) => a.value.localeCompare(b.value, 'th'));
+  }, [certifiers]);
+
+  const applyCertifierQuery = (next: string) => {
+    setCertifierQuery(next);
+    const trimmed = next.trim();
+    if (!trimmed) {
+      setSelectedCertifierId('');
+      return;
+    }
+    // Match by the formatted value we display in the dropdown.
+    const found = certifiers.find((u) => {
+      const primary = u.name?.trim() || u.email;
+      const pos = u.position?.trim();
+      const suffix = u.signatureImageUrl ? '✓ มีลายเซ็น' : 'ยังไม่มีลายเซ็น';
+      const value = `${primary} — ${u.email}${pos ? ` (${pos})` : ''} · ${suffix}`;
+      return value === trimmed;
+    });
+    if (found) setSelectedCertifierId(found.id);
   };
 
   const handleRejectClick = (bookingId: string) => {
@@ -392,6 +445,38 @@ export default function ApproveAndAllocateBookings({
                 <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
               ) : (
                 <>
+                  {(() => {
+                    const booking = data?.pendingBookings?.find((b) => b.id === selectedBookingId);
+                    if (booking?.expresswayOption !== 'EXPRESSWAY') return null;
+                    return (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                        การเดินทางนี้เลือก <span className="font-semibold">ใช้ทางด่วน</span> — โปรดเลือกผู้รับรองเพื่อให้ระบบส่งคำขอรับรอง (ทำภายหลังได้ แต่แนะนำทำตอนนี้)
+                      </div>
+                    );
+                  })()}
+
+                  {(() => {
+                    const booking = data?.pendingBookings?.find((b) => b.id === selectedBookingId);
+                    if (booking?.expresswayOption !== 'EXPRESSWAY') return null;
+                    return (
+                      <div>
+                        <SuggestTextField
+                          label="ผู้รับรองทางด่วน (พิมพ์เพื่อค้นหา)"
+                          value={certifierQuery}
+                          onChange={applyCertifierQuery}
+                          suggestions={certifierSuggestions}
+                          rootClassName="mb-0"
+                          inputClassName="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-slate-900 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#0076c3]/60"
+                          maxVisibleWhenEmpty={10}
+                          maxVisibleFiltered={18}
+                        />
+                        <p className="mt-1 text-xs text-slate-600">
+                          ผู้รับรองจะได้รับแจ้งเตือนในระบบ และสามารถเลือกใช้ลายเซ็นจากโปรไฟล์หรือเซ็นใหม่เฉพาะรายการได้
+                        </p>
+                      </div>
+                    );
+                  })()}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">เลือกรถยนต์</label>
                     <select
