@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate:car-request-templates": "node scripts/generate-car-request-pdf-templates.mjs"
   },
   "dependencies": {
     "@line/bot-sdk": "^10.6.0",

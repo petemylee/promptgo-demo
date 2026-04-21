@@ -208,6 +208,7 @@ model Booking {
   startMileage        Int?           // เลขไมล์ก่อนออกเดินทาง
   endMileage          Int?           // เลขไมล์หลังเดินทาง
   executiveConfirmedAt DateTime?     // วันที่ Executive ยืนยัน
+  adminApprovedAt     DateTime?     // วันที่ Admin/Executive กดอนุมัติและจัดสรรรถ-คนขับ (เบื้องต้น)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 

@@ -46,10 +46,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
     }
 
-    // ตรวจสอบ expresswayOption (สำหรับเลือก template ในอนาคต)
     const validExpresswayOptions = ['EXPRESSWAY', 'NO_EXPRESSWAY'];
-    if (expresswayOption && !validExpresswayOptions.includes(expresswayOption)) {
-      return NextResponse.json({ error: 'Invalid expressway option' }, { status: 400 });
+    if (!expresswayOption || !validExpresswayOptions.includes(expresswayOption)) {
+      return NextResponse.json(
+        { error: 'กรุณาเลือกการใช้ทางด่วนหรือไม่ใช้ทางด่วน' },
+        { status: 400 }
+      );
     }
 
     // ตรวจสอบข้อมูลเมื่อขอใช้สำหรับบุคคลอื่น
@@ -81,7 +83,7 @@ export async function POST(req: Request) {
       endTime: parsedEndTime,
       passengerCount: passengerCountNum,
       tripType: normalizedTripType,
-      expresswayOption: expresswayOption || null,
+      expresswayOption,
       requestForSelf: isForSelf,
       travelerName: isForSelf ? null : (travelerName?.trim() || null),
       travelerPosition: isForSelf ? null : (travelerPosition?.trim() || null),

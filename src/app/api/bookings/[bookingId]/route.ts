@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import type { Session } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import { BookingStatus, TripType, type Role } from '@prisma/client';
+import { BookingStatus, TripType, type Role, type ExpresswayOption } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 import { writeUsageLog } from '@/lib/usageLogs';
@@ -136,7 +136,8 @@ export async function PATCH(
       endTime,
       passengerCount,
       tripType,
-      additionalNotes
+      additionalNotes,
+      expresswayOption,
     } = body;
 
     // ดึง booking เพื่อตรวจสอบสิทธิ์
@@ -218,7 +219,7 @@ export async function PATCH(
       // ถ้าเป็นการแก้ไขข้อมูล (ไม่ใช่แค่ลายเซ็น)
       if (startLocation !== undefined || endLocation !== undefined || purpose !== undefined || startTime !== undefined ||
           endTime !== undefined || passengerCount !== undefined || tripType !== undefined ||
-          additionalNotes !== undefined) {
+          additionalNotes !== undefined || expresswayOption !== undefined) {
         if (!requesterMayEditBookingDetails(bookingForAuth.status)) {
           return NextResponse.json({
             error: 'ไม่สามารถแก้ไขคำขอที่อยู่ในสถานะนี้ได้ (แก้ไขได้เฉพาะคำขอที่ยังดำเนินการอยู่)',
@@ -234,6 +235,7 @@ export async function PATCH(
           endTime?: Date | null;
           passengerCount?: number | null;
           tripType?: TripType | null;
+          expresswayOption?: ExpresswayOption;
           requesterSignatureUrl?: string | null;
           additionalNotes?: string | null;
         } = {};
@@ -275,6 +277,16 @@ export async function PATCH(
             return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
           }
           updateData.tripType = normalizedTrip;
+        }
+        if (expresswayOption !== undefined) {
+          const validExpressway = ['EXPRESSWAY', 'NO_EXPRESSWAY'];
+          if (expresswayOption == null || !validExpressway.includes(expresswayOption)) {
+            return NextResponse.json(
+              { error: 'กรุณาเลือกการใช้ทางด่วนหรือไม่ใช้ทางด่วน' },
+              { status: 400 }
+            );
+          }
+          updateData.expresswayOption = expresswayOption as ExpresswayOption;
         }
         if (requesterSignatureUrl !== undefined) updateData.requesterSignatureUrl = requesterSignatureUrl || null;
 
@@ -414,6 +426,7 @@ export async function PATCH(
         data: {
           status: status as BookingStatus,
           adminApproverId: session.user.id,
+          ...(status === 'APPROVED' ? { adminApprovedAt: new Date() } : {}),
           ...(status === 'REJECTED'
             ? {
                 rejectionReason: (rejectionReason as string).trim(),

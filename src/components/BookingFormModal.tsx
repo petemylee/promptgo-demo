@@ -179,6 +179,10 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
       setError('กรุณากรอกข้อมูลผู้เดินทางให้ครบถ้วน');
       return;
     }
+    if (!expresswayOption) {
+      setError('กรุณาเลือกการใช้ทางด่วนหรือไม่ใช้ทางด่วน');
+      return;
+    }
     const parsedStartTime = parseBangkokDateTimeLocal(startTime);
     const parsedEndTime = parseBangkokDateTimeLocal(endTime);
     if (!parsedStartTime || !parsedEndTime) {
@@ -251,7 +255,7 @@ export default function BookingFormModal({ isOpen = true, onClose, onCreated, va
           endTime: parsedEndTime,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
-          expresswayOption: expresswayOption || null,
+          expresswayOption,
           requestForSelf,
           travelerName: requestForSelf ? null : travelerName?.trim() || null,
           travelerPosition: requestForSelf ? null : travelerPosition?.trim() || null,

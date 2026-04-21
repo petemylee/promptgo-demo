@@ -29,6 +29,7 @@ interface BookingDetail {
   endTime: string | null;
   passengerCount: number | null;
   tripType: string | null;
+  expresswayOption?: 'EXPRESSWAY' | 'NO_EXPRESSWAY' | null;
   status: string;
   startMileage?: number | null;
   endMileage?: number | null;
@@ -284,6 +285,14 @@ export default function BookingDetailModal({ isOpen, onClose, bookingId, onUpdat
                     booking.tripType
                   }</p>
                 )}
+                <p>
+                  <span className="font-medium">การใช้ทางด่วน:</span>{' '}
+                  {booking.expresswayOption === 'EXPRESSWAY'
+                    ? 'ใช้ทางด่วน'
+                    : booking.expresswayOption === 'NO_EXPRESSWAY'
+                      ? 'ไม่ใช้ทางด่วน'
+                      : '-'}
+                </p>
                 {booking.passengerCount && (
                   <p><span className="font-medium">จำนวนคนนั่ง:</span> {booking.passengerCount} คน</p>
                 )}

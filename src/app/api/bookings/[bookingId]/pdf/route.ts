@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFTextField, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
+import {
+  CAR_REQUEST_PDF_LAYOUT,
+  resolveCarRequestTemplate,
+} from '@/lib/pdf/car-request-pdf-layout';
+import { drawSignatureInFieldAndRemoveWidget } from '@/lib/pdf/signature-field-draw';
 
 const thaiMonths = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -440,6 +445,7 @@ export async function GET(
         requester: true,
         vehicle: true,
         driver: true,
+        adminApprover: { select: { name: true, position: true, signatureImageUrl: true } },
         executiveConfirmer: true, // ผู้บริหารที่จะเซ็นอนุมัติ
       },
       // Prisma include จะดึงทุก field ของ Booking model รวมถึง executiveConfirmedAt
@@ -454,16 +460,13 @@ export async function GET(
     const bookingWithConfirmedAt = booking as BookingWithConfirmedAtType;
     console.log('[PDF] executiveConfirmedAt from booking:', bookingWithConfirmedAt?.executiveConfirmedAt);
 
-    // 2. เตรียมไฟล์
-    // ลองหาไฟล์ template ทั้งสองชื่อ (car-request-template.pdf หรือ car-request-template.pdf.pdf)
-    let templatePath = join(process.cwd(), 'public/templates/car-request-template.pdf');
-    if (!existsSync(templatePath)) {
-      // ถ้าไม่เจอ ลองหาไฟล์ที่ชื่อ .pdf.pdf
-      templatePath = join(process.cwd(), 'public/templates/car-request-template.pdf.pdf');
-      if (!existsSync(templatePath)) {
-        return NextResponse.json({ error: 'Template file missing' }, { status: 500 });
-      }
+    // 2. เตรียมไฟล์ — เลือกเทมเพลตจาก expresswayOption
+    const resolved = resolveCarRequestTemplate(booking.expresswayOption ?? null);
+    if (!resolved.ok) {
+      return NextResponse.json({ error: resolved.error }, { status: 500 });
     }
+    const { templatePath, layoutKey } = resolved;
+    const sigLayout = CAR_REQUEST_PDF_LAYOUT[layoutKey];
 
     const fontPath = join(process.cwd(), 'public/fonts/THSarabunNew.ttf');
 
@@ -483,34 +486,52 @@ export async function GET(
     // หรือใช้วิธีสร้าง form field ใหม่ แต่จะต้องระบุตำแหน่ง
     const fill = (field: string, text: string) => {
       try {
-        const f = form.getTextField(field);
-        f.setText(text);
-        // อัปเดต appearance ด้วยฟอนต์ภาษาไทย
-        // ขนาดฟอนต์จะใช้ค่าที่ตั้งไว้ใน template PDF
-        f.updateAppearances(thaiFont);
-      } catch (e) { 
-        console.warn(`Field ${field} missing:`, e); 
+        const matches = form.getFields().filter((f) => f.getName() === field);
+        let filled = 0;
+        for (const m of matches) {
+          if (m instanceof PDFTextField) {
+            m.setText(text);
+            // อัปเดต appearance ด้วยฟอนต์ภาษาไทย (ขนาดฟอนต์อิงจาก template)
+            m.updateAppearances(thaiFont);
+            filled += 1;
+          }
+        }
+        if (filled === 0) {
+          // Keep warning for debugging field-name mismatches.
+          console.warn(`Field ${field} missing`);
+        }
+      } catch (e) {
+        console.warn(`Field ${field} missing:`, e);
       }
     };
 
     // 4. แปลงข้อมูลวันที่
+    // วันที่ในหัวฟอร์ม (req_*): วันที่ยื่นคำขอ — แยกจากวันเริ่มเดินทาง
+    const requestDate = new Date(booking.createdAt);
     const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
     const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
 
     // 5. เริ่มกรอกข้อมูล (Mapping)
     // หมายเหตุ: ขนาดฟอนต์ถูกกำหนดไว้ใน template PDF แล้ว
     // ถ้าต้องการเปลี่ยนขนาด ให้แก้ไขที่ template PDF เอง
-    // --- ส่วนหัว --- (อิงตามวันที่เริ่ม)
-    fill('req_day', startDate.getDate().toString());
-    fill('req_month', thaiMonths[startDate.getMonth()]);
-    fill('req_year', (startDate.getFullYear() + 543).toString());
+    // --- ส่วนหัว --- วันที่คำขอ (createdAt)
+    fill('req_day', requestDate.getDate().toString());
+    fill('req_month', thaiMonths[requestDate.getMonth()]);
+    fill('req_year', (requestDate.getFullYear() + 543).toString());
+    fill(
+      'req_date_long',
+      `${requestDate.getDate()} ${thaiMonths[requestDate.getMonth()]} ${requestDate.getFullYear() + 543}`
+    );
 
-    // --- ผู้เดินทาง (ใช้ traveler เมื่อขอใช้สำหรับบุคคลอื่น) ---
-    const bookingWithTraveler = booking as typeof booking & { requestForSelf?: boolean | null; travelerName?: string | null; travelerPosition?: string | null };
-    const pdfDisplayName = bookingWithTraveler.requestForSelf !== false ? (booking.requester.name || '-') : (bookingWithTraveler.travelerName || '-');
-    const pdfDisplayPosition = bookingWithTraveler.requestForSelf !== false ? (booking.requester.position || '-') : (bookingWithTraveler.travelerPosition || '-');
-    fill('requester_name', pdfDisplayName);
-    fill('requester_position', pdfDisplayPosition);
+    // --- ผู้ขอ (เจ้าของบัญชีผู้สร้างคำขอ) ---
+    const requesterAccountName = booking.requester?.name || '-';
+    const requesterAccountPosition = booking.requester?.position || '-';
+    fill('requester_name', requesterAccountName);
+    fill('requester_position', requesterAccountPosition);
+
+    // --- ผู้เดินทาง (ถ้าต้องการแยก field เพิ่มในอนาคต) ---
+    // หมายเหตุ: ระบบรองรับขอใช้แทนบุคคลอื่นด้วย (travelerName/travelerPosition)
+    // แต่ตาม requirement ล่าสุด ช่อง requester_* ต้องเป็นชื่อเจ้าของ account เสมอ
     
     // --- รายละเอียด ---
     fill('destination', booking.endLocation || '-');
@@ -522,15 +543,37 @@ export async function GET(
     fill('start_month', thaiMonths[startDate.getMonth()]);
     fill('start_year', (startDate.getFullYear() + 543).toString());
     fill('start_time', startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+    fill(
+      'start_date_long',
+      `${startDate.getDate()} ${thaiMonths[startDate.getMonth()]} ${startDate.getFullYear() + 543}`
+    );
 
     // --- วันกลับ ---
     fill('end_day', endDate.getDate().toString());
     fill('end_month', thaiMonths[endDate.getMonth()]);
     fill('end_year', (endDate.getFullYear() + 543).toString());
     fill('end_time', endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+    fill(
+      'end_date_long',
+      `${endDate.getDate()} ${thaiMonths[endDate.getMonth()]} ${endDate.getFullYear() + 543}`
+    );
+
+    // --- ผู้อนุมัติและจัดสรรเบื้องต้น (Admin / Executive) ---
+    fill('admin_approver_name', booking.adminApprover?.name?.trim() || '-');
+    fill('admin_approver_position', booking.adminApprover?.position?.trim() || '-');
+    if (booking.adminApprovedAt) {
+      const adminApprDate = new Date(booking.adminApprovedAt);
+      fill(
+        'admin_approve_date_long',
+        `${adminApprDate.getDate()} ${thaiMonths[adminApprDate.getMonth()]} ${adminApprDate.getFullYear() + 543}`
+      );
+    } else {
+      fill('admin_approve_date_long', '-');
+    }
 
     // --- รถ/คนขับ ---
     if (booking.vehicle) {
+        fill('vehicle_brand', booking.vehicle.brand?.trim() || '-');
         fill('vehicle_plate', booking.vehicle.licensePlate || '-');
     }
     if (booking.driver) fill('driver_name', booking.driver.name || '-');
@@ -549,168 +592,25 @@ export async function GET(
     }
 
     // 6. จัดการลายเซ็น (รูปภาพ)
-    const page = pdfDoc.getPages()[0];
-    const { height } = page.getSize();
-    
-    // ลายเซ็นผู้ขอ (ซ้าย) - ใช้ requesterSignatureUrl จาก Booking (ไม่ใช่ requester.signatureImageUrl จาก User)
+    // ใช้ signature fields ใน template เป็นตัวกำหนดตำแหน่งทั้งหมด (ไม่ใช้พิกัด x/y ในโค้ด)
     const requesterSigUrl = booking.requesterSignatureUrl ?? booking.requester.signatureImageUrl;
-    if (requesterSigUrl) {
-        try {
-            // Check if URL is from Supabase (starts with http/https) or local path
-            let sigBytes: Buffer;
-            if (requesterSigUrl.startsWith('http://') || requesterSigUrl.startsWith('https://')) {
-                // Fetch from Supabase URL
-                const response = await fetch(requesterSigUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch signature: ${response.statusText}`);
-                }
-                const arrayBuffer = await response.arrayBuffer();
-                sigBytes = Buffer.from(arrayBuffer);
-            } else {
-                // Legacy local file path
-                const sigPath = join(process.cwd(), 'public', requesterSigUrl);
-                if (existsSync(sigPath)) {
-                    sigBytes = readFileSync(sigPath);
-                } else {
-                    throw new Error('Signature file not found');
-                }
-            }
-            
-            // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
-            let img;
-            try {
-                img = await pdfDoc.embedPng(sigBytes);
-            } catch {
-                img = await pdfDoc.embedJpg(sigBytes);
-            }
-            // พื้นที่ลายเซ็นผู้ขอใช้: x: 257 ถึง 417, y: 493 ถึง 523
-            const reqSigAreaX1 = 257;
-            const reqSigAreaX2 = 417;
-            const reqSigAreaWidth = reqSigAreaX2 - reqSigAreaX1; // 160
-            const reqSigYBottom = 493; // ตำแหน่งด้านล่าง
-            const reqSigYTop = 523; // ตำแหน่งด้านบน
-            const reqSigMaxHeight = reqSigYTop - reqSigYBottom; // 30
-            const reqAspectRatio = img.width / img.height;
-            let reqDisplayWidth = reqSigAreaWidth;
-            let reqDisplayHeight = reqSigAreaWidth / reqAspectRatio;
-            if (reqDisplayHeight > reqSigMaxHeight) {
-                reqDisplayHeight = reqSigMaxHeight;
-                reqDisplayWidth = reqSigMaxHeight * reqAspectRatio;
-            }
-            if (reqDisplayWidth > reqSigAreaWidth) {
-                reqDisplayWidth = reqSigAreaWidth;
-                reqDisplayHeight = reqSigAreaWidth / reqAspectRatio;
-                if (reqDisplayHeight > reqSigMaxHeight) {
-                    reqDisplayHeight = reqSigMaxHeight;
-                    reqDisplayWidth = reqSigMaxHeight * reqAspectRatio;
-                }
-            }
-            const reqCenterX = (reqSigAreaX1 + reqSigAreaX2) / 2;
-            const reqSignatureX = reqCenterX - (reqDisplayWidth / 2);
-            page.drawImage(img, {
-                x: reqSignatureX,
-                y: reqSigYBottom,
-                width: reqDisplayWidth,
-                height: reqDisplayHeight,
-            });
-        } catch (e) { 
-            console.error('Sign load error', e); 
-        }
-    }
-    fill('requester_sign_name', pdfDisplayName);
+    fill('requester_sign_name', requesterAccountName);
+    await drawSignatureInFieldAndRemoveWidget(pdfDoc, form, 'requester_signature', requesterSigUrl);
 
-    // ลายเซ็นผู้อนุมัติ (ขวา)
-    if (booking.executiveConfirmer?.signatureImageUrl) {
-        try {
-            // Check if URL is from Supabase (starts with http/https) or local path
-            let sigBytes: Buffer;
-            if (booking.executiveConfirmer.signatureImageUrl.startsWith('http://') || booking.executiveConfirmer.signatureImageUrl.startsWith('https://')) {
-                // Fetch from Supabase URL
-                const response = await fetch(booking.executiveConfirmer.signatureImageUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch signature: ${response.statusText}`);
-                }
-                const arrayBuffer = await response.arrayBuffer();
-                sigBytes = Buffer.from(arrayBuffer);
-            } else {
-                // Legacy local file path
-                const sigPath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
-                if (existsSync(sigPath)) {
-                    sigBytes = readFileSync(sigPath);
-                } else {
-                    throw new Error('Signature file not found');
-                }
-            }
-            
-            // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
-            let img;
-            try {
-                img = await pdfDoc.embedPng(sigBytes);
-            } catch {
-                img = await pdfDoc.embedJpg(sigBytes);
-            }
-            
-            // คำนวณตำแหน่งและขนาดลายเซ็น
-            // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
-            // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
-            const signatureAreaX1 = 256;
-            const signatureAreaX2 = 420;
-            const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
-            const signatureY = 420; // ตำแหน่งด้านล่าง
-            const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
-            const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
-            
-            // ดึงขนาดภาพจริง
-            const imageWidth = img.width;
-            const imageHeight = img.height;
-            const aspectRatio = imageWidth / imageHeight;
-            
-            // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
-            let displayWidth = signatureAreaWidth;
-            let displayHeight = signatureAreaWidth / aspectRatio;
-            
-            // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
-            if (displayHeight > maxHeight) {
-                displayHeight = maxHeight;
-                displayWidth = maxHeight * aspectRatio;
-            }
-            
-            // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
-            if (displayWidth > signatureAreaWidth) {
-                displayWidth = signatureAreaWidth;
-                displayHeight = signatureAreaWidth / aspectRatio;
-                // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
-                if (displayHeight > maxHeight) {
-                    displayHeight = maxHeight;
-                    displayWidth = maxHeight * aspectRatio;
-                }
-            }
-            
-            // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
-            const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
-            const signatureX = centerX - (displayWidth / 2);
-            
-            // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
-            page.drawImage(img, { 
-                x: signatureX, 
-                y: signatureY, 
-                width: displayWidth, 
-                height: displayHeight 
-            });
-            
-            // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
-            // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
-            const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
-            page.drawImage(img, { 
-                x: signatureX, 
-                y: signatureY2, 
-                width: displayWidth, 
-                height: displayHeight 
-            });
-        } catch (e) { 
-            console.error('Exec sign load error', e); 
-        }
-    }
+    // ลายเซ็นแอดมิน / ผู้บริหาร — ถ้าเทมเพลตมี signature fields ชื่อ admin_signature / executive_signature จะใช้กรอบจาก PDF
+    await drawSignatureInFieldAndRemoveWidget(
+      pdfDoc,
+      form,
+      'admin_signature',
+      booking.adminApprover?.signatureImageUrl
+    );
+
+    const executiveInPdfField = await drawSignatureInFieldAndRemoveWidget(
+      pdfDoc,
+      form,
+      'executive_signature',
+      booking.executiveConfirmer?.signatureImageUrl
+    );
     
     // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่ Executive ยืนยัน (executiveConfirmedAt)
     // เนื่องจาก booking ต้องเป็น CONFIRMED ก่อนถึงจะสร้าง PDF ได้ ดังนั้นควรจะมี executiveConfirmedAt อยู่แล้ว
@@ -723,14 +623,14 @@ export async function GET(
       console.warn('[PDF] WARNING: executiveConfirmedAt is null/undefined, using current date as fallback');
     }
     
-    const approvalDate = confirmedAt 
-      ? new Date(confirmedAt) 
+    const approvalDate = confirmedAt
+      ? new Date(confirmedAt)
       : new Date(); // Fallback เป็นวันที่ปัจจุบันถ้าไม่มี (ไม่ควรเกิดขึ้น)
     console.log('[PDF] approvalDate:', approvalDate.toISOString());
-    const d = approvalDate.getDate().toString().padStart(2, '0');
-    const m = (approvalDate.getMonth() + 1).toString().padStart(2, '0');
-    const y = (approvalDate.getFullYear() + 543).toString();
-    fill('approve_date_full', `${d}/${m}/${y}`);
+    fill(
+      'approve_date_full',
+      `${approvalDate.getDate()} ${thaiMonths[approvalDate.getMonth()]} ${approvalDate.getFullYear() + 543}`
+    );
 
     // 7. จบงาน
     form.flatten(); // ลบช่องกรอกข้อมูลทิ้ง ให้เหลือแต่เนื้อหา

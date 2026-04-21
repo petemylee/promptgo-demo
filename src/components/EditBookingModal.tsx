@@ -14,6 +14,7 @@ import {
 import { requesterMayEditBookingDetails } from '@/lib/bookingRequesterWorkflow';
 
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
+type ExpresswayOption = 'EXPRESSWAY' | 'NO_EXPRESSWAY';
 
 interface EditBookingModalProps {
   isOpen?: boolean;
@@ -33,6 +34,7 @@ interface BookingData {
   endTime: string | null;
   passengerCount: number | null;
   tripType: TripType | null;
+  expresswayOption: ExpresswayOption | null;
   requesterSignatureUrl: string | null;
   status: string;
 }
@@ -45,6 +47,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
   const [endTime, setEndTime] = useState('');
   const [passengerCount, setPassengerCount] = useState('');
   const [tripType, setTripType] = useState<TripType | ''>('');
+  const [expresswayOption, setExpresswayOption] = useState<ExpresswayOption | ''>('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -111,6 +114,11 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setPassengerCount(data.passengerCount?.toString() || '');
       const rawTrip = String(data.tripType ?? '');
       setTripType(rawTrip === 'PICK_UP' ? 'ONE_WAY' : (rawTrip as TripType | ''));
+      if (data.expresswayOption === 'EXPRESSWAY' || data.expresswayOption === 'NO_EXPRESSWAY') {
+        setExpresswayOption(data.expresswayOption);
+      } else {
+        setExpresswayOption('');
+      }
       setSignatureDataUrl(data.requesterSignatureUrl);
     } catch (err) {
       setPostPendingEditNotice(false);
@@ -153,6 +161,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
       setEndTime('');
       setPassengerCount('');
       setTripType('');
+      setExpresswayOption('');
       setError('');
       setSignatureDataUrl(null);
       setPostPendingEditNotice(false);
@@ -183,6 +192,10 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
     }
     if (isBeforeBangkokStartOfToday(parsedStartTime) || isBeforeBangkokStartOfToday(parsedEndTime)) {
       setError('ไม่สามารถเลือกวันที่ย้อนหลังได้');
+      return;
+    }
+    if (!expresswayOption) {
+      setError('กรุณาเลือกการใช้ทางด่วนหรือไม่ใช้ทางด่วน');
       return;
     }
     setIsLoading(true);
@@ -235,6 +248,7 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
           endTime: parsedEndTime,
           passengerCount: passengerCount ? parseInt(passengerCount, 10) : null,
           tripType: tripType || null,
+          expresswayOption,
           requesterSignatureUrl,
         }),
       });
@@ -403,6 +417,37 @@ export default function EditBookingModal({ isOpen = true, onClose, bookingId, on
                       required
                     />
                     <span className="text-sm text-gray-700">ส่ง/รับกลับ</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  การเดินทาง<span className="text-red-600">*</span>
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="expresswayOption"
+                      value="EXPRESSWAY"
+                      checked={expresswayOption === 'EXPRESSWAY'}
+                      onChange={(e) => setExpresswayOption(e.target.value as ExpresswayOption)}
+                      className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                      required
+                    />
+                    <span className="text-sm text-gray-700">ใช้ทางด่วน</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="expresswayOption"
+                      value="NO_EXPRESSWAY"
+                      checked={expresswayOption === 'NO_EXPRESSWAY'}
+                      onChange={(e) => setExpresswayOption(e.target.value as ExpresswayOption)}
+                      className="w-4 h-4 text-[#0076c3] focus:ring-[#0076c3]"
+                      required
+                    />
+                    <span className="text-sm text-gray-700">ไม่ใช้ทางด่วน</span>
                   </label>
                 </div>
               </div>
