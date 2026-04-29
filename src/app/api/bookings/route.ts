@@ -1,9 +1,7 @@
-// src/app/api/bookings/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-// ✅ 1. นำเข้าฟังก์ชันส่งไลน์
 import { sendLineMessage } from '@/lib/line';
 import { buildBookingNotification } from '@/lib/lineNotifications';
 import { parseMaybeDateInput, isBeforeBangkokStartOfToday } from '@/lib/dateTime';
@@ -11,34 +9,28 @@ import { createNotifications } from '@/lib/notifications';
 import { inboxHrefForUserRole } from '@/lib/inboxHrefForRole';
 
 export async function POST(req: Request) {
-  // 1. ตรวจสอบ Session และสิทธิ์การใช้งาน
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // สร้างคำขอได้ทุก role ยกเว้น Driver
   if (session.user.role === 'Driver') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    // 2. ดึงข้อมูลจาก Frontend
     const body = await req.json();
     const { startLocation, endLocation, purpose, startTime, endTime, passengerCount, tripType, expresswayOption, requestForSelf, travelerName, travelerPosition, travelerPhone, requesterSignatureUrl, additionalNotes } = body;
 
-    // 3. ตรวจสอบข้อมูลเบื้องต้น
     if (!startLocation || !endLocation || !purpose || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ตรวจสอบ passengerCount
     const passengerCountNum = passengerCount ? parseInt(passengerCount, 10) : null;
     if (passengerCountNum === null || isNaN(passengerCountNum) || passengerCountNum < 1) {
       return NextResponse.json({ error: 'Passenger count must be at least 1' }, { status: 400 });
     }
 
-    // ตรวจสอบ tripType
     const validTripTypes = ['ONE_WAY', 'ROUND_TRIP'];
     let normalizedTripType = tripType || null;
     if (normalizedTripType === 'PICK_UP') normalizedTripType = 'ONE_WAY';
@@ -54,7 +46,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ตรวจสอบข้อมูลเมื่อขอใช้สำหรับบุคคลอื่น
     const isForSelf = requestForSelf !== false;
     if (!isForSelf) {
       if (!travelerName?.trim() || !travelerPosition?.trim() || !travelerPhone?.trim()) {
@@ -62,7 +53,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. สร้างข้อมูลการจองใหม่ในฐานข้อมูล
     const parsedStartTime = parseMaybeDateInput(startTime);
     const parsedEndTime = parseMaybeDateInput(endTime);
     if (!parsedStartTime || !parsedEndTime) {
@@ -97,9 +87,6 @@ export async function POST(req: Request) {
       data: createData,
     });
 
-    // ==========================================
-    // ✅ In-app notifications: Admin/Executive + Requester
-    // ==========================================
     try {
       const recipients = await prisma.user.findMany({
         where: { role: { in: ['Admin', 'Executive'] } },
@@ -136,9 +123,6 @@ export async function POST(req: Request) {
       console.error('Failed to create in-app notifications:', err);
     }
 
-    // ==========================================
-    // ✅ 5. แจ้งเตือน LINE ไปยังทุก Admin ที่ผูก LINE แล้ว (จาก DB)
-    // ==========================================
     try {
       const adminsWithLine = await prisma.user.findMany({
         where: {
@@ -149,7 +133,6 @@ export async function POST(req: Request) {
       });
       const adminLineIds = adminsWithLine.map((u) => u.lineUserId).filter((id): id is string => !!id);
 
-      // แจ้งผู้ขอ (requester) ถ้าผูก LINE แล้ว
       const requester = await prisma.user.findUnique({
         where: { id: session.user.id as string },
         select: {
@@ -214,9 +197,7 @@ export async function POST(req: Request) {
     } catch (lineError) {
       console.error("Failed to send LINE notification:", lineError);
     }
-    // ==========================================
 
-    // 6. ส่งข้อมูลที่สร้างสำเร็จกลับไป
     return NextResponse.json(newBooking, { status: 201 });
 
   } catch (error) {
@@ -225,7 +206,6 @@ export async function POST(req: Request) {
   }
 }
 
-// ========== ฟังก์ชัน GET เดิม (คงไว้เหมือนเดิมทุกประการ) ==========
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
@@ -238,7 +218,6 @@ export async function GET(req: Request) {
     const adminDashboard = url.searchParams.get('adminDashboard') === 'true';
     const executiveHistory = url.searchParams.get('executiveHistory') === 'true';
 
-    // Executive ทำงานแทน Admin: ใช้ query เพื่อขอข้อมูลรูปแบบ Admin dashboard/history
     if ((adminDashboard || allBookings) && (session.user.role === 'Admin' || session.user.role === 'Executive')) {
       if (allBookings) {
         const bookings = await prisma.booking.findMany({
@@ -322,7 +301,6 @@ export async function GET(req: Request) {
       });
     } else if (session.user.role === 'Executive') {
       if (executiveHistory) {
-        // สำหรับ Executive history: ส่งเฉพาะ bookings ที่ executive คนนี้เคยอนุมัติ
         const bookings = await prisma.booking.findMany({
           where: {
             executiveConfirmerId: session.user.id,
@@ -373,7 +351,6 @@ export async function GET(req: Request) {
         });
         return NextResponse.json(bookings);
       } else {
-        // สำหรับ Executive dashboard: ส่งข้อมูลการจองทั้งหมด (เหมือนเดิม)
         const bookings = await prisma.booking.findMany({
           include: {
             requester: {
@@ -413,7 +390,6 @@ export async function GET(req: Request) {
         return NextResponse.json(bookings);
       }
     } else if (session.user.role === 'Admin') {
-      // โหมดเดิมของ Admin: dashboard format (หรือ history เมื่อ all=true)
       if (allBookings) {
         const bookings = await prisma.booking.findMany({
           include: {
@@ -491,7 +467,6 @@ export async function GET(req: Request) {
         pendingBookings: pendingBookings,
       });
     } else {
-      // สำหรับ roles อื่นๆ: ส่งข้อมูลการจองทั้งหมด
       const bookings = await prisma.booking.findMany({
         include: {
           requester: {

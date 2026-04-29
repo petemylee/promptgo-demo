@@ -1,10 +1,8 @@
-// src/lib/line.ts
-import * as line from '@line/bot-sdk';
+﻿import * as line from '@line/bot-sdk';
 
 const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 const channelSecret = process.env.LINE_CHANNEL_SECRET || '';
 
-// สร้าง Client (ใช้เมื่อมี token แล้วเท่านั้น)
 const lineConfig = {
   channelAccessToken,
   channelSecret,
@@ -17,11 +15,11 @@ const client = channelAccessToken ? new line.Client(lineConfig) : null;
  */
 export const sendLineMessage = async (userId: string, message: string): Promise<boolean> => {
   if (!userId) {
-    console.warn('⚠️ No User ID provided for LINE message.');
+    console.warn('No User ID provided for LINE message.');
     return false;
   }
   if (!channelAccessToken || !client) {
-    console.warn('⚠️ LINE_CHANNEL_ACCESS_TOKEN is not set. Skip sending LINE message.');
+    console.warn('LINE_CHANNEL_ACCESS_TOKEN is not set. Skip sending LINE message.');
     return false;
   }
 
@@ -30,10 +28,10 @@ export const sendLineMessage = async (userId: string, message: string): Promise<
       type: 'text',
       text: message,
     });
-    console.log('✅ LINE message sent to:', userId);
+    console.log('LINE message sent to:', userId);
     return true;
   } catch (error) {
-    console.error('❌ Error sending LINE message:', error);
+    console.error('Error sending LINE message:', error);
     return false;
   }
 };

@@ -1,4 +1,3 @@
-// src/app/api/driver/jobs/[bookingId]/end/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import type { Session } from 'next-auth';

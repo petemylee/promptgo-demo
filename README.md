@@ -37,10 +37,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Environment Variables
 
-Create a `.env` file based on the following template:
+1. Copy the example file: `cp .env.example .env` (Windows: `copy .env.example .env`).
+2. Fill in real values; do not commit `.env`.
+3. Full descriptions (Thai): [docs/environment-variables.md](docs/environment-variables.md).
 
-```
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DBNAME?schema=public"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="replace-with-strong-secret"
-```
+Minimum to run locally often includes `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` — see `.env.example` for all variables used by the app.

@@ -1,4 +1,3 @@
-// src/app/driver/jobs/[bookingId]/page.tsx
 'use client';
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';

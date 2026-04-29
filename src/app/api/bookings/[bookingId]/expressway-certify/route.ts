@@ -12,9 +12,16 @@ export async function POST(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  type CertifyBody = {
+    action?: string;
+    note?: string;
+    signatureMode?: string;
+    signatureDataUrl?: string;
+  };
+
   try {
-    const body: unknown = await req.json().catch(() => ({}));
-    const action = (body as any)?.action;
+    const body = (await req.json().catch(() => ({}))) as CertifyBody;
+    const action = body.action;
     if (action !== 'APPROVE' && action !== 'REJECT') {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
@@ -42,7 +49,7 @@ export async function POST(
     if (!me) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (action === 'REJECT') {
-      const note = typeof (body as any)?.note === 'string' ? (body as any).note.trim() : '';
+      const note = typeof body.note === 'string' ? body.note.trim() : '';
       const updated = await prisma.booking.update({
         where: { id: bookingId },
         data: {
@@ -57,7 +64,7 @@ export async function POST(
       return NextResponse.json(updated);
     }
 
-    const signatureMode = (body as any)?.signatureMode;
+    const signatureMode = body.signatureMode;
     if (signatureMode !== 'PROFILE' && signatureMode !== 'NEW') {
       return NextResponse.json({ error: 'Invalid signatureMode' }, { status: 400 });
     }
@@ -69,7 +76,7 @@ export async function POST(
         return NextResponse.json({ error: 'โปรไฟล์ยังไม่มีลายเซ็น' }, { status: 400 });
       }
     } else {
-      const dataUrl = typeof (body as any)?.signatureDataUrl === 'string' ? (body as any).signatureDataUrl : '';
+      const dataUrl = typeof body.signatureDataUrl === 'string' ? body.signatureDataUrl : '';
       if (!dataUrl.startsWith('data:')) {
         return NextResponse.json({ error: 'Missing signatureDataUrl' }, { status: 400 });
       }

@@ -7,10 +7,7 @@ import fontkit from '@pdf-lib/fontkit';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
-import {
-  CAR_REQUEST_PDF_LAYOUT,
-  resolveCarRequestTemplate,
-} from '@/lib/pdf/car-request-pdf-layout';
+import { resolveCarRequestTemplate } from '@/lib/pdf/car-request-pdf-layout';
 import {
   drawSignatureInFieldAndRemoveWidget,
   ensureSignatureFieldsHaveNormalAppearance,
@@ -33,7 +30,6 @@ export async function POST(
   }
 
   try {
-    // Fetch booking details
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -53,31 +49,22 @@ export async function POST(
       return NextResponse.json({ error: 'Booking must be confirmed to generate PDF' }, { status: 400 });
     }
 
-    // Load PDF template
     const templatePath = join(process.cwd(), 'public', 'templates', 'booking-approval-template.pdf');
     let pdfDoc: PDFDocument;
     
     if (existsSync(templatePath)) {
-      // Use existing template
       const templateBytes = await readFile(templatePath);
       pdfDoc = await PDFDocument.load(templateBytes);
     } else {
-      // Create new PDF if template doesn't exist (fallback)
       pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
-      
-      // Set up colors
-      const primaryColor = rgb(0, 0.47, 0.76); // #004c80
-      const secondaryColor = rgb(0, 0.47, 0.76); // #004c80
+      const page = pdfDoc.addPage([595.28, 841.89]);
+      const primaryColor = rgb(0, 0.47, 0.76);
+      const secondaryColor = rgb(0, 0.47, 0.76);
       const textColor = rgb(0.2, 0.2, 0.2);
-      
-      // Load fonts
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       
       const { width, height } = page.getSize();
-      
-      // Header
       page.drawText('OFM PROMPTGO', {
         x: 50,
         y: height - 50,
@@ -94,7 +81,6 @@ export async function POST(
         color: secondaryColor,
       });
 
-      // Booking ID and Date
       page.drawText(`เลขที่เอกสาร: ${booking.id}`, {
         x: 50,
         y: height - 110,
@@ -111,7 +97,6 @@ export async function POST(
         color: textColor,
       });
 
-      // Line separator
       page.drawLine({
         start: { x: 50, y: height - 150 },
         end: { x: width - 50, y: height - 150 },
@@ -119,20 +104,16 @@ export async function POST(
         color: primaryColor,
       });
 
-      // Template fallback content would go here
     }
 
-    // Get the first page for form filling
     const pages = pdfDoc.getPages();
     const page = pages[0];
     const { height } = page.getSize();
 
-    // Load fonts for form filling
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const textColor = rgb(0.2, 0.2, 0.2);
 
-    // Format dates
     const formatDate = (dateString: string | null) => {
       if (!dateString) return '-';
       return new Date(dateString).toLocaleDateString('th-TH', {
@@ -144,10 +125,6 @@ export async function POST(
       });
     };
 
-    // Fill form fields based on template structure
-    // Adjust these coordinates based on your actual template
-    
-    // วันที่ (Date) - Top right area
     page.drawText(new Date(booking.createdAt).toLocaleDateString('th-TH'), {
       x: 450,
       y: height - 100,
@@ -156,7 +133,6 @@ export async function POST(
       color: textColor,
     });
 
-    // ชื่อผู้เดินทาง (Name) - ใช้ traveler เมื่อขอใช้สำหรับบุคคลอื่น
     const b = booking as typeof booking & { requestForSelf?: boolean | null; travelerName?: string | null; travelerPosition?: string | null };
     const displayName = b.requestForSelf !== false ? (b.requester.name || '-') : (b.travelerName || '-');
     const displayPosition = b.requestForSelf !== false ? (b.requester.position || '-') : (b.travelerPosition || '-');
@@ -168,7 +144,6 @@ export async function POST(
       color: textColor,
     });
 
-    // ตำแหน่ง (Position)
     page.drawText(displayPosition, {
       x: 100,
       y: height - 220,
@@ -177,7 +152,6 @@ export async function POST(
       color: textColor,
     });
 
-    // ใช้รถยนต์ไป... (สถานที่ที่จะไป)
     const destination = booking.endLocation || '-';
     page.drawText(`ใช้รถยนต์ไป${destination}`, {
       x: 100,
@@ -187,7 +161,6 @@ export async function POST(
       color: textColor,
     });
 
-    // เพื่อ... (วัตถุประสงค์)
     const purpose = booking.purpose || '-';
     page.drawText(`เพื่อ${purpose}`, {
       x: 100,
@@ -197,7 +170,6 @@ export async function POST(
       color: textColor,
     });
 
-    // หมายเหตุเพิ่มเติม (ถ้ามี) และเลื่อนบรรทัดถัดไป
     const notesOffset = booking.additionalNotes ? 20 : 0;
     if (booking.additionalNotes) {
       page.drawText(`หมายเหตุ: ${booking.additionalNotes}`, {
@@ -209,7 +181,6 @@ export async function POST(
       });
     }
 
-    // ในวันที่... (วันที่เดินทาง)
     const travelDate = booking.startTime ? formatDate(booking.startTime.toISOString()) : '-';
     page.drawText(`ในวันที่${travelDate}`, {
       x: 100,
@@ -219,8 +190,6 @@ export async function POST(
       color: textColor,
     });
 
-    // Additional information
-    // ข้อมูลรถ
     if (booking.vehicle) {
       page.drawText(`รถยนต์: ${booking.vehicle.brand} ${booking.vehicle.model} (${booking.vehicle.licensePlate})`, {
         x: 100,
@@ -231,7 +200,6 @@ export async function POST(
       });
     }
 
-    // ข้อมูลคนขับ
     if (booking.driver) {
       page.drawText(`คนขับ: ${booking.driver.name}`, {
         x: 100,
@@ -242,7 +210,6 @@ export async function POST(
       });
     }
 
-    // ข้อมูลเลขไมล์
     let mileageY = height - 360;
     if (booking.startMileage !== null) {
       page.drawText(`เลขไมล์ก่อนออกเดินทาง: ${booking.startMileage.toLocaleString()} กม.`, {
@@ -265,7 +232,6 @@ export async function POST(
       });
       mileageY -= 20;
       
-      // คำนวณระยะทางที่ใช้ไป
       if (booking.startMileage !== null) {
         const distanceTraveled = booking.endMileage - booking.startMileage;
         page.drawText(`ระยะทางที่ใช้ไป: ${distanceTraveled.toLocaleString()} กม.`, {
@@ -279,7 +245,6 @@ export async function POST(
       }
     }
 
-    // ข้อมูลการอนุมัติ
     const approvalY = mileageY - 20;
     if (booking.adminApprover) {
       page.drawText(`อนุมัติโดย: ${booking.adminApprover.name}`, {
@@ -301,13 +266,10 @@ export async function POST(
       });
     }
 
-    // Add signature image if available
     if (booking.executiveConfirmer?.signatureImageUrl) {
       try {
-        // Check if URL is from Supabase (starts with http/https) or local path
         let signatureBytes: Buffer;
         if (booking.executiveConfirmer.signatureImageUrl.startsWith('http://') || booking.executiveConfirmer.signatureImageUrl.startsWith('https://')) {
-          // Fetch from Supabase URL
           const response = await fetch(booking.executiveConfirmer.signatureImageUrl);
           if (!response.ok) {
             throw new Error(`Failed to fetch signature: ${response.statusText}`);
@@ -315,7 +277,6 @@ export async function POST(
           const arrayBuffer = await response.arrayBuffer();
           signatureBytes = Buffer.from(arrayBuffer);
         } else {
-          // Legacy local file path
           const signaturePath = join(process.cwd(), 'public', booking.executiveConfirmer.signatureImageUrl);
           if (existsSync(signaturePath)) {
             signatureBytes = await readFile(signaturePath);
@@ -324,7 +285,6 @@ export async function POST(
           }
         }
         
-        // ลอง embed เป็น PNG ก่อน ถ้าไม่ได้ลอง JPG
         let signatureImage;
         try {
           signatureImage = await pdfDoc.embedPng(signatureBytes);
@@ -332,57 +292,39 @@ export async function POST(
           signatureImage = await pdfDoc.embedJpg(signatureBytes);
         }
         
-        // คำนวณตำแหน่งและขนาดลายเซ็น
-        // พื้นที่ที่ต้องการ: x: 256 ถึง x: 420 (ความกว้าง = 164)
-        // y: 420 (ตำแหน่งด้านล่างของรูป), ไม่เกิน y: 382 (ด้านบน)
+        /* Fallback PDF: signature area x 256–420, bottom y 420, top cap y 382 */
         const signatureAreaX1 = 256;
         const signatureAreaX2 = 420;
-        const signatureAreaWidth = signatureAreaX2 - signatureAreaX1; // 164
-        const signatureY = 420; // ตำแหน่งด้านล่าง
-        const maxY = 382; // ตำแหน่งสูงสุดที่อนุญาต
-        const maxHeight = signatureY - maxY; // ความสูงสูงสุด = 38
-        
-        // ดึงขนาดภาพจริง
+        const signatureAreaWidth = signatureAreaX2 - signatureAreaX1;
+        const signatureY = 420;
+        const maxY = 382;
+        const maxHeight = signatureY - maxY;
         const imageWidth = signatureImage.width;
         const imageHeight = signatureImage.height;
         const aspectRatio = imageWidth / imageHeight;
-        
-        // คำนวณขนาดใหม่ให้พอดีในพื้นที่ โดยคงสัดส่วน
         let displayWidth = signatureAreaWidth;
         let displayHeight = signatureAreaWidth / aspectRatio;
-        
-        // จำกัดความสูงไม่ให้เกิน maxHeight (ไม่เกิน y: 382)
         if (displayHeight > maxHeight) {
           displayHeight = maxHeight;
           displayWidth = maxHeight * aspectRatio;
         }
-        
-        // ถ้าความกว้างเกินพื้นที่ ให้ปรับใหม่
         if (displayWidth > signatureAreaWidth) {
           displayWidth = signatureAreaWidth;
           displayHeight = signatureAreaWidth / aspectRatio;
-          // ตรวจสอบอีกครั้งว่าความสูงไม่เกิน maxHeight
           if (displayHeight > maxHeight) {
             displayHeight = maxHeight;
             displayWidth = maxHeight * aspectRatio;
           }
         }
-        
-        // คำนวณตำแหน่ง x ให้อยู่กึ่งกลาง
         const centerX = (signatureAreaX1 + signatureAreaX2) / 2;
         const signatureX = centerX - (displayWidth / 2);
-        
-        // Add signature image กึ่งกลางในพื้นที่ที่กำหนด (จุดแรก)
         page.drawImage(signatureImage, {
           x: signatureX,
           y: signatureY,
           width: displayWidth,
           height: displayHeight,
         });
-        
-        // Add signature image ที่จุดที่สอง (x เดิม, y: 570 นับจากขอบล่าง)
-        // y: 570 นับจากขอบล่าง = height - 570 ในระบบพิกัด PDF
-        const signatureY2 = height - 570; // ตำแหน่งด้านล่างของรูปที่สอง (นับจากขอบล่าง 570)
+        const signatureY2 = height - 570;
         page.drawImage(signatureImage, {
           x: signatureX,
           y: signatureY2,
@@ -391,27 +333,22 @@ export async function POST(
         });
       } catch (error) {
         console.error('Error adding signature image:', error);
-        // Continue without signature if there's an error
       }
     }
 
-    // Save PDF
     const pdfBytes = await pdfDoc.save();
 
-    // Create PDFs directory if it doesn't exist
     const pdfsDir = join(process.cwd(), 'public', 'pdfs');
     if (!existsSync(pdfsDir)) {
       await mkdir(pdfsDir, { recursive: true });
     }
 
-    // Generate filename and save
     const timestamp = Date.now();
     const filename = `booking_${bookingId}_${timestamp}.pdf`;
     const filepath = join(pdfsDir, filename);
     
     await writeFile(filepath, pdfBytes);
 
-    // Update booking with PDF URL
     const pdfUrl = `/pdfs/${filename}`;
     await prisma.booking.update({
       where: { id: bookingId },
@@ -430,7 +367,7 @@ export async function POST(
   }
 }
 
-// GET: สร้าง PDF จาก template ที่มี form fields (ตามที่ Gemini แนะนำ)
+/** GET: สร้าง PDF จาก template (AcroForm fields) */
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ bookingId: string }> }
@@ -441,7 +378,6 @@ export async function GET(
 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 1. ดึงข้อมูล Booking (รวม executiveConfirmedAt)
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -449,28 +385,21 @@ export async function GET(
         vehicle: true,
         driver: true,
         adminApprover: { select: { name: true, position: true, signatureImageUrl: true } },
-        executiveConfirmer: true, // ผู้บริหารที่จะเซ็นอนุมัติ
+        executiveConfirmer: true,
         expresswayCertifier: { select: { id: true, name: true, position: true, signatureImageUrl: true } },
       },
-      // Prisma include จะดึงทุก field ของ Booking model รวมถึง executiveConfirmedAt
     });
     
     if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
 
-    // Debug: ตรวจสอบว่า executiveConfirmedAt ถูกดึงมาหรือไม่
-    console.log('[PDF] Booking ID:', bookingId);
-    console.log('[PDF] Booking status:', booking.status);
     type BookingWithConfirmedAtType = typeof booking & { executiveConfirmedAt: Date | null };
     const bookingWithConfirmedAt = booking as BookingWithConfirmedAtType;
-    console.log('[PDF] executiveConfirmedAt from booking:', bookingWithConfirmedAt?.executiveConfirmedAt);
 
-    // 2. เตรียมไฟล์ — เลือกเทมเพลตจาก expresswayOption
     const resolved = resolveCarRequestTemplate(booking.expresswayOption ?? null);
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.error }, { status: 500 });
     }
-    const { templatePath, layoutKey } = resolved;
-    const sigLayout = CAR_REQUEST_PDF_LAYOUT[layoutKey];
+    const { templatePath } = resolved;
 
     const fontPath = join(process.cwd(), 'public/fonts/THSarabunNew.ttf');
 
@@ -478,16 +407,12 @@ export async function GET(
       return NextResponse.json({ error: 'Font file missing' }, { status: 500 });
     }
 
-    // 3. โหลด PDF
     const pdfDoc = await PDFDocument.load(readFileSync(templatePath));
     pdfDoc.registerFontkit(fontkit);
     const thaiFont = await pdfDoc.embedFont(readFileSync(fontPath));
     const form = pdfDoc.getForm();
 
-    // Helper กรอกข้อมูล
-    // หมายเหตุ: pdf-lib v1.17.1 สำหรับ TextField ที่โหลดมาจาก template PDF
-    // ไม่รองรับการเปลี่ยน fontSize โดยตรง ต้องแก้ไขที่ template PDF เอง
-    // หรือใช้วิธีสร้าง form field ใหม่ แต่จะต้องระบุตำแหน่ง
+    /* pdf-lib TextField from template: font size is fixed in the PDF; change the template to resize. */
     const fill = (field: string, text: string) => {
       try {
         const matches = form.getFields().filter((f) => f.getName() === field);
@@ -495,13 +420,11 @@ export async function GET(
         for (const m of matches) {
           if (m instanceof PDFTextField) {
             m.setText(text);
-            // อัปเดต appearance ด้วยฟอนต์ภาษาไทย (ขนาดฟอนต์อิงจาก template)
             m.updateAppearances(thaiFont);
             filled += 1;
           }
         }
         if (filled === 0) {
-          // Keep warning for debugging field-name mismatches.
           console.warn(`Field ${field} missing`);
         }
       } catch (e) {
@@ -509,16 +432,10 @@ export async function GET(
       }
     };
 
-    // 4. แปลงข้อมูลวันที่
-    // วันที่ในหัวฟอร์ม (req_*): วันที่ยื่นคำขอ — แยกจากวันเริ่มเดินทาง
     const requestDate = new Date(booking.createdAt);
     const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
     const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
 
-    // 5. เริ่มกรอกข้อมูล (Mapping)
-    // หมายเหตุ: ขนาดฟอนต์ถูกกำหนดไว้ใน template PDF แล้ว
-    // ถ้าต้องการเปลี่ยนขนาด ให้แก้ไขที่ template PDF เอง
-    // --- ส่วนหัว --- วันที่คำขอ (createdAt)
     fill('req_day', requestDate.getDate().toString());
     fill('req_month', thaiMonths[requestDate.getMonth()]);
     fill('req_year', (requestDate.getFullYear() + 543).toString());
@@ -527,25 +444,17 @@ export async function GET(
       `วันที่ ${requestDate.getDate()} ${thaiMonths[requestDate.getMonth()]} ${requestDate.getFullYear() + 543}`
     );
 
-    // --- ผู้ขอ (เจ้าของบัญชีผู้สร้างคำขอ) ---
     const requesterAccountName = booking.requester?.name || '-';
     const requesterAccountPosition = booking.requester?.position || '-';
     fill('requester_name', requesterAccountName);
-    // รองรับเทมเพลตที่ใช้ชื่อ field แยกเป็น 2 กล่อง (Sejda/PDF editors บางตัว)
     fill('req_name_1', requesterAccountName);
     fill('req_name_2', requesterAccountName);
     fill('requester_position', requesterAccountPosition);
 
-    // --- ผู้เดินทาง (ถ้าต้องการแยก field เพิ่มในอนาคต) ---
-    // หมายเหตุ: ระบบรองรับขอใช้แทนบุคคลอื่นด้วย (travelerName/travelerPosition)
-    // แต่ตาม requirement ล่าสุด ช่อง requester_* ต้องเป็นชื่อเจ้าของ account เสมอ
-    
-    // --- รายละเอียด ---
     fill('destination', booking.endLocation || '-');
     fill('purpose', booking.purpose || '-');
     fill('passenger_count', booking.passengerCount?.toString() || '-');
 
-    // --- วันไป ---
     fill('start_day', startDate.getDate().toString());
     fill('start_month', thaiMonths[startDate.getMonth()]);
     fill('start_year', (startDate.getFullYear() + 543).toString());
@@ -555,7 +464,6 @@ export async function GET(
       `${startDate.getDate()} ${thaiMonths[startDate.getMonth()]} ${startDate.getFullYear() + 543}`
     );
 
-    // --- วันกลับ ---
     fill('end_day', endDate.getDate().toString());
     fill('end_month', thaiMonths[endDate.getMonth()]);
     fill('end_year', (endDate.getFullYear() + 543).toString());
@@ -565,7 +473,6 @@ export async function GET(
       `${endDate.getDate()} ${thaiMonths[endDate.getMonth()]} ${endDate.getFullYear() + 543}`
     );
 
-    // --- ผู้อนุมัติและจัดสรรเบื้องต้น (Admin / Executive) ---
     fill('admin_approver_name', booking.adminApprover?.name?.trim() || '-');
     fill('admin_approver_position', booking.adminApprover?.position?.trim() || '-');
     if (booking.adminApprovedAt) {
@@ -578,7 +485,6 @@ export async function GET(
       fill('admin_approve_date_long', '-');
     }
 
-    // --- ผู้รับรองทางด่วน (เฉพาะกรณีใช้ทางด่วน) ---
     if (booking.expresswayOption === 'EXPRESSWAY') {
       fill('expressway_certifier_name', booking.expresswayCertifierName || booking.expresswayCertifier?.name || '-');
       fill(
@@ -595,39 +501,32 @@ export async function GET(
         fill('expressway_certified_date_long', '');
       }
     } else {
-      // Keep fields blank-safe if template includes them
       fill('expressway_certifier_name', '');
       fill('expressway_certifier_position', '');
       fill('expressway_certified_date_long', '');
     }
 
-    // --- รถ/คนขับ ---
     if (booking.vehicle) {
         fill('vehicle_brand', booking.vehicle.brand?.trim() || '-');
         fill('vehicle_plate', booking.vehicle.licensePlate || '-');
     }
     if (booking.driver) fill('driver_name', booking.driver.name || '-');
 
-    // --- เลขไมล์ ---
     if (booking.startMileage !== null) {
         fill('mileage_start', booking.startMileage.toLocaleString('th-TH'));
     }
     if (booking.endMileage !== null) {
         fill('mileage_end', booking.endMileage.toLocaleString('th-TH'));
-        // คำนวณระยะทางที่ใช้ไป
         if (booking.startMileage !== null) {
             const distanceTraveled = booking.endMileage - booking.startMileage;
             fill('distance_total', distanceTraveled.toLocaleString('th-TH'));
         }
     }
 
-    // 6. จัดการลายเซ็น (รูปภาพ)
-    // ใช้ signature fields ใน template เป็นตัวกำหนดตำแหน่งทั้งหมด (ไม่ใช้พิกัด x/y ในโค้ด)
     const requesterSigUrl = booking.requesterSignatureUrl ?? booking.requester.signatureImageUrl;
     fill('requester_sign_name', requesterAccountName);
     await drawSignatureInFieldAndRemoveWidget(pdfDoc, form, 'requester_signature', requesterSigUrl);
 
-    // ลายเซ็นแอดมิน / ผู้บริหาร — ถ้าเทมเพลตมี signature fields ชื่อ admin_signature / executive_signature จะใช้กรอบจาก PDF
     await drawSignatureInFieldAndRemoveWidget(
       pdfDoc,
       form,
@@ -635,7 +534,6 @@ export async function GET(
       booking.adminApprover?.signatureImageUrl
     );
 
-    // ลายเซ็นผู้รับรองทางด่วน (เฉพาะเมื่อเป็นแบบใช้ทางด่วน)
     if (booking.expresswayOption === 'EXPRESSWAY') {
       const certSigUrl =
         booking.expresswayCertifierSignatureUrl ?? booking.expresswayCertifier?.signatureImageUrl ?? null;
@@ -651,19 +549,13 @@ export async function GET(
     // If not confirmed yet, keep signature/date blank.
     const confirmedAt = bookingWithConfirmedAt.executiveConfirmedAt;
     const executiveSigUrl = confirmedAt ? booking.executiveConfirmer?.signatureImageUrl : null;
-    const executiveInPdfField = await drawSignatureInFieldAndRemoveWidget(
+    await drawSignatureInFieldAndRemoveWidget(
       pdfDoc,
       form,
       'executive_signature',
       executiveSigUrl
     );
-    
-    // วันที่อนุมัติ (ใต้ลายเซ็นขวา) - ใช้วันที่ Executive ยืนยัน (executiveConfirmedAt)
-    // เนื่องจาก booking ต้องเป็น CONFIRMED ก่อนถึงจะสร้าง PDF ได้ ดังนั้นควรจะมี executiveConfirmedAt อยู่แล้ว
-    // ใช้ type assertion เพราะ Prisma type อาจจะยังไม่ sync
-    console.log('[PDF] executiveConfirmedAt:', confirmedAt, 'Type:', typeof confirmedAt);
-    console.log('[PDF] booking status:', booking.status);
-    
+
     if (confirmedAt) {
       const approvalDate = new Date(confirmedAt);
       fill(
@@ -674,9 +566,6 @@ export async function GET(
       fill('approve_date_full', '');
     }
 
-    // 7. จบงาน
-    // ลบช่องกรอกข้อมูลทิ้ง ให้เหลือแต่เนื้อหา
-    // Defensive: fix broken signature widgets before flatten.
     const fixedSigWidgets = ensureSignatureFieldsHaveNormalAppearance(pdfDoc, form);
     if (fixedSigWidgets > 0) {
       console.warn(`[PDF] WARN: fixed ${fixedSigWidgets} signature widget appearance(s) before flatten`);
@@ -688,7 +577,6 @@ export async function GET(
     }
     const pdfBytes = await pdfDoc.save();
 
-    // แปลง Uint8Array เป็น Buffer เพื่อให้ NextResponse รับได้
     const pdfBuffer = Buffer.from(pdfBytes);
 
     return new NextResponse(pdfBuffer, {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import type { ExpresswayCertificationStatus } from '@prisma/client';
+
+const CERT_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const satisfies readonly ExpresswayCertificationStatus[];
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -9,12 +12,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const url = new URL(req.url);
-    const status = url.searchParams.get('status'); // PENDING/APPROVED/REJECTED or null
+    const status = url.searchParams.get('status');
+    const statusFilter =
+      status != null && (CERT_STATUSES as readonly string[]).includes(status)
+        ? { expresswayCertificationStatus: status as ExpresswayCertificationStatus }
+        : {};
 
     const bookings = await prisma.booking.findMany({
       where: {
         expresswayCertifierId: session.user.id,
-        ...(status ? { expresswayCertificationStatus: status as any } : {}),
+        ...statusFilter,
       },
       select: {
         id: true,

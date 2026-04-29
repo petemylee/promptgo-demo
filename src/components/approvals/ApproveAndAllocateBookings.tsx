@@ -129,7 +129,7 @@ export default function ApproveAndAllocateBookings({
       setDrivers(driversData);
       const certifierCandidates = usersData.filter(
         (user: ApprovalDriver & { isActive?: boolean }) =>
-          user.role !== 'Driver' && user.role !== 'Requester' && (user as any).isActive !== false
+          user.role !== 'Driver' && user.role !== 'Requester' && user.isActive !== false
       );
       setCertifiers(certifierCandidates);
     } catch (err: unknown) {

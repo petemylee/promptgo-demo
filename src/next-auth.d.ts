@@ -1,8 +1,6 @@
-// src/types/next-auth.d.ts หรือ src/next-auth.d.ts
-import type { DefaultSession, DefaultUser } from 'next-auth';
-import { Role } from '@prisma/client'; // Import Role enum จาก Prisma
+﻿import type { DefaultSession, DefaultUser } from 'next-auth';
+import { Role } from '@prisma/client';
 
-// ขยาย Type ของ User เพื่อรวม 'role'
 declare module 'next-auth' {
   interface Session {
     user: {
