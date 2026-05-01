@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import BookingSummaryHeader from '@/components/booking/BookingSummaryHeader';
+import ReallocateVehicleDriverModal from '@/components/history/ReallocateVehicleDriverModal';
 import { formatDateTimeTHLong } from '@/lib/formatters';
 import { SIDEBAR_ROUTE_RESET_EVENT, type SidebarRouteResetDetail } from '@/lib/sidebarRouteReset';
 
@@ -39,6 +40,7 @@ interface Booking {
     name: string | null;
   } | null;
   vehicle: {
+    id: string;
     licensePlate: string;
     brand: string | null;
     model: string | null;
@@ -58,6 +60,18 @@ interface Booking {
 
 function isPrintableStatus(status: string) {
   return status === 'CONFIRMED' || status === 'IN_PROGRESS' || status === 'COMPLETED';
+}
+
+/** แก้ไขจัดสรรได้เฉพาะหลังอนุมัติเบื้องต้น และยังไม่มี feedback (เชื่อม driverId ใน DriverFeedback) */
+function canEditAllocation(booking: Booking) {
+  const okStatus =
+    booking.status === 'APPROVED' ||
+    booking.status === 'CONFIRMED' ||
+    booking.status === 'IN_PROGRESS' ||
+    booking.status === 'COMPLETED';
+  if (!okStatus) return false;
+  if (booking.driverFeedback) return false;
+  return true;
 }
 
 export default function ApprovalConfirmationHistoryPage({
@@ -80,6 +94,7 @@ export default function ApprovalConfirmationHistoryPage({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [reallocateBooking, setReallocateBooking] = useState<Booking | null>(null);
 
   const fetchBookings = useCallback(async () => {
     if (status !== 'authenticated') return;
@@ -140,6 +155,7 @@ export default function ApprovalConfirmationHistoryPage({
       if (detail.href !== pathname) return;
       setIsDetailOpen(false);
       setSelectedBookingId(null);
+      setReallocateBooking(null);
       setQuery('');
       setStatusFilter('all');
       setStartDateFrom('');
@@ -461,6 +477,16 @@ export default function ApprovalConfirmationHistoryPage({
                         ดูรายละเอียด
                       </button>
 
+                      {canEditAllocation(booking) && (
+                        <button
+                          type="button"
+                          onClick={() => setReallocateBooking(booking)}
+                          className="col-span-2 md:col-span-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-50 transition"
+                        >
+                          แก้ไขจัดสรรรถ/คนขับ
+                        </button>
+                      )}
+
                       {(pdfPolicy === 'always' ||
                         (pdfPolicy === 'onlyPrintable' && isPrintableStatus(booking.status))) && (
                         <button
@@ -502,6 +528,19 @@ export default function ApprovalConfirmationHistoryPage({
           }}
           bookingId={selectedBookingId}
           onUpdated={fetchBookings}
+        />
+      )}
+
+      {reallocateBooking && (
+        <ReallocateVehicleDriverModal
+          isOpen
+          onClose={() => setReallocateBooking(null)}
+          bookingId={reallocateBooking.id}
+          bookingStatus={reallocateBooking.status}
+          initialVehicleId={reallocateBooking.vehicle?.id ?? ''}
+          initialDriverId={reallocateBooking.driver?.id ?? ''}
+          hasDriverFeedback={!!reallocateBooking.driverFeedback}
+          onSaved={fetchBookings}
         />
       )}
     </div>

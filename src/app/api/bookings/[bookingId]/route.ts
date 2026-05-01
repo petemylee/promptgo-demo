@@ -139,6 +139,7 @@ export async function PATCH(
       tripType,
       additionalNotes,
       expresswayOption,
+      allocationUpdate,
     } = body;
 
     // ดึง booking เพื่อตรวจสอบสิทธิ์
@@ -149,6 +150,223 @@ export async function PATCH(
     if (!bookingForAuth) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
+
+    // Admin/Executive: แก้ไขจัดสรรรถ/คนขับ (เช่น จากหน้าประวัติการอนุมัติและยืนยัน)
+    if (
+      allocationUpdate === true &&
+      (session.user.role === 'Admin' || session.user.role === 'Executive')
+    ) {
+      if (
+        vehicleId == null ||
+        driverId == null ||
+        typeof vehicleId !== 'string' ||
+        typeof driverId !== 'string' ||
+        !vehicleId.trim() ||
+        !driverId.trim()
+      ) {
+        return NextResponse.json({ error: 'ต้องระบุรถและคนขับให้ครบ' }, { status: 400 });
+      }
+
+      const bookingRow = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: {
+          id: true,
+          status: true,
+          vehicleId: true,
+          driverId: true,
+          driverFeedback: { select: { id: true } },
+        },
+      });
+
+      if (!bookingRow) {
+        return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      }
+
+      const allowedReallocate: BookingStatus[] = [
+        'APPROVED',
+        'CONFIRMED',
+        'IN_PROGRESS',
+        'COMPLETED',
+      ];
+      if (!allowedReallocate.includes(bookingRow.status)) {
+        return NextResponse.json(
+          { error: 'ไม่สามารถแก้ไขจัดสรรในสถานะนี้ได้' },
+          { status: 400 }
+        );
+      }
+
+      // หลังมี feedback ต่อคนขับแล้ว ไม่ให้เปลี่ยน driverId/vehicleId — จะทำให้ DriverFeedback.driverId ไม่ตรงกับงาน
+      if (bookingRow.driverFeedback) {
+        return NextResponse.json(
+          { error: 'ไม่สามารถแก้ไขจัดสรรหลังมีการให้คะแนนคนขับแล้ว' },
+          { status: 400 }
+        );
+      }
+
+      const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+      if (!vehicle) {
+        return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+      }
+
+      const driverUser = await prisma.user.findUnique({ where: { id: driverId } });
+      if (!driverUser) {
+        return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+      }
+      if (driverUser.role !== 'Driver') {
+        return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
+      }
+
+      const prevDriverId = bookingRow.driverId;
+      const prevVehicleId = bookingRow.vehicleId;
+
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          vehicleId,
+          driverId,
+        },
+        include: {
+          requester: { select: { role: true } },
+        },
+      });
+
+      await writeUsageLog({
+        action: 'UPDATE',
+        path: session.user.role === 'Executive' ? '/executive/history' : '/admin/history',
+        userId: session.user.id,
+        role: session.user.role as Role,
+        entityType: 'Booking',
+        entityId: bookingId,
+        message: `ผู้ใช้ ${actorName(session)} แก้ไขจัดสรรรถ/คนขับ (ประวัติ)`,
+      });
+
+      const requesterInboxHref = inboxHrefForUserRole(updatedBooking.requester.role);
+      const notifPayload: Parameters<typeof createNotifications>[0] = [];
+
+      if (prevDriverId && prevDriverId !== driverId) {
+        notifPayload.push({
+          userId: prevDriverId,
+          type: 'JOB_REASSIGNED_AWAY',
+          title: 'งานถูกโอนให้คนขับอื่น',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+          href: '/driver',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'WARNING',
+        });
+      }
+
+      if (driverId !== prevDriverId) {
+        notifPayload.push({
+          userId: driverId,
+          type: 'JOB_REASSIGNED_TO',
+          title: 'มีการมอบหมายงานให้คุณ',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}… (แก้ไขจัดสรรจากผู้ดูแล)`,
+          href: '/driver',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'INFO',
+        });
+      } else if (
+        prevDriverId &&
+        driverId === prevDriverId &&
+        prevVehicleId !== vehicleId
+      ) {
+        notifPayload.push({
+          userId: driverId,
+          type: 'VEHICLE_REALLOCATED',
+          title: 'มีการเปลี่ยนรถในงานของคุณ',
+          message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+          href: '/driver',
+          entityType: 'Booking',
+          entityId: bookingId,
+          severity: 'INFO',
+        });
+      }
+
+      notifPayload.push({
+        userId: updatedBooking.requesterId,
+        type: 'BOOKING_ALLOCATION_UPDATED',
+        title: 'มีการอัปเดตการจัดสรรรถ/คนขับ',
+        message: `เลขที่การจอง: ${bookingId.slice(0, 8)}…`,
+        href: requesterInboxHref,
+        entityType: 'Booking',
+        entityId: bookingId,
+        severity: 'INFO',
+      });
+
+      try {
+        await createNotifications(notifPayload);
+      } catch (err) {
+        console.error('Failed to create reallocation notifications:', err);
+      }
+
+      // LINE: แจ้งคนขับใหม่เฉพาะเมื่อยังเป็นงานที่เกี่ยวข้องกับการเดินทางจริง (ไม่ส่งตอน COMPLETED)
+      if (driverId !== prevDriverId && bookingRow.status !== 'COMPLETED') {
+        const bookingForLine = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          include: {
+            requester: {
+              select: { name: true, position: true, phoneNumber: true },
+            },
+            vehicle: {
+              select: { brand: true, model: true, color: true, licensePlate: true },
+            },
+            driver: {
+              select: { lineUserId: true, name: true, phoneNumber: true },
+            },
+          },
+        });
+        const newDriverLine = await prisma.user.findUnique({
+          where: { id: driverId },
+          select: { lineUserId: true },
+        });
+        if (bookingForLine && newDriverLine?.lineUserId) {
+          const lineEvent =
+            bookingRow.status === 'APPROVED'
+              ? ('BOOKING_APPROVED_DRIVER' as const)
+              : ('BOOKING_CONFIRMED_DRIVER' as const);
+          const driverMsg = buildBookingNotification(lineEvent, {
+            id: bookingForLine.id,
+            status: bookingForLine.status,
+            purpose: bookingForLine.purpose,
+            endLocation: bookingForLine.endLocation,
+            startTime: bookingForLine.startTime,
+            endTime: bookingForLine.endTime,
+            passengerCount: bookingForLine.passengerCount,
+            requestForSelf: bookingForLine.requestForSelf,
+            travelerName: bookingForLine.travelerName,
+            travelerPosition: bookingForLine.travelerPosition,
+            travelerPhone: bookingForLine.travelerPhone,
+            requester: {
+              name: bookingForLine.requester.name,
+              position: bookingForLine.requester.position,
+              phoneNumber: bookingForLine.requester.phoneNumber,
+            },
+            vehicle: bookingForLine.vehicle
+              ? {
+                  brand: bookingForLine.vehicle.brand,
+                  model: bookingForLine.vehicle.model,
+                  color: bookingForLine.vehicle.color,
+                  licensePlate: bookingForLine.vehicle.licensePlate,
+                }
+              : null,
+            driver: bookingForLine.driver
+              ? {
+                  name: bookingForLine.driver.name,
+                  phoneNumber: bookingForLine.driver.phoneNumber,
+                }
+              : null,
+          });
+          sendLineMessage(newDriverLine.lineUserId, driverMsg).catch((e) =>
+            console.error('LINE driver reallocation notification:', e)
+          );
+        }
+      }
+
+      return NextResponse.json(updatedBooking);
+    }
+
     // ถ้า Admin/Executive กำลังอนุมัติ/ปฏิเสธ ให้ใช้ flow อนุมัติเสมอ (แม้จะเป็นผู้สร้างคำขอเอง)
     const isAdminApprovalRequest =
       (session.user.role === 'Admin' || session.user.role === 'Executive') &&
