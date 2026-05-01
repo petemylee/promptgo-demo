@@ -18,6 +18,7 @@ interface Booking {
   endTime: string | null;
   status: string;
   createdAt: string;
+  executiveConfirmedAt: string | null;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
@@ -333,7 +334,17 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
     );
   }
 
-  if (!booking || booking.status !== 'APPROVED') {
+  const canConfirm =
+    !!booking &&
+    (booking.status === 'APPROVED' ||
+      ((booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED') &&
+        !booking.executiveConfirmedAt));
+  const isRetroactiveConfirm =
+    !!booking &&
+    (booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED') &&
+    !booking.executiveConfirmedAt;
+
+  if (!booking || (!canConfirm && booking.status !== 'CONFIRMED')) {
     return (
       <div className="p-4 md:p-8">
         <div className="text-center py-12">
@@ -756,8 +767,24 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
               </div>
             )}
 
+            {/* Retroactive confirm notice */}
+            {isRetroactiveConfirm && (
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <span className="text-amber-600 mr-3 text-xl" aria-hidden>⚠️</span>
+                  <div>
+                    <h4 className="font-medium text-amber-900">ยืนยันย้อนหลัง</h4>
+                    <p className="text-sm text-amber-800 mt-1">
+                      คนขับได้เริ่มงานไปก่อนแล้ว การยืนยันนี้ถือเป็นการลงลายเซ็นและสร้างเอกสารย้อนหลัง
+                      สถานะการเดินทางจะไม่ถูกเปลี่ยนกลับ
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
-            {booking.status === 'APPROVED' ? (
+            {canConfirm ? (
             <div className="flex gap-4">
               <button
                 onClick={() => router.back()}
@@ -780,7 +807,7 @@ export default function BookingConfirmationPage({ params }: { params: Promise<{ 
                     กำลังยืนยัน...
                   </div>
                 ) : (
-                  'ยืนยันการเดินทาง'
+                  isRetroactiveConfirm ? 'ยืนยันย้อนหลัง' : 'ยืนยันการเดินทาง'
                 )}
               </button>
             </div>

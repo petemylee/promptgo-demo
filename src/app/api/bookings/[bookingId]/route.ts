@@ -153,9 +153,12 @@ export async function PATCH(
     const isAdminApprovalRequest =
       (session.user.role === 'Admin' || session.user.role === 'Executive') &&
       (status === 'APPROVED' || status === 'REJECTED');
+    // อนุญาตให้ Executive ยืนยันขั้นสุดท้ายได้เสมอ แม้จะเป็นผู้สร้างคำขอเอง
+    const isExecutiveConfirm =
+      session.user.role === 'Executive' && status === 'CONFIRMED';
     const isRequesterOfBooking = bookingForAuth.requesterId === session.user.id;
 
-    if (isRequesterOfBooking && !isAdminApprovalRequest) {
+    if (isRequesterOfBooking && !isAdminApprovalRequest && !isExecutiveConfirm) {
       // ผู้ขอใช้รถสามารถยกเลิกคำขอได้ตลอดช่วงที่ยังดำเนินการ
       if (status === 'CANCELLED') {
         if (!requesterMayCancelBooking(bookingForAuth.status)) {
@@ -665,15 +668,19 @@ export async function PATCH(
           return NextResponse.json({ error: 'Selected user is not a driver' }, { status: 400 });
       }
 
-      // อัปเดต booking status
+      // ถ้า Driver เริ่มงานไปแล้ว (IN_PROGRESS/COMPLETED) จะถือเป็นการยืนยันย้อนหลัง
+      // ไม่ย้อนสถานะกลับเป็น CONFIRMED เพื่อไม่ให้ข้อมูลเส้นทาง/การเดินทางสูญหาย
+      const isRetroactiveConfirm =
+        bookingForAuth.status === 'IN_PROGRESS' || bookingForAuth.status === 'COMPLETED';
+
       const updateData: {
-        status: BookingStatus;
+        status?: BookingStatus;
         executiveConfirmerId: string;
         vehicleId: string;
         driverId: string;
         executiveConfirmedAt: Date;
       } = {
-        status: BookingStatus.CONFIRMED,
+        ...(isRetroactiveConfirm ? {} : { status: BookingStatus.CONFIRMED }),
         executiveConfirmerId: executiveConfirmerId || session.user.id,
         vehicleId: vehicleId,
         driverId: driverId,

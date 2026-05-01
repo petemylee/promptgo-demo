@@ -12,6 +12,7 @@ interface Booking {
   endTime: string | null;
   status: string;
   createdAt: string;
+  executiveConfirmedAt: string | null;
   requestForSelf?: boolean | null;
   travelerName?: string | null;
   travelerPosition?: string | null;
@@ -44,9 +45,18 @@ export default function ExecutiveApprovalsPage() {
     try {
       const response = await fetch('/api/bookings');
       const data = await response.json();
-      // Filter only APPROVED bookings
-      const approvedBookings = data.filter((booking: Booking) => booking.status === 'APPROVED');
-      setBookings(approvedBookings);
+      // รวม APPROVED (รอยืนยันปกติ) + IN_PROGRESS/COMPLETED ที่ยังไม่ได้ยืนยัน (ยืนยันย้อนหลัง)
+      const pending = data.filter((booking: Booking) => {
+        if (booking.status === 'APPROVED') return true;
+        if (
+          (booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED') &&
+          !booking.executiveConfirmedAt
+        ) {
+          return true;
+        }
+        return false;
+      });
+      setBookings(pending);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
@@ -123,7 +133,9 @@ export default function ExecutiveApprovalsPage() {
       <div className="bg-white/80 backdrop-blur p-6 rounded-2xl shadow-md ring-1 ring-black/5">
         {sortedBookings.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {sortedBookings.map((booking) => (
+            {sortedBookings.map((booking) => {
+              const isRetroactive = booking.status !== 'APPROVED';
+              return (
               <div key={booking.id} className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -135,6 +147,11 @@ export default function ExecutiveApprovalsPage() {
                       {booking.requestForSelf !== false ? (booking.requester.position || '-') : (booking.travelerPosition || '-')}
                     </div>
                   </div>
+                  {isRetroactive && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                      ยืนยันย้อนหลัง
+                    </span>
+                  )}
                 </div>
 
                 <div className="mt-3 space-y-3">
@@ -148,6 +165,14 @@ export default function ExecutiveApprovalsPage() {
                     driver={booking.driver ? { name: booking.driver.name } : null}
                   />
                 </div>
+
+                {isRetroactive && (
+                  <div className="mt-3 rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200/60">
+                    <div className="text-sm text-amber-900">
+                      คนขับเริ่มงานก่อนที่จะได้รับการยืนยันขั้นสุดท้าย กรุณาลงลายเซ็นเพื่อยืนยันย้อนหลัง
+                    </div>
+                  </div>
+                )}
 
                 {booking.adminApprover && (
                   <div className="mt-3 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-200/60">
@@ -170,7 +195,8 @@ export default function ExecutiveApprovalsPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">

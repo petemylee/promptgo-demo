@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 
-// GET: ดึงข้อมูลงานที่ได้รับมอบหมายให้ Driver (CONFIRMED bookings)
+// GET: ดึงข้อมูลงานที่ได้รับมอบหมายให้ Driver
+// รวมทั้ง APPROVED (อนุมัติเบื้องต้น แต่ยังไม่ยืนยัน) / CONFIRMED / IN_PROGRESS
+// เพื่อให้คนขับเริ่มงานได้ทันทีแม้ Executive ยังไม่ยืนยัน
 export async function GET() {
   const session = await getServerSession(authOptions);
   
@@ -18,11 +20,10 @@ export async function GET() {
   }
 
   try {
-    // ดึงข้อมูล CONFIRMED bookings ที่ assigned ให้ driver ปัจจุบัน
     const jobs = await prisma.booking.findMany({
       where: {
         driverId: session.user.id,
-        status: 'CONFIRMED',
+        status: { in: ['APPROVED', 'CONFIRMED', 'IN_PROGRESS'] },
       },
       include: {
         requester: {

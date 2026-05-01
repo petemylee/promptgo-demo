@@ -39,6 +39,13 @@ const messageFor = (args: {
   if (s === 'APPROVED') {
     const missing = [args.hasVehicle ? null : 'รถ', args.hasDriver ? null : 'คนขับ'].filter(Boolean);
     const suffix = missing.length ? ` (ยังไม่ได้เลือก${missing.join('และ')})` : '';
+    if (role === 'Driver') {
+      return {
+        title: 'พร้อมเริ่มงาน',
+        body: 'สามารถกดเริ่มงานได้เลย โดยไม่ต้องรอการยืนยันขั้นสุดท้ายจากผู้บริหาร',
+        tone: 'success',
+      };
+    }
     return {
       title: 'รอยืนยันขั้นสุดท้าย',
       body:

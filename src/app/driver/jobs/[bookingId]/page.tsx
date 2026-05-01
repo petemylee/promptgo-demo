@@ -74,7 +74,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
 
   const handleStartJob = async () => {
     if (!booking) return;
-    if (booking.status !== 'CONFIRMED') {
+    if (booking.status !== 'CONFIRMED' && booking.status !== 'APPROVED') {
       setError('งานนี้ยังไม่อยู่ในสถานะที่สามารถเริ่มงานได้');
       return;
     }
@@ -136,7 +136,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ bookingId
   if (!booking) return null;
 
   const isInProgress = booking.status === 'IN_PROGRESS';
-  const isConfirmed = booking.status === 'CONFIRMED';
+  const isConfirmed = booking.status === 'CONFIRMED' || booking.status === 'APPROVED';
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4 md:p-8">

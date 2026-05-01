@@ -41,6 +41,7 @@ type Job = {
 };
 
 const getPrimaryAction = (status: string) => {
+  if (status === 'APPROVED') return { label: 'เริ่มงาน', tone: 'primary' as const };
   if (status === 'CONFIRMED') return { label: 'เริ่มงาน', tone: 'primary' as const };
   if (status === 'IN_PROGRESS') return { label: 'ทำงานต่อ', tone: 'primary' as const };
   return { label: 'ดูรายละเอียด', tone: 'secondary' as const };

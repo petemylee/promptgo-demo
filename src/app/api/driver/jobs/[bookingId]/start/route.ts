@@ -79,10 +79,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden: Booking not assigned to you' }, { status: 403 });
     }
 
-    // ตรวจสอบว่า booking status เป็น CONFIRMED หรือไม่
-    if (booking.status !== 'CONFIRMED') {
+    // อนุญาตให้เริ่มงานได้ทั้งจาก APPROVED (อนุมัติเบื้องต้น) และ CONFIRMED
+    // เพื่อกันปัญหาผู้บริหารไม่ว่าง/ไม่อยู่
+    if (booking.status !== 'CONFIRMED' && booking.status !== 'APPROVED') {
       return NextResponse.json(
-        { error: 'Booking must be CONFIRMED to start' },
+        { error: 'Booking must be APPROVED or CONFIRMED to start' },
         { status: 400 }
       );
     }

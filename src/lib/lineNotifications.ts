@@ -59,11 +59,20 @@ function deriveTraveler(data: BookingLineData) {
 }
 
 function contactSection(data: BookingLineData) {
-  return (
-    `📞 ข้อมูลติดต่อ:\n` +
-    `┌ ผู้จอง: ${valueOrDash(data.requester?.phoneNumber)}\n` +
-    `└ คนขับ: ${valueOrDash(data.driver?.phoneNumber)}\n\n`
-  );
+  const requesterPhone = data.requester?.phoneNumber?.trim();
+  const driverPhone = data.driver?.phoneNumber?.trim();
+
+  const lines: string[] = [];
+  if (requesterPhone) lines.push(`ผู้จอง: ${requesterPhone}`);
+  if (driverPhone) lines.push(`คนขับ: ${driverPhone}`);
+
+  if (lines.length === 0) return '';
+
+  const header = `📞 ข้อมูลติดต่อ:\n`;
+  if (lines.length === 1) {
+    return `${header}└ ${lines[0]}\n\n`;
+  }
+  return `${header}┌ ${lines[0]}\n└ ${lines[1]}\n\n`;
 }
 
 function vehicleText(data: BookingLineData) {
