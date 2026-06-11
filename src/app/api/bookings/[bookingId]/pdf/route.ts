@@ -12,11 +12,11 @@ import {
   drawSignatureInFieldAndRemoveWidget,
   ensureSignatureFieldsHaveNormalAppearance,
 } from '@/lib/pdf/signature-field-draw';
-
-const thaiMonths = [
-  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-];
+import {
+  formatBangkokDateTime,
+  formatBangkokThaiBuddhistDateLong,
+  getBangkokPdfDateFields,
+} from '@/lib/dateTime';
 
 export async function POST(
   request: NextRequest,
@@ -89,7 +89,7 @@ export async function POST(
         color: textColor,
       });
 
-      page.drawText(`วันที่สร้าง: ${new Date(booking.createdAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}`, {
+      page.drawText(`วันที่สร้าง: ${formatBangkokDateTime(booking.createdAt)}`, {
         x: 50,
         y: height - 130,
         size: 12,
@@ -114,20 +114,7 @@ export async function POST(
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const textColor = rgb(0.2, 0.2, 0.2);
 
-    const formatDate = (dateString: string | null) => {
-      if (!dateString) return '-';
-      return new Date(dateString).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Bangkok',
-        hour12: false,
-      });
-    };
-
-    page.drawText(new Date(booking.createdAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }), {
+    page.drawText(formatBangkokDateTime(booking.createdAt), {
       x: 450,
       y: height - 100,
       size: 12,
@@ -183,7 +170,7 @@ export async function POST(
       });
     }
 
-    const travelDate = booking.startTime ? formatDate(booking.startTime.toISOString()) : '-';
+    const travelDate = booking.startTime ? formatBangkokDateTime(booking.startTime) : '-';
     page.drawText(`ในวันที่${travelDate}`, {
       x: 100,
       y: height - 290 - notesOffset,
@@ -434,17 +421,14 @@ export async function GET(
       }
     };
 
-    const requestDate = new Date(booking.createdAt);
-    const startDate = booking.startTime ? new Date(booking.startTime) : new Date();
-    const endDate = booking.endTime ? new Date(booking.endTime) : startDate;
+    const requestDateFields = getBangkokPdfDateFields(booking.createdAt);
+    const startDateFields = getBangkokPdfDateFields(booking.startTime ?? new Date());
+    const endDateFields = getBangkokPdfDateFields(booking.endTime ?? booking.startTime ?? new Date());
 
-    fill('req_day', requestDate.getDate().toString());
-    fill('req_month', thaiMonths[requestDate.getMonth()]);
-    fill('req_year', (requestDate.getFullYear() + 543).toString());
-    fill(
-      'req_date_long',
-      `วันที่ ${requestDate.getDate()} ${thaiMonths[requestDate.getMonth()]} ${requestDate.getFullYear() + 543}`
-    );
+    fill('req_day', requestDateFields?.day ?? '-');
+    fill('req_month', requestDateFields?.month ?? '-');
+    fill('req_year', requestDateFields?.buddhistYear ?? '-');
+    fill('req_date_long', requestDateFields ? `วันที่ ${requestDateFields.dateLong}` : '-');
 
     const requesterAccountName = booking.requester?.name || '-';
     const requesterAccountPosition = booking.requester?.position || '-';
@@ -457,32 +441,22 @@ export async function GET(
     fill('purpose', booking.purpose || '-');
     fill('passenger_count', booking.passengerCount?.toString() || '-');
 
-    fill('start_day', startDate.getDate().toString());
-    fill('start_month', thaiMonths[startDate.getMonth()]);
-    fill('start_year', (startDate.getFullYear() + 543).toString());
-    fill('start_time', startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
-    fill(
-      'start_date_long',
-      `${startDate.getDate()} ${thaiMonths[startDate.getMonth()]} ${startDate.getFullYear() + 543}`
-    );
+    fill('start_day', startDateFields?.day ?? '-');
+    fill('start_month', startDateFields?.month ?? '-');
+    fill('start_year', startDateFields?.buddhistYear ?? '-');
+    fill('start_time', startDateFields?.time ?? '-');
+    fill('start_date_long', startDateFields?.dateLong ?? '-');
 
-    fill('end_day', endDate.getDate().toString());
-    fill('end_month', thaiMonths[endDate.getMonth()]);
-    fill('end_year', (endDate.getFullYear() + 543).toString());
-    fill('end_time', endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
-    fill(
-      'end_date_long',
-      `${endDate.getDate()} ${thaiMonths[endDate.getMonth()]} ${endDate.getFullYear() + 543}`
-    );
+    fill('end_day', endDateFields?.day ?? '-');
+    fill('end_month', endDateFields?.month ?? '-');
+    fill('end_year', endDateFields?.buddhistYear ?? '-');
+    fill('end_time', endDateFields?.time ?? '-');
+    fill('end_date_long', endDateFields?.dateLong ?? '-');
 
     fill('admin_approver_name', booking.adminApprover?.name?.trim() || '-');
     fill('admin_approver_position', booking.adminApprover?.position?.trim() || '-');
     if (booking.adminApprovedAt) {
-      const adminApprDate = new Date(booking.adminApprovedAt);
-      fill(
-        'admin_approve_date_long',
-        `${adminApprDate.getDate()} ${thaiMonths[adminApprDate.getMonth()]} ${adminApprDate.getFullYear() + 543}`
-      );
+      fill('admin_approve_date_long', formatBangkokThaiBuddhistDateLong(booking.adminApprovedAt));
     } else {
       fill('admin_approve_date_long', '-');
     }
@@ -494,11 +468,7 @@ export async function GET(
         booking.expresswayCertifierPosition || booking.expresswayCertifier?.position || '-'
       );
       if (booking.expresswayCertifiedAt) {
-        const certifiedAt = new Date(booking.expresswayCertifiedAt);
-        fill(
-          'expressway_certified_date_long',
-          `${certifiedAt.getDate()} ${thaiMonths[certifiedAt.getMonth()]} ${certifiedAt.getFullYear() + 543}`
-        );
+        fill('expressway_certified_date_long', formatBangkokThaiBuddhistDateLong(booking.expresswayCertifiedAt));
       } else {
         fill('expressway_certified_date_long', '');
       }
@@ -559,11 +529,7 @@ export async function GET(
     );
 
     if (confirmedAt) {
-      const approvalDate = new Date(confirmedAt);
-      fill(
-        'approve_date_full',
-        `${approvalDate.getDate()} ${thaiMonths[approvalDate.getMonth()]} ${approvalDate.getFullYear() + 543}`
-      );
+      fill('approve_date_full', formatBangkokThaiBuddhistDateLong(confirmedAt));
     } else {
       fill('approve_date_full', '');
     }

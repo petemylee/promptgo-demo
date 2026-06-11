@@ -1,4 +1,43 @@
+import { TZDate } from '@date-fns/tz';
+
 const BANGKOK_TIMEZONE = 'Asia/Bangkok';
+
+export const THAI_MONTHS = [
+  'มกราคม',
+  'กุมภาพันธ์',
+  'มีนาคม',
+  'เมษายน',
+  'พฤษภาคม',
+  'มิถุนายน',
+  'กรกฎาคม',
+  'สิงหาคม',
+  'กันยายน',
+  'ตุลาคม',
+  'พฤศจิกายน',
+  'ธันวาคม',
+] as const;
+
+export type BangkokCalendarParts = {
+  day: number;
+  monthIndex: number;
+  year: number;
+};
+
+export type BangkokPdfDateFields = {
+  day: string;
+  month: string;
+  buddhistYear: string;
+  dateLong: string;
+  time: string;
+};
+
+export type BangkokMonthRange = {
+  value: string;
+  startDate: Date;
+  endDate: Date;
+  year: number;
+  monthIndex: number;
+};
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
@@ -119,4 +158,93 @@ export function bangkokStartOfTodayDatetimeLocalString(): string {
 export function isBeforeBangkokStartOfToday(date: Date): boolean {
   if (!isValidDate(date)) return true;
   return date.getTime() < bangkokStartOfToday().getTime();
+}
+
+function toValidDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return isValidDate(date) ? date : null;
+}
+
+/** Calendar day/month/year in Asia/Bangkok (not server local TZ). */
+export function getBangkokCalendarParts(
+  value: Date | string | null | undefined
+): BangkokCalendarParts | null {
+  const date = toValidDate(value);
+  if (!date) return null;
+  const tz = new TZDate(date.getTime(), BANGKOK_TIMEZONE);
+  return {
+    day: tz.getDate(),
+    monthIndex: tz.getMonth(),
+    year: tz.getFullYear(),
+  };
+}
+
+export function getBangkokPdfDateFields(
+  value: Date | string | null | undefined
+): BangkokPdfDateFields | null {
+  const parts = getBangkokCalendarParts(value);
+  if (!parts) return null;
+  const month = THAI_MONTHS[parts.monthIndex];
+  return {
+    day: parts.day.toString(),
+    month,
+    buddhistYear: (parts.year + 543).toString(),
+    dateLong: `${parts.day} ${month} ${parts.year + 543}`,
+    time: formatBangkokTimeHM(value),
+  };
+}
+
+export function formatBangkokThaiBuddhistDateLong(
+  value: Date | string | null | undefined
+): string {
+  const fields = getBangkokPdfDateFields(value);
+  return fields?.dateLong ?? '-';
+}
+
+export function formatBangkokDateTimeReport(value: Date | string | null | undefined): string {
+  if (!value) return '-';
+  const date = toValidDate(value);
+  if (!date) return '-';
+  return date.toLocaleString('th-TH', {
+    timeZone: BANGKOK_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Current calendar month in Asia/Bangkok as YYYY-MM. */
+export function currentBangkokMonthYYYYMM(): string {
+  const tz = TZDate.tz(BANGKOK_TIMEZONE);
+  return `${tz.getFullYear()}-${pad2(tz.getMonth() + 1)}`;
+}
+
+/** Parse YYYY-MM as a Bangkok calendar month; range uses midnight Bangkok boundaries. */
+export function parseBangkokMonthValue(value: string): BangkokMonthRange | null {
+  if (!/^\d{4}-\d{2}$/.test(value)) return null;
+  const [yearRaw, monthRaw] = value.split('-');
+  const year = Number(yearRaw);
+  const monthIndex = Number(monthRaw) - 1;
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return null;
+  }
+  const startDate = new Date(new TZDate(year, monthIndex, 1, BANGKOK_TIMEZONE).getTime());
+  const endDate = new Date(new TZDate(year, monthIndex + 1, 1, BANGKOK_TIMEZONE).getTime());
+  return { value, startDate, endDate, year, monthIndex };
+}
+
+export function bangkokMonthRangeFromTo(
+  fromParam: string | null,
+  toParam: string | null
+): { from: BangkokMonthRange; to: BangkokMonthRange; startDate: Date; endDate: Date } | null {
+  const fromValue = fromParam ?? currentBangkokMonthYYYYMM();
+  const toValue = toParam ?? fromValue;
+  const from = parseBangkokMonthValue(fromValue);
+  const to = parseBangkokMonthValue(toValue);
+  if (!from || !to) return null;
+  if (from.value > to.value) return null;
+  return { from, to, startDate: from.startDate, endDate: to.endDate };
 }

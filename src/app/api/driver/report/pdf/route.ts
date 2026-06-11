@@ -6,43 +6,7 @@ import { PDFDocument, type PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-
-function parseMonthValue(value: string) {
-  if (!/^\d{4}-\d{2}$/.test(value)) return null;
-  const [yearRaw, monthRaw] = value.split('-');
-  const year = Number(yearRaw);
-  const monthIndex = Number(monthRaw) - 1;
-  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) return null;
-  const startDate = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
-  return { value, startDate, year, monthIndex };
-}
-
-function monthRangeFromTo(fromParam: string | null, toParam: string | null) {
-  const now = new Date();
-  const fallbackMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const fromValue = fromParam ?? fallbackMonth;
-  const toValue = toParam ?? fromValue;
-
-  const from = parseMonthValue(fromValue);
-  const to = parseMonthValue(toValue);
-  if (!from || !to) return null;
-  if (from.value > to.value) return null;
-
-  const endDate = new Date(Date.UTC(to.year, to.monthIndex + 1, 1, 0, 0, 0));
-  return { from, to, startDate: from.startDate, endDate };
-}
-
-function formatDateTimeReport(value: Date | null) {
-  if (!value) return '-';
-  return value.toLocaleString('th-TH', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { bangkokMonthRangeFromTo, formatBangkokDateTimeReport } from '@/lib/dateTime';
 
 function formatKm(value: number | null) {
   if (value === null || Number.isNaN(value)) return '-';
@@ -63,7 +27,7 @@ export async function GET(req: Request) {
   const toParam = url.searchParams.get('to');
   const isPreview = url.searchParams.get('preview') === '1';
 
-  const monthRange = monthRangeFromTo(fromParam, toParam);
+  const monthRange = bangkokMonthRangeFromTo(fromParam, toParam);
   if (!monthRange) {
     return NextResponse.json({ error: 'Invalid month format. Use from=YYYY-MM&to=YYYY-MM' }, { status: 400 });
   }
@@ -288,8 +252,8 @@ export async function GET(req: Request) {
           b.startMileage !== null && b.endMileage !== null ? Math.max(0, b.endMileage - b.startMileage) : null;
 
         drawRow(state, {
-          start: formatDateTimeReport(b.startTime),
-          end: formatDateTimeReport(b.endTime),
+          start: formatBangkokDateTimeReport(b.startTime),
+          end: formatBangkokDateTimeReport(b.endTime),
           from: b.startLocation ?? '-',
           to: b.endLocation ?? '-',
           km: formatKm(km),
