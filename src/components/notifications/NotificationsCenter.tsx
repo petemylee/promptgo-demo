@@ -83,7 +83,7 @@ export default function NotificationsCenter() {
                               {n.title}
                             </p>
                             <time className="shrink-0 text-xs text-slate-500">
-                              {new Date(n.createdAt).toLocaleString('th-TH')}
+                              {new Date(n.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour12: false })}
                             </time>
                           </div>
                           {n.message && <p className="mt-1 text-sm text-slate-600">{n.message}</p>}

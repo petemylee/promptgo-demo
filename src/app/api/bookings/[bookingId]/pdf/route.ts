@@ -89,7 +89,7 @@ export async function POST(
         color: textColor,
       });
 
-      page.drawText(`วันที่สร้าง: ${new Date(booking.createdAt).toLocaleDateString('th-TH')}`, {
+      page.drawText(`วันที่สร้าง: ${new Date(booking.createdAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}`, {
         x: 50,
         y: height - 130,
         size: 12,
@@ -121,11 +121,13 @@ export async function POST(
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Asia/Bangkok',
+        hour12: false,
       });
     };
 
-    page.drawText(new Date(booking.createdAt).toLocaleDateString('th-TH'), {
+    page.drawText(new Date(booking.createdAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }), {
       x: 450,
       y: height - 100,
       size: 12,
